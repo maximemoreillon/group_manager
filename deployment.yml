@@ -1,0 +1,38 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: group-manager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: group-manager
+  template:
+    metadata:
+      labels:
+        app: group-manager
+    spec:
+
+      containers:
+      - name: group-manager
+        image: 172.16.98.151:5000/group-manager
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 7000
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: group-manager
+  name: group-manager
+spec:
+  ports:
+  - port: 7000
+    nodePort: 32000
+  selector:
+    app: group-manager
+  type: LoadBalancer

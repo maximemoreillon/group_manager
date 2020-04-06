@@ -3,6 +3,8 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const neo4j = require('neo4j-driver')
 
+const axios = require('axios')
+
 const secrets = require('./secrets');
 
 const app_port = 7000;
@@ -72,6 +74,8 @@ app.get('/group_by_id', (req, res) => {
     id: req.query.id,
   })
   .then(result => {
+    // Not too usre about sendig only one record
+    // How about sending all records and let the front end deal with it?
     if(result.records.length < 1) return res.status(404).send('Not found')
     res.send(result.records[0].get('group'))
   })
@@ -80,7 +84,7 @@ app.get('/group_by_id', (req, res) => {
 })
 
 app.post('/create_group', check_authentication, (req, res) => {
-  // Make relationship with user>
+  // Create a group
   const session = driver.session();
   session
   .run(`
