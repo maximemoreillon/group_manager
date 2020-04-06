@@ -199,14 +199,17 @@ app.get('/groups_of_user', check_authentication, (req, res) => {
 app.get('/top_level_groups', (req, res) => {
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
 
+  // TODO: use labels
   const session = driver.session();
   session
   .run(`
     // Find groups
-    MATCH (group:Group)
+    MATCH (group)<-[:BELONGS_TO]-() // Temporary
+    // MATCH (group:Group) // Final
 
     // That do not belong to any group
-    WHERE NOT (group)-[:BELONGS_TO]->(:Group)
+    WHERE NOT (group)-[:BELONGS_TO]->() // Temporary
+    // WHERE NOT (group)-[:BELONGS_TO]->()
 
     // NOT SURE WHY DISTINCT NEEDED
     RETURN DISTINCT(group)
@@ -218,17 +221,22 @@ app.get('/top_level_groups', (req, res) => {
 
 app.get('/groups_directly_belonging_to_group', (req, res) => {
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
+  // TODO: use labels
   const session = driver.session();
   session
   .run(`
     // Match the parent node
-    MATCH (parent_group:Group)
-    WHERE ID(parent_group)={id}
+    MATCH (parent_group) // Temporary
+    //MATCH (parent_group:Group) // Final
+    WHERE id(parent_group)=toInt({id})
 
     // Match children that only have a direct connection to parent
     WITH parent_group
-    MATCH (parent_group)<-[:BELONGS_TO]-(group:Group)
-    WHERE NOT group:Employee AND NOT (group)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(parent_group)
+    MATCH (parent_group)<-[:BELONGS_TO]-(group) // Temporary
+    WHERE NOT group:Employee AND NOT (group)-[:BELONGS_TO]->()-[:BELONGS_TO]->(parent_group) // temporary
+
+    // MATCH (parent_group)<-[:BELONGS_TO]-(group:Group) // Final
+    // WHERE NOT (group)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(parent_group) // Final
 
     // DISTINCT JUST IN CASE
     RETURN DISTINCT(group)
