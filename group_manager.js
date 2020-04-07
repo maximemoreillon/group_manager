@@ -129,7 +129,8 @@ app.post('/join_group', check_authentication, (req, res) => {
   session
   .run(`
     // Find the user
-    MATCH (user:user)
+    // TODO: Switch to User label
+    MATCH (user:Employee)
     WHERE id(user)=toInt({user_id})
 
     // Find the workplace
@@ -144,7 +145,7 @@ app.post('/join_group', check_authentication, (req, res) => {
     RETURN user, group
     `,
     {
-      employee_id: get_user_id_for_modification(req, res),
+      user_id: get_user_id_for_modification(req, res),
       group_id: req.body.group_id
     })
   .then(result => { res.send(result.records) })
@@ -158,8 +159,9 @@ app.post('/leave_group', check_authentication, (req, res) => {
   const session = driver.session();
   session
   .run(`
+    // TODO: Switch to User label
     // Find the user and the group
-    MATCH (user:User)-[r:BELONGS_TO]->(group:Group)
+    MATCH (user:Employee)-[r:BELONGS_TO]->(group:Group)
     WHERE id(user)=toInt({user_id}) AND id(group)=toInt({group_id})
 
     // delete relationship
@@ -169,7 +171,7 @@ app.post('/leave_group', check_authentication, (req, res) => {
     RETURN user
     `,
     {
-      employee_id: get_user_id_for_modification(req, res),
+      user_id: get_user_id_for_modification(req, res),
       group_id: req.body.group_id
     })
   .then(result => { res.send(result.records) })
