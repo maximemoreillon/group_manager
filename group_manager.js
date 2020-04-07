@@ -135,7 +135,8 @@ app.post('/join_group', check_authentication, (req, res) => {
 
     // Find the workplace
     WITH user
-    MATCH (group:Group)
+    MATCH (group) // Temporary
+    // MATCH (group:Group) // Final
     WHERE id(group)=toInt({group_id})
 
     // MERGE relationship
@@ -161,7 +162,8 @@ app.post('/leave_group', check_authentication, (req, res) => {
   .run(`
     // TODO: Switch to User label
     // Find the user and the group
-    MATCH (user:Employee)-[r:BELONGS_TO]->(group:Group)
+    MATCH (user:Employee)-[r:BELONGS_TO]->(group)// Temporary
+    //MATCH (user:User)-[r:BELONGS_TO]->(group:Group)// Final
     WHERE id(user)=toInt({user_id}) AND id(group)=toInt({group_id})
 
     // delete relationship
