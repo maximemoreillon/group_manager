@@ -267,18 +267,19 @@ app.get('/all_groups_of_group', check_authentication, (req, res) => {
   .finally( () => { session.close() })
 })
 
-app.get('/users_of_group', check_authentication, (req, res) => {
+app.get('/users_of_group', (req, res) => {
   // Route to retrieve a user's groups
 
   const session = driver.session();
   session
   .run(`
-    MATCH (user:User)-[:BELONGS_TO]->(group:Group)
+    MATCH (user:Employee)-[:BELONGS_TO]->(group) // Temporary
+    //MATCH (user:User)-[:BELONGS_TO]->(group:Group) // Final
     WHERE id(group)=toInt({id})
     RETURN user
     `,
     {
-      id: req.body.id
+      id: req.query.id
     })
   .then(result => { res.send(result.records) })
   .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
