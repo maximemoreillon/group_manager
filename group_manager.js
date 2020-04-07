@@ -180,16 +180,16 @@ app.post('/leave_group', check_authentication, (req, res) => {
 
 app.get('/groups_of_user', check_authentication, (req, res) => {
   // Route to retrieve a user's groups
-
   const session = driver.session();
   session
   .run(`
-    MATCH (user:User)-[:BELONGS_TO]->(group:Group)
-    WHERE id(user)=toInt({user_id})
+    MATCH (user:Employee)-[:BELONGS_TO]->(group) // Temporary
+    //MATCH (user:User)-[:BELONGS_TO]->(group:Group) // Final
+    WHERE id(user)=toInt({id})
     RETURN group
     `,
     {
-      user_id: get_employee_id_for_viewing(req, res),
+      id: get_employee_id_for_viewing(req, res),
     })
   .then(result => { res.send(result.records) })
   .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
