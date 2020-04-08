@@ -62,12 +62,11 @@ app.get('/', (req, res) => {
   res.send('Group manager')
 });
 
-
-app.get('/group_by_id', (req, res) => {
+function get_group_by_id(req, res){
   const session = driver.session();
   session
   .run(`
-    MATCH (group:Group)
+    MATCH (group)
     WHERE id(group)=toInt({id})
     RETURN group
     `, {
@@ -81,17 +80,34 @@ app.get('/group_by_id', (req, res) => {
   })
   .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
   .finally( () => { session.close() })
-})
+}
+
+app.get('/group_by_id', get_group_by_id)
+app.get('/group', get_group_by_id)
 
 app.post('/create_group', check_authentication, (req, res) => {
   // Create a group
   const session = driver.session();
   session
   .run(`
-    MERGE (group:Group {name: {name}})
+    // Create the group
+    CREATE (group:Group)
+    SET group.name = {group_name}
+
+    // Create creation relationship
+    WITH group
+    MATCH (creator) // Todo: Label
+    WHERE id(creator)=toInt({user_id})
+    CREATE (group)-[:ADMINISTRATED_BY]->(creator)
+    CREATE (group)-[:CREATED_BY]->(creator) // ADD DATE
+    CREATE (group)<-[:BELONGS_TO]-(creator)
+
+    // Could have a CREATED_BY relationship
+
     RETURN group
     `, {
-    name: req.body.name,
+    user_id: res.locals.user.identity.low,
+    group_name: req.body.name,
   })
   .then(result => {
     if(result.records.length < 1) return res.status(500).send('Error creating node')
@@ -106,15 +122,16 @@ app.post('/delete_group', check_authentication, (req, res) => {
   const session = driver.session();
   session
   .run(`
-    MATCH (group:Group)
-    WHERE id(group)=toInt({id})
+    MATCH (group:Group)-[:ADMINISTRATED_BY]->(administrator)
+    WHERE id(group)=toInt({group_id}) AND id(administrator)=toInt({user_id})
     DETACH DELETE group
     RETURN "success"
     `, {
-    id: req.body.id,
+    user_id: res.locals.user.identity.low,
+    group_id: req.body.id,
   })
   .then(result => {
-    if(result.records.length < 1) return res.status(404).send('Not found')
+    if(result.records.length < 1) return res.status(404).send('Error deleting node')
     res.send(result.records[0])
   })
   .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
@@ -122,22 +139,21 @@ app.post('/delete_group', check_authentication, (req, res) => {
 })
 
 
-app.post('/join_group', check_authentication, (req, res) => {
-  // Route to join a group
+app.post('/invite_user_in_group', check_authentication, (req, res) => {
+  // Route to make a user join a group
 
   const session = driver.session();
   session
   .run(`
     // Find the user
-    // TODO: Switch to User label
-    MATCH (user:Employee)
+    // TODO: Add Label
+    MATCH (user)
     WHERE id(user)=toInt({user_id})
 
     // Find the workplace
     WITH user
-    MATCH (group) // Temporary
-    // MATCH (group:Group) // Final
-    WHERE id(group)=toInt({group_id})
+    MATCH (group)-[:ADMINISTRATED_BY]->(administrator) // No labels yet
+    WHERE id(group)=toInt({group_id}) AND id(administrator)=toInt({current_user_id})
 
     // MERGE relationship
     MERGE (user)-[:BELONGS_TO]->(group)
@@ -146,10 +162,47 @@ app.post('/join_group', check_authentication, (req, res) => {
     RETURN user, group
     `,
     {
-      user_id: get_user_id_for_modification(req, res),
+      current_user_id: res.locals.user.identity.low,
+      user_id: req.body.user_id,
       group_id: req.body.group_id
     })
   .then(result => { res.send(result.records) })
+  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .finally( () => { session.close() })
+})
+
+
+app.post('/join_group', check_authentication, (req, res) => {
+  // Route to join a group (only works if group is not private)
+
+  const session = driver.session();
+  session
+  .run(`
+    // TODO: Switch to User label
+    // Find the user
+    MATCH (user)
+    WHERE id(user)=toInt({user_id})
+
+    // Find the group
+    // TODO: CHECK IF GROUP IS PRIVATE
+    WITH user
+    MATCH (group)
+    WHERE id(group)=toInt({group_id})
+
+    // MERGE relationship
+    MERGE (user)-[:BELONGS_TO]->(group)
+
+    // Return
+    RETURN user
+    `,
+    {
+      user_id: get_user_id_for_modification(req, res),
+      group_id: req.body.group_id
+    })
+  .then(result => {
+    if(result.records.length < 1) return res.send(`Error joining group`)
+    res.send(result.records)
+  })
   .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
   .finally( () => { session.close() })
 })
@@ -176,11 +229,117 @@ app.post('/leave_group', check_authentication, (req, res) => {
       user_id: get_user_id_for_modification(req, res),
       group_id: req.body.group_id
     })
-  .then(result => { res.send(result.records) })
+  .then(result => {
+    if(result.records.length < 1) return res.send(`Error leaving group`)
+    res.send(result.records)
+  })
   .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
   .finally( () => { session.close() })
 })
 
+
+
+app.post('/remove_user_from_group', check_authentication, (req, res) => {
+  // Route to leave a group
+  // TODO CHECK OF SUCCESS
+  const session = driver.session();
+  session
+  .run(`
+    // TODO: Switch to User label
+    // Find the user and the group
+    MATCH (user:Employee)-[r:BELONGS_TO]->(group)-[:ADMINISTRATED_BY]->(administrator)
+    WHERE id(user)=toInt({user_id})
+      AND id(group)=toInt({group_id})
+      AND id(administrator)=toInt({current_user_id})
+
+    // delete relationship
+    DELETE r
+
+    // Return
+    RETURN user
+    `,
+    {
+      current_user_id: res.locals.user.identity.low,
+      user_id: req.body.user_id,
+      group_id: req.body.group_id,
+    })
+  .then(result => {
+    if(result.records.length < 1) return res.send(`Error removing from group`)
+    res.send(result.records)
+  })
+  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .finally( () => { session.close() })
+})
+
+app.post('/make_user_administrator_of_group', check_authentication, (req, res) => {
+  // Route to leave a group
+
+  const session = driver.session();
+  session
+  .run(`
+    // TODO: Switch to User label
+    // Find the user and administrator
+    MATCH (user:Employee)
+    WHERE id(user)=toInt({user_id})
+
+    // Find the group
+    WITH user
+    MATCH (group)-[:ADMINISTRATED_BY]->(administrator)
+    WHERE id(group)=toInt({group_id}) AND id(administrator)=toInt({current_user_id})
+
+    // Merge relationship
+    MERGE (group)-[:ADMINISTRATED_BY]->(user) // No labels yet
+
+    // Return
+    RETURN user
+    `,
+    {
+      current_user_id: res.locals.user.identity.low,
+      user_id: req.body.user_id,
+      group_id: req.body.group_id,
+    })
+  .then(result => {
+    if(result.records.length < 1) return res.send(`Error leaving group`)
+    res.send(result.records)
+  })
+  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .finally( () => { session.close() })
+})
+
+app.post('/remove_user_from_administrators', check_authentication, (req, res) => {
+  // Route to leave a group
+
+  const session = driver.session();
+  session
+  .run(`
+    // TODO: Switch to User label
+
+    // Find the group (only an admin can remove an admin)
+    MATCH (group)-[:ADMINISTRATED_BY]->(administrator)
+    WHERE id(group)=toInt({group_id}) AND id(administrator)=toInt({current_user_id})
+
+    WITH group
+    MATCH (user:Employee)<-[r:ADMINISTRATED_BY]-(group)
+    WHERE id(user)=toInt({user_id})
+
+    // Delete relationship
+    DELETE r
+
+    // Return
+    RETURN user
+    `,
+    {
+      current_user_id: res.locals.user.identity.low,
+      user_id: req.body.user_id,
+      group_id: req.body.group_id,
+    })
+  .then(result => {
+    if(result.records.length < 1) return res.send(`Error removing from administrators`)
+    res.send(result.records)
+  })
+  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .finally( () => { session.close() })
+})
 
 app.get('/groups_of_user', check_authentication, (req, res) => {
   // Route to retrieve a user's groups
@@ -237,7 +396,8 @@ app.get('/groups_directly_belonging_to_group', (req, res) => {
     // Match children that only have a direct connection to parent
     WITH parent_group
     MATCH (parent_group)<-[:BELONGS_TO]-(group) // Temporary
-    WHERE NOT group:Employee AND NOT (group)-[:BELONGS_TO]->()-[:BELONGS_TO]->(parent_group) // temporary
+    WHERE NOT group:Employee
+      AND NOT (group)-[:BELONGS_TO]->()-[:BELONGS_TO]->(parent_group) // temporary
 
     // MATCH (parent_group)<-[:BELONGS_TO]-(group:Group) // Final
     // WHERE NOT (group)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(parent_group) // Final
@@ -279,6 +439,24 @@ app.get('/users_of_group', (req, res) => {
   .run(`
     MATCH (user:Employee)-[:BELONGS_TO]->(group) // Temporary
     //MATCH (user:User)-[:BELONGS_TO]->(group:Group) // Final
+    WHERE id(group)=toInt({id})
+    RETURN user
+    `,
+    {
+      id: req.query.id
+    })
+  .then(result => { res.send(result.records) })
+  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .finally( () => { session.close() })
+})
+
+app.get('/administrators_of_group', (req, res) => {
+  // Route to retrieve a user's groups
+
+  const session = driver.session();
+  session
+  .run(`
+    MATCH (user:Employee)<-[:ADMINISTRATED_BY]-(group) // Temporary
     WHERE id(group)=toInt({id})
     RETURN user
     `,
