@@ -450,6 +450,22 @@ app.get('/users_of_group', (req, res) => {
   .finally( () => { session.close() })
 })
 
+app.get('/users_with_no_group', (req, res) => {
+  // Route to retrieve users without a group
+
+  const session = driver.session();
+  session
+  .run(`
+    MATCH (user:Employee)
+    WHERE NOT (user)-[:BELONGS_TO]->()
+    RETURN user
+    `,
+    {})
+  .then(result => { res.send(result.records) })
+  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .finally( () => { session.close() })
+})
+
 app.get('/administrators_of_group', (req, res) => {
   // Route to retrieve a user's groups
 
