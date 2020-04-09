@@ -34,7 +34,7 @@ function check_authentication(req, res, next){
   .catch(error => { res.status(400).send(error) })
 }
 
-function get_employee_id_for_viewing(req, res){
+function get_user_id_for_viewing(req, res){
   if('employee_id' in req.body) return req.body.employee_id
   if('employee_id' in req.query) return req.query.employee_id
 
@@ -46,6 +46,8 @@ function get_employee_id_for_viewing(req, res){
 }
 
 function get_user_id_for_modification(req, res){
+
+  // TODO: Use user_id instead of employee_id
 
   // If not requiring particular employee, just return self
   if(! ('employee_id' in req.body)) return res.locals.user.identity.low
@@ -96,10 +98,10 @@ app.post('/create_group', check_authentication, (req, res) => {
 
     // Create creation relationship
     WITH group
-    MATCH (creator) // Todo: Label
+    MATCH (creator:User)
     WHERE id(creator)=toInt({user_id})
     CREATE (group)-[:ADMINISTRATED_BY]->(creator)
-    CREATE (group)-[:CREATED_BY]->(creator) // ADD DATE
+    CREATE (group)-[:CREATED_BY]->(creator) // TODO: ADD DATE
     CREATE (group)<-[:BELONGS_TO]-(creator)
 
     // Could have a CREATED_BY relationship
@@ -118,11 +120,11 @@ app.post('/create_group', check_authentication, (req, res) => {
 })
 
 app.post('/delete_group', check_authentication, (req, res) => {
-  // TODO: authenticate better
+  // Routeto delete a group
   const session = driver.session();
   session
   .run(`
-    MATCH (group:Group)-[:ADMINISTRATED_BY]->(administrator)
+    MATCH (group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
     WHERE id(group)=toInt({group_id}) AND id(administrator)=toInt({user_id})
     DETACH DELETE group
     RETURN "success"
@@ -146,13 +148,12 @@ app.post('/invite_user_in_group', check_authentication, (req, res) => {
   session
   .run(`
     // Find the user
-    // TODO: Add Label
-    MATCH (user)
+    MATCH (user:User)
     WHERE id(user)=toInt({user_id})
 
     // Find the workplace
     WITH user
-    MATCH (group)-[:ADMINISTRATED_BY]->(administrator) // No labels yet
+    MATCH (group:Group)-[:ADMINISTRATED_BY]->(administrator)
     WHERE id(group)=toInt({group_id}) AND id(administrator)=toInt({current_user_id})
 
     // MERGE relationship
@@ -178,15 +179,14 @@ app.post('/join_group', check_authentication, (req, res) => {
   const session = driver.session();
   session
   .run(`
-    // TODO: Switch to User label
     // Find the user
-    MATCH (user)
+    MATCH (user:User)
     WHERE id(user)=toInt({user_id})
 
     // Find the group
     // TODO: CHECK IF GROUP IS PRIVATE
     WITH user
-    MATCH (group)
+    MATCH (group:Group)
     WHERE id(group)=toInt({group_id})
 
     // MERGE relationship
@@ -213,10 +213,8 @@ app.post('/leave_group', check_authentication, (req, res) => {
   const session = driver.session();
   session
   .run(`
-    // TODO: Switch to User label
     // Find the user and the group
-    MATCH (user:Employee)-[r:BELONGS_TO]->(group)// Temporary
-    //MATCH (user:User)-[r:BELONGS_TO]->(group:Group)// Final
+    MATCH (user:User)-[r:BELONGS_TO]->(group:Group)
     WHERE id(user)=toInt({user_id}) AND id(group)=toInt({group_id})
 
     // delete relationship
@@ -240,14 +238,13 @@ app.post('/leave_group', check_authentication, (req, res) => {
 
 
 app.post('/remove_user_from_group', check_authentication, (req, res) => {
-  // Route to leave a group
-  // TODO CHECK OF SUCCESS
+  // Route to make a user leave a group
+
   const session = driver.session();
   session
   .run(`
-    // TODO: Switch to User label
     // Find the user and the group
-    MATCH (user:Employee)-[r:BELONGS_TO]->(group)-[:ADMINISTRATED_BY]->(administrator)
+    MATCH (user:User)-[r:BELONGS_TO]->(group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
     WHERE id(user)=toInt({user_id})
       AND id(group)=toInt({group_id})
       AND id(administrator)=toInt({current_user_id})
@@ -277,18 +274,17 @@ app.post('/make_user_administrator_of_group', check_authentication, (req, res) =
   const session = driver.session();
   session
   .run(`
-    // TODO: Switch to User label
     // Find the user and administrator
-    MATCH (user:Employee)
+    MATCH (user:User)
     WHERE id(user)=toInt({user_id})
 
-    // Find the group
+    // Find the group and its administrator
     WITH user
-    MATCH (group)-[:ADMINISTRATED_BY]->(administrator)
+    MATCH (group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
     WHERE id(group)=toInt({group_id}) AND id(administrator)=toInt({current_user_id})
 
     // Merge relationship
-    MERGE (group)-[:ADMINISTRATED_BY]->(user) // No labels yet
+    MERGE (group)-[:ADMINISTRATED_BY]->(user)
 
     // Return
     RETURN user
@@ -307,19 +303,17 @@ app.post('/make_user_administrator_of_group', check_authentication, (req, res) =
 })
 
 app.post('/remove_user_from_administrators', check_authentication, (req, res) => {
-  // Route to leave a group
+  // Route to remove a user from the administrators of a group
 
   const session = driver.session();
   session
   .run(`
-    // TODO: Switch to User label
-
     // Find the group (only an admin can remove an admin)
-    MATCH (group)-[:ADMINISTRATED_BY]->(administrator)
+    MATCH (group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
     WHERE id(group)=toInt({group_id}) AND id(administrator)=toInt({current_user_id})
 
     WITH group
-    MATCH (user:Employee)<-[r:ADMINISTRATED_BY]-(group)
+    MATCH (user:User)<-[r:ADMINISTRATED_BY]-(group)
     WHERE id(user)=toInt({user_id})
 
     // Delete relationship
@@ -341,18 +335,18 @@ app.post('/remove_user_from_administrators', check_authentication, (req, res) =>
   .finally( () => { session.close() })
 })
 
+
 app.get('/groups_of_user', check_authentication, (req, res) => {
   // Route to retrieve a user's groups
   const session = driver.session();
   session
   .run(`
-    MATCH (user:Employee)-[:BELONGS_TO]->(group) // Temporary
-    //MATCH (user:User)-[:BELONGS_TO]->(group:Group) // Final
+    MATCH (user:User)-[:BELONGS_TO]->(group:Group)
     WHERE id(user)=toInt({id})
     RETURN group
     `,
     {
-      id: get_employee_id_for_viewing(req, res),
+      id: get_user_id_for_viewing(req, res),
     })
   .then(result => { res.send(result.records) })
   .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
@@ -361,18 +355,14 @@ app.get('/groups_of_user', check_authentication, (req, res) => {
 
 app.get('/top_level_groups', (req, res) => {
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
-
-  // TODO: use labels
   const session = driver.session();
   session
   .run(`
     // Find groups
-    MATCH (group)<-[:BELONGS_TO]-() // Temporary
-    // MATCH (group:Group) // Final
+    MATCH (group:Group) // Final
 
     // That do not belong to any group
-    WHERE NOT (group)-[:BELONGS_TO]->() // Temporary
-    // WHERE NOT (group)-[:BELONGS_TO]->()
+    WHERE NOT (group)-[:BELONGS_TO]->(:Group)
 
     // NOT SURE WHY DISTINCT NEEDED
     RETURN DISTINCT(group)
@@ -384,23 +374,17 @@ app.get('/top_level_groups', (req, res) => {
 
 app.get('/groups_directly_belonging_to_group', (req, res) => {
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
-  // TODO: use labels
   const session = driver.session();
   session
   .run(`
     // Match the parent node
-    MATCH (parent_group) // Temporary
-    //MATCH (parent_group:Group) // Final
+    MATCH (parent_group:Group)
     WHERE id(parent_group)=toInt({id})
 
     // Match children that only have a direct connection to parent
     WITH parent_group
-    MATCH (parent_group)<-[:BELONGS_TO]-(group) // Temporary
-    WHERE NOT group:Employee
-      AND NOT (group)-[:BELONGS_TO]->()-[:BELONGS_TO]->(parent_group) // temporary
-
-    // MATCH (parent_group)<-[:BELONGS_TO]-(group:Group) // Final
-    // WHERE NOT (group)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(parent_group) // Final
+    MATCH (parent_group)<-[:BELONGS_TO]-(group:Group)
+    WHERE NOT (group)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(parent_group) // temporary
 
     // DISTINCT JUST IN CASE
     RETURN DISTINCT(group)
@@ -437,8 +421,7 @@ app.get('/users_of_group', (req, res) => {
   const session = driver.session();
   session
   .run(`
-    MATCH (user:Employee)-[:BELONGS_TO]->(group) // Temporary
-    //MATCH (user:User)-[:BELONGS_TO]->(group:Group) // Final
+    MATCH (user:User)-[:BELONGS_TO]->(group:Group) // Final
     WHERE id(group)=toInt({id})
     RETURN user
     `,
@@ -456,8 +439,8 @@ app.get('/users_with_no_group', (req, res) => {
   const session = driver.session();
   session
   .run(`
-    MATCH (user:Employee)
-    WHERE NOT (user)-[:BELONGS_TO]->()
+    MATCH (user:User)
+    WHERE NOT (user)-[:BELONGS_TO]->(:Group)
     RETURN user
     `,
     {})
@@ -472,7 +455,7 @@ app.get('/administrators_of_group', (req, res) => {
   const session = driver.session();
   session
   .run(`
-    MATCH (user:Employee)<-[:ADMINISTRATED_BY]-(group) // Temporary
+    MATCH (user:User)<-[:ADMINISTRATED_BY]-(group:Group)
     WHERE id(group)=toInt({id})
     RETURN user
     `,
