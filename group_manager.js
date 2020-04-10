@@ -61,7 +61,7 @@ function get_user_id_for_modification(req, res){
 }
 
 app.get('/', (req, res) => {
-  res.send('Group manager')
+  res.send('Group management API, Maxime MOREILLON')
 });
 
 function get_group_by_id(req, res){
@@ -141,7 +141,7 @@ app.post('/delete_group', check_authentication, (req, res) => {
 })
 
 
-app.post('/invite_user_in_group', check_authentication, (req, res) => {
+app.post('/add_user_to_group', check_authentication, (req, res) => {
   // Route to make a user join a group
 
   const session = driver.session();
@@ -151,9 +151,9 @@ app.post('/invite_user_in_group', check_authentication, (req, res) => {
     MATCH (user:User)
     WHERE id(user)=toInt({user_id})
 
-    // Find the workplace
+    // Find the group
     WITH user
-    MATCH (group:Group)-[:ADMINISTRATED_BY]->(administrator)
+    MATCH (group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
     WHERE id(group)=toInt({group_id}) AND id(administrator)=toInt({current_user_id})
 
     // MERGE relationship
@@ -166,6 +166,72 @@ app.post('/invite_user_in_group', check_authentication, (req, res) => {
       current_user_id: res.locals.user.identity.low,
       user_id: req.body.user_id,
       group_id: req.body.group_id
+    })
+  .then(result => { res.send(result.records) })
+  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .finally( () => { session.close() })
+})
+
+app.post('/add_group_to_group', check_authentication, (req, res) => {
+  // Route to make a user join a group
+
+  // TODO: prevent too many subgroups
+  // Todo: prevent cyclic
+
+  const session = driver.session();
+  session
+  .run(`
+    // Find the group to put in the parent group
+    MATCH (child_group:Group)
+    WHERE id(child_group)=toInt({child_group_id})
+
+    // Find the parent group
+    WITH child_group
+    MATCH (parent_group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
+    WHERE id(parent_group)=toInt({parent_group_id})
+      AND id(administrator)=toInt({current_user_id})
+    // Prevent cyclic graphs
+      AND NOT (parent_group)-[:BELONGS_TO]->(child_group)
+      AND NOT (parent_group)-[:BELONGS_TO *1..]->(:Group)-[:BELONGS_TO]->(child_group)
+
+    // MERGE relationship
+    MERGE (child_group)-[:BELONGS_TO]->(parent_group)
+
+    // Return
+    RETURN child_group
+    `,
+    {
+      current_user_id: res.locals.user.identity.low,
+      parent_group_id: req.body.parent_group_id,
+      child_group_id: req.body.child_group_id
+    })
+  .then(result => { res.send(result.records) })
+  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .finally( () => { session.close() })
+})
+
+app.post('/remove_group_from_group', check_authentication, (req, res) => {
+  // Route to make a user join a group
+
+  const session = driver.session();
+  session
+  .run(`
+    // Find the parent_group and the child_group
+    MATCH (child_group:Group)-[r:BELONGS_TO]->(parent_group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
+    WHERE id(child_group)=toInt({child_group_id})
+      AND id(parent_group)=toInt({parent_group_id})
+      AND id(administrator)=toInt({current_user_id})
+
+    // delete relationship
+    DELETE r
+
+    // Return
+    RETURN child_group
+    `,
+    {
+      current_user_id: res.locals.user.identity.low,
+      parent_group_id: req.body.parent_group_id,
+      child_group_id: req.body.child_group_id
     })
   .then(result => { res.send(result.records) })
   .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
@@ -397,23 +463,7 @@ app.get('/groups_directly_belonging_to_group', (req, res) => {
   .finally( () => { session.close() })
 });
 
-app.get('/all_groups_of_group', check_authentication, (req, res) => {
-  // Route to retrieve groups inside a group
 
-  const session = driver.session();
-  session
-  .run(`
-    MATCH (child:Group)-[:BELONGS_TO]->(parent:Group)
-    WHERE id(parent)=toInt({parent})
-    RETURN child
-    `,
-    {
-      id: req.query.id
-    })
-  .then(result => { res.send(result.records) })
-  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
-  .finally( () => { session.close() })
-})
 
 app.get('/users_of_group', (req, res) => {
   // Route to retrieve a user's groups
@@ -424,6 +474,24 @@ app.get('/users_of_group', (req, res) => {
     MATCH (user:User)-[:BELONGS_TO]->(group:Group) // Final
     WHERE id(group)=toInt({id})
     RETURN user
+    `,
+    {
+      id: req.query.id
+    })
+  .then(result => { res.send(result.records) })
+  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .finally( () => { session.close() })
+})
+
+app.get('/groups_of_group', check_authentication, (req, res) => {
+  // Route to retrieve groups inside a group
+
+  const session = driver.session();
+  session
+  .run(`
+    MATCH (group:Group)-[:BELONGS_TO]->(parent:Group)
+    WHERE id(parent)=toInt({id})
+    RETURN group
     `,
     {
       id: req.query.id
@@ -466,6 +534,26 @@ app.get('/administrators_of_group', (req, res) => {
   .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
   .finally( () => { session.close() })
 })
+
+app.post('/update_group_avatar', check_authentication, (req, res) => {
+  // Could be combined with route to update any info of the group
+  const session = driver.session();
+  session
+  .run(`
+    MATCH (user:User)<-[:ADMINISTRATED_BY]-(group:Group)
+    WHERE id(group) = toInt({group_id}) AND id(user) = toInt({user_id})
+    SET group.avatar_src={avatar_src}
+    RETURN group
+    `, {
+      user_id: get_employee_id_for_modification(req, res),
+      group_id: req.body.group_id,
+      avatar_src: req.body.avatar_src
+    })
+    .then(result => { res.send(result.records) })
+    .catch(error => res.status(400).send(`Error accessing DB: ${error}`))
+    .finally( () => session.close())
+});
+
 
 
 app.listen(app_port, () => {
