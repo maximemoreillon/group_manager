@@ -173,24 +173,23 @@ app.post('/add_user_to_group', check_authentication, (req, res) => {
 })
 
 app.post('/add_group_to_group', check_authentication, (req, res) => {
-  // Route to make a user join a group
-
-  // TODO: prevent too many subgroups
-  // Todo: prevent cyclic
+  // Route to make a group join a group
+  // Can only be done if user is admin of both groups
 
   const session = driver.session();
   session
   .run(`
     // Find the group to put in the parent group
-    MATCH (child_group:Group)
+    MATCH (child_group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
     WHERE id(child_group)=toInt({child_group_id})
+      AND id(administrator)=toInt({current_user_id})
 
     // Find the parent group
     WITH child_group
     MATCH (parent_group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
     WHERE id(parent_group)=toInt({parent_group_id})
       AND id(administrator)=toInt({current_user_id})
-    // Prevent cyclic graphs
+      // Prevent cyclic graphs
       AND NOT (parent_group)-[:BELONGS_TO]->(child_group)
       AND NOT (parent_group)-[:BELONGS_TO *1..]->(:Group)-[:BELONGS_TO]->(child_group)
 
@@ -212,6 +211,8 @@ app.post('/add_group_to_group', check_authentication, (req, res) => {
 
 app.post('/remove_group_from_group', check_authentication, (req, res) => {
   // Route to make a user join a group
+
+  // TODO: Should the user b eadmin of child group?
 
   const session = driver.session();
   session
@@ -254,6 +255,7 @@ app.post('/join_group', check_authentication, (req, res) => {
     WITH user
     MATCH (group:Group)
     WHERE id(group)=toInt({group_id})
+      AND (NOT EXISTS(group.restricted) OR NOT group.restricted)
 
     // MERGE relationship
     MERGE (user)-[:BELONGS_TO]->(group)
@@ -438,6 +440,46 @@ app.get('/top_level_groups', (req, res) => {
   .finally( () => { session.close() })
 })
 
+app.get('/top_level_groups/official', (req, res) => {
+  // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
+  const session = driver.session();
+  session
+  .run(`
+    // Find groups
+    MATCH (group:Group) // Final
+
+    // That do not belong to any group
+    WHERE NOT (group)-[:BELONGS_TO]->(:Group)
+      AND group.official
+
+    // NOT SURE WHY DISTINCT NEEDED
+    RETURN DISTINCT(group)
+    `, {})
+  .then(result => { res.send(result.records); })
+  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .finally( () => { session.close() })
+})
+
+app.get('/top_level_groups/non_official', (req, res) => {
+  // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
+  const session = driver.session();
+  session
+  .run(`
+    // Find groups
+    MATCH (group:Group) // Final
+
+    // That do not belong to any group
+    WHERE NOT (group)-[:BELONGS_TO]->(:Group)
+      AND (NOT EXISTS(group.official) OR NOT group.official)
+
+    // NOT SURE WHY DISTINCT NEEDED
+    RETURN DISTINCT(group)
+    `, {})
+  .then(result => { res.send(result.records); })
+  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .finally( () => { session.close() })
+})
+
 app.get('/groups_directly_belonging_to_group', (req, res) => {
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
   const session = driver.session();
@@ -534,6 +576,49 @@ app.get('/administrators_of_group', (req, res) => {
   .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
   .finally( () => { session.close() })
 })
+
+app.post('/set_group_restriction', check_authentication, (req, res) => {
+  // Route to retrieve a user's groups
+  // Todo: error message when failure
+  const session = driver.session();
+  session
+  .run(`
+    MATCH (group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
+    WHERE id(group)=toInt({id}) AND id(administrator)=toInt({current_user_id})
+    SET group.restricted={restricted}
+    RETURN group
+    `,
+    {
+      current_user_id: res.locals.user.identity.low,
+      restricted: req.body.restricted,
+      id: req.body.id,
+    })
+  .then(result => { res.send(result.records) })
+  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .finally( () => { session.close() })
+})
+
+app.post('/set_group_officiality', check_authentication, (req, res) => {
+  // Route to retrieve a user's groups
+  // Todo: error message when failure
+  const session = driver.session();
+  session
+  .run(`
+    MATCH (group:Group)-[:ADMINISTRATED_BY]->(administrator:User{isAdmin: true})
+    WHERE id(group)=toInt({id}) AND id(administrator)=toInt({current_user_id})
+    SET group.official={officiality}
+    RETURN group
+    `,
+    {
+      current_user_id: res.locals.user.identity.low,
+      officiality: req.body.official,
+      id: req.body.id,
+    })
+  .then(result => { res.send(result.records) })
+  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .finally( () => { session.close() })
+})
+
 
 app.post('/update_group_avatar', check_authentication, (req, res) => {
   // Could be combined with route to update any info of the group
