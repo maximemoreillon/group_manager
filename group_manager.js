@@ -466,7 +466,7 @@ app.get('/top_level_groups/official', (req, res) => {
     MATCH (group:Group) // Final
 
     // That do not belong to any group
-    WHERE NOT (group)-[:BELONGS_TO]->(:Group)
+    WHERE NOT (group)-[:BELONGS_TO *1..]->(:Group {official: true})
       AND group.official
 
     // NOT SURE WHY DISTINCT NEEDED
