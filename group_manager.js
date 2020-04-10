@@ -421,6 +421,23 @@ app.get('/groups_of_user', check_authentication, (req, res) => {
   .finally( () => { session.close() })
 })
 
+app.get('/groups_of_administrator', check_authentication, (req, res) => {
+  // Route to retrieve a user's groups
+  const session = driver.session();
+  session
+  .run(`
+    MATCH (user:User)<-[:ADMINISTRATED_BY]-(group:Group)
+    WHERE id(user)=toInt({id})
+    RETURN group
+    `,
+    {
+      id: get_user_id_for_viewing(req, res),
+    })
+  .then(result => { res.send(result.records) })
+  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .finally( () => { session.close() })
+})
+
 app.get('/top_level_groups', (req, res) => {
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
   const session = driver.session();
