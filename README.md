@@ -28,3 +28,10 @@ A NodeJS application to manage groups of users
 | /remove_user_from_group | POST | user_id, group_id | Removes user whose ID is user_id from the group whose ID is group_id. Only possible if the current user is an administrator of the group |
 | /join_group | POST | group_id | Join group whose ID is group_id. Only possible if the group is not restricted |
 | /leave_group | POST | group_id | Leave group whose ID is group_id |
+
+### Management of group administrators
+| Endpoint | Method | parameters | Description |
+| --- | --- | --- | --- |
+| /make_user_administrator_of_group | POST | user_id, group_id | Make user whose ID is user_id an administrator of the group whose ID is group_id. Only possible if the current user is an administrator of the group |
+| /remove_user_from_administrators | POST | user_id, group_id | Removes user whose ID is user_id from the administrators of the group whose ID is group_id. Only possible if the current user is an administrator of the group |
+
