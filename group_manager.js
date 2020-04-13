@@ -595,7 +595,7 @@ app.get('/administrators_of_group', (req, res) => {
 })
 
 app.post('/set_group_restriction', check_authentication, (req, res) => {
-  // Route to retrieve a user's groups
+  // Route to make a group restricted (i.e. cannot be joined)
   // Todo: error message when failure
   const session = driver.session();
   session
@@ -616,7 +616,8 @@ app.post('/set_group_restriction', check_authentication, (req, res) => {
 })
 
 app.post('/set_group_officiality', check_authentication, (req, res) => {
-  // Route to retrieve a user's groups
+  // Route to make a group official
+  // Can only be done by admins
   // Todo: error message when failure
   const session = driver.session();
   session
@@ -637,17 +638,18 @@ app.post('/set_group_officiality', check_authentication, (req, res) => {
 })
 
 
-app.post('/update_group_avatar', check_authentication, (req, res) => {
-  // Could be combined with route to update any info of the group
+
+app.post('/update_avatar', check_authentication, (req, res) => {
+  // Route to update the avatar of the group
   const session = driver.session();
   session
   .run(`
-    MATCH (user:User)<-[:ADMINISTRATED_BY]-(group:Group)
+    MATCH (group:Group)-[:ADMINISTRATED_BY]->(user:User)
     WHERE id(group) = toInt({group_id}) AND id(user) = toInt({user_id})
     SET group.avatar_src={avatar_src}
     RETURN group
     `, {
-      user_id: get_employee_id_for_modification(req, res),
+      user_id: get_user_id_for_modification(req, res),
       group_id: req.body.group_id,
       avatar_src: req.body.avatar_src
     })
