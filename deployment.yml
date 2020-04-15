@@ -16,7 +16,7 @@ spec:
 
       containers:
       - name: group-manager
-        image: 172.16.98.151:5000/group-manager
+        image: ${CONTAINER_REGISTRY}/group-manager
         imagePullPolicy: Always
         ports:
         - containerPort: 7000
@@ -32,7 +32,7 @@ metadata:
 spec:
   ports:
   - port: 7000
-    nodePort: 32000
+    nodePort: 31999
   selector:
     app: group-manager
   type: LoadBalancer
