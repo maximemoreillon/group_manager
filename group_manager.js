@@ -560,6 +560,24 @@ app.get('/groups_of_group', check_authentication, (req, res) => {
   .finally( () => { session.close() })
 })
 
+app.get('/parent_groups_of_group', check_authentication, (req, res) => {
+  // Route to retrieve groups inside a group
+
+  const session = driver.session();
+  session
+  .run(`
+    MATCH (child:Group)-[:BELONGS_TO]->(group:Group)
+    WHERE id(child)=toInt({id})
+    RETURN group
+    `,
+    {
+      id: req.query.id
+    })
+  .then(result => { res.send(result.records) })
+  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .finally( () => { session.close() })
+})
+
 app.get('/users_with_no_group', (req, res) => {
   // Route to retrieve users without a group
 
@@ -615,6 +633,44 @@ app.post('/set_group_restriction', check_authentication, (req, res) => {
   .finally( () => { session.close() })
 })
 
+app.post('/update_avatar', check_authentication, (req, res) => {
+  // Route to update the avatar of the group
+  const session = driver.session();
+  session
+  .run(`
+    MATCH (group:Group)-[:ADMINISTRATED_BY]->(user:User)
+    WHERE id(group) = toInt({group_id}) AND id(user) = toInt({user_id})
+    SET group.avatar_src={avatar_src}
+    RETURN group
+    `, {
+      user_id: get_user_id_for_modification(req, res),
+      group_id: req.body.group_id,
+      avatar_src: req.body.avatar_src
+    })
+    .then(result => { res.send(result.records) })
+    .catch(error => res.status(400).send(`Error accessing DB: ${error}`))
+    .finally( () => session.close())
+})
+
+app.post('/rename_group', check_authentication, (req, res) => {
+  // Route to update the name of the group
+  const session = driver.session();
+  session
+  .run(`
+    MATCH (group:Group)-[:ADMINISTRATED_BY]->(user:User)
+    WHERE id(group) = toInt({group_id}) AND id(user) = toInt({user_id})
+    SET group.name={name}
+    RETURN group
+    `, {
+      user_id: get_user_id_for_modification(req, res),
+      group_id: req.body.group_id,
+      name: req.body.name
+    })
+    .then(result => { res.send(result.records) })
+    .catch(error => res.status(400).send(`Error accessing DB: ${error}`))
+    .finally( () => session.close())
+})
+
 app.post('/set_group_officiality', check_authentication, (req, res) => {
   // Route to make a group official
   // Can only be done by admins
@@ -639,24 +695,7 @@ app.post('/set_group_officiality', check_authentication, (req, res) => {
 
 
 
-app.post('/update_avatar', check_authentication, (req, res) => {
-  // Route to update the avatar of the group
-  const session = driver.session();
-  session
-  .run(`
-    MATCH (group:Group)-[:ADMINISTRATED_BY]->(user:User)
-    WHERE id(group) = toInt({group_id}) AND id(user) = toInt({user_id})
-    SET group.avatar_src={avatar_src}
-    RETURN group
-    `, {
-      user_id: get_user_id_for_modification(req, res),
-      group_id: req.body.group_id,
-      avatar_src: req.body.avatar_src
-    })
-    .then(result => { res.send(result.records) })
-    .catch(error => res.status(400).send(`Error accessing DB: ${error}`))
-    .finally( () => session.close())
-});
+
 
 
 
