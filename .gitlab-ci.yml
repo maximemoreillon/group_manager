@@ -8,7 +8,8 @@ variables:
 containerization:
   stage: containerization
   script:
-    - cp ${SECRETS} ./secrets.js
+    - cp ${ENV} ./.env # .env file provided by GitLab
+    - cp ${SECRETS} ./secrets.js # Should be removed at some point
     - >
       docker build
       --build-arg HTTP_PROXY=$HTTP_PROXY
@@ -16,11 +17,16 @@ containerization:
       -t ${CONTAINER_REGISTRY}/${APPLICATION_NAME}
       .
     - docker push ${CONTAINER_REGISTRY}/${APPLICATION_NAME}
+    - docker image rm ${CONTAINER_REGISTRY}/${APPLICATION_NAME} # Cleanup
 
 deployment:
   stage: deployment
   script:
     - envsubst < deployment.yml | kubectl apply -f -
     - kubectl rollout restart deployment/${APPLICATION_NAME}
+    # If a nodeport is specified, serve app through a nodeport service
+    - if [ -z ${SERVICE_PORT} ]; then echo "SERVICE_PORT not set"; else envsubst < nodeport_service.yml | kubectl apply -f -; fi
+    # if a domain name is specified, serve app through an ingress
+    - if [ -z ${CERTIFICATE_DOMAIN} ]; then echo "CERTIFICATE_DOMAIN not set"; else envsubst < ingress.yml | kubectl apply -f -; fi
   environment:
     name: staging

@@ -2,17 +2,20 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const neo4j = require('neo4j-driver')
-
 const axios = require('axios')
+const dotenv = require('dotenv');
 
-const secrets = require('./secrets');
+dotenv.config();
 
-const app_port = 7000;
-
+var app_port = 80
+if(process.env.APP_PORT) app_port=process.env.APP_PORT
 
 var driver = neo4j.driver(
-  secrets.neo4j.url,
-  neo4j.auth.basic(secrets.neo4j.username, secrets.neo4j.password)
+  process.env.NEO4J_URL,
+  neo4j.auth.basic(
+    process.env.NEO4J_USERNAME,
+    process.env.NEO4J_PASSWORD
+  )
 )
 
 var app = express()
@@ -23,10 +26,13 @@ app.use(cors())
 
 function check_authentication(req, res, next){
 
-  let token = req.headers.authorization.split(" ")[1];
-  if(!token) return res.status(400).send(`No token in authorization header`)
+  // Retrieves JWT from authorization headers and sends it to the authentication microservice
+  // Allows for identification of the user
 
-  axios.post(secrets.authentication_api_url, { jwt: token })
+  let jwt = req.headers.authorization.split(" ")[1];
+  if(!jwt) return res.status(400).send(`No jwt in authorization header`)
+
+  axios.post(`${process.env.AUTHENTICATION_API_URL}/decode_jwt`, { jwt: jwt })
   .then(response => {
     res.locals.user = response.data
     next()
@@ -35,6 +41,10 @@ function check_authentication(req, res, next){
 }
 
 function get_user_id_for_viewing(req, res){
+
+  // Returns the user ID specified in the body is available
+  // otherwise returns ID of the current user
+
   if('employee_id' in req.body) return req.body.employee_id
   if('employee_id' in req.query) return req.query.employee_id
 
@@ -46,6 +56,8 @@ function get_user_id_for_viewing(req, res){
 }
 
 function get_user_id_for_modification(req, res){
+
+  // gets the user ID from the request body and only allow to proceed if matches that of the current user
 
   // TODO: Use user_id instead of employee_id
 
@@ -61,6 +73,7 @@ function get_user_id_for_modification(req, res){
 }
 
 app.get('/', (req, res) => {
+  // Splash screen
   res.send('Group management API, Maxime MOREILLON')
 });
 
