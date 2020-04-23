@@ -30,3 +30,5 @@ deployment:
     - if [ -z ${CERTIFICATE_DOMAIN} ]; then echo "CERTIFICATE_DOMAIN not set"; else envsubst < ingress.yml | kubectl apply -f -; fi
   environment:
     name: staging
+    kubernetes:
+      namespace: ${KUBERNETES_NAMESPACE}
