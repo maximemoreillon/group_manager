@@ -23,7 +23,6 @@ app.use(bodyParser.json())
 app.use(cors())
 
 
-
 function check_authentication(req, res, next){
 
   // Retrieves JWT from authorization headers and sends it to the authentication microservice
