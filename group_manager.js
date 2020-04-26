@@ -22,7 +22,7 @@ var app = express()
 app.use(bodyParser.json())
 app.use(cors())
 
-
+// This should be replaced by the corresponding npm package
 function check_authentication(req, res, next){
 
   // Retrieves JWT from authorization headers and sends it to the authentication microservice
