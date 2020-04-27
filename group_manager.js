@@ -4,6 +4,7 @@ const cors = require('cors');
 const neo4j = require('neo4j-driver')
 const axios = require('axios')
 const dotenv = require('dotenv');
+const auth = require('@moreillon/authentication_middleware')
 
 dotenv.config();
 
@@ -22,22 +23,6 @@ var app = express()
 app.use(bodyParser.json())
 app.use(cors())
 
-// This should be replaced by the corresponding npm package
-function check_authentication(req, res, next){
-
-  // Retrieves JWT from authorization headers and sends it to the authentication microservice
-  // Allows for identification of the user
-
-  let jwt = req.headers.authorization.split(" ")[1];
-  if(!jwt) return res.status(400).send(`No jwt in authorization header`)
-
-  axios.post(`${process.env.AUTHENTICATION_API_URL}/decode_jwt`, { jwt: jwt })
-  .then(response => {
-    res.locals.user = response.data
-    next()
-  })
-  .catch(error => { res.status(400).send(error) })
-}
 
 function get_user_id_for_viewing(req, res){
 
@@ -99,7 +84,7 @@ function get_group_by_id(req, res){
 app.get('/group_by_id', get_group_by_id)
 app.get('/group', get_group_by_id)
 
-app.post('/create_group', check_authentication, (req, res) => {
+app.post('/create_group', auth.authenticate, (req, res) => {
   // Create a group
   const session = driver.session();
   session
@@ -131,7 +116,7 @@ app.post('/create_group', check_authentication, (req, res) => {
   .finally( () => { session.close() })
 })
 
-app.post('/delete_group', check_authentication, (req, res) => {
+app.post('/delete_group', auth.authenticate, (req, res) => {
   // Routeto delete a group
   const session = driver.session();
   session
@@ -153,7 +138,7 @@ app.post('/delete_group', check_authentication, (req, res) => {
 })
 
 
-app.post('/add_user_to_group', check_authentication, (req, res) => {
+app.post('/add_user_to_group', auth.authenticate, (req, res) => {
   // Route to make a user join a group
 
   const session = driver.session();
@@ -184,7 +169,7 @@ app.post('/add_user_to_group', check_authentication, (req, res) => {
   .finally( () => { session.close() })
 })
 
-app.post('/add_group_to_group', check_authentication, (req, res) => {
+app.post('/add_group_to_group', auth.authenticate, (req, res) => {
   // Route to make a group join a group
   // Can only be done if user is admin of both groups
 
@@ -221,7 +206,7 @@ app.post('/add_group_to_group', check_authentication, (req, res) => {
   .finally( () => { session.close() })
 })
 
-app.post('/remove_group_from_group', check_authentication, (req, res) => {
+app.post('/remove_group_from_group', auth.authenticate, (req, res) => {
   // Route to make a user join a group
 
   // TODO: Should the user b eadmin of child group?
@@ -252,7 +237,7 @@ app.post('/remove_group_from_group', check_authentication, (req, res) => {
 })
 
 
-app.post('/join_group', check_authentication, (req, res) => {
+app.post('/join_group', auth.authenticate, (req, res) => {
   // Route to join a group (only works if group is not private)
 
   const session = driver.session();
@@ -287,7 +272,7 @@ app.post('/join_group', check_authentication, (req, res) => {
   .finally( () => { session.close() })
 })
 
-app.post('/leave_group', check_authentication, (req, res) => {
+app.post('/leave_group', auth.authenticate, (req, res) => {
   // Route to leave a group
 
   const session = driver.session();
@@ -317,7 +302,7 @@ app.post('/leave_group', check_authentication, (req, res) => {
 
 
 
-app.post('/remove_user_from_group', check_authentication, (req, res) => {
+app.post('/remove_user_from_group', auth.authenticate, (req, res) => {
   // Route to make a user leave a group
 
   const session = driver.session();
@@ -348,7 +333,7 @@ app.post('/remove_user_from_group', check_authentication, (req, res) => {
   .finally( () => { session.close() })
 })
 
-app.post('/make_user_administrator_of_group', check_authentication, (req, res) => {
+app.post('/make_user_administrator_of_group', auth.authenticate, (req, res) => {
   // Route to leave a group
 
   const session = driver.session();
@@ -382,7 +367,7 @@ app.post('/make_user_administrator_of_group', check_authentication, (req, res) =
   .finally( () => { session.close() })
 })
 
-app.post('/remove_user_from_administrators', check_authentication, (req, res) => {
+app.post('/remove_user_from_administrators', auth.authenticate, (req, res) => {
   // Route to remove a user from the administrators of a group
 
   const session = driver.session();
@@ -416,7 +401,7 @@ app.post('/remove_user_from_administrators', check_authentication, (req, res) =>
 })
 
 
-app.get('/groups_of_user', check_authentication, (req, res) => {
+app.get('/groups_of_user', auth.authenticate, (req, res) => {
   // Route to retrieve a user's groups
   const session = driver.session();
   session
@@ -433,7 +418,7 @@ app.get('/groups_of_user', check_authentication, (req, res) => {
   .finally( () => { session.close() })
 })
 
-app.get('/groups_of_administrator', check_authentication, (req, res) => {
+app.get('/groups_of_administrator', auth.authenticate, (req, res) => {
   // Route to retrieve a user's groups
   const session = driver.session();
   session
@@ -554,7 +539,7 @@ app.get('/users_of_group', (req, res) => {
   .finally( () => { session.close() })
 })
 
-app.get('/groups_of_group', check_authentication, (req, res) => {
+app.get('/groups_of_group', auth.authenticate, (req, res) => {
   // Route to retrieve groups inside a group
 
   const session = driver.session();
@@ -572,7 +557,7 @@ app.get('/groups_of_group', check_authentication, (req, res) => {
   .finally( () => { session.close() })
 })
 
-app.get('/parent_groups_of_group', check_authentication, (req, res) => {
+app.get('/parent_groups_of_group', auth.authenticate, (req, res) => {
   // Route to retrieve groups inside a group
 
   const session = driver.session();
@@ -624,7 +609,7 @@ app.get('/administrators_of_group', (req, res) => {
   .finally( () => { session.close() })
 })
 
-app.post('/set_group_restriction', check_authentication, (req, res) => {
+app.post('/set_group_restriction', auth.authenticate, (req, res) => {
   // Route to make a group restricted (i.e. cannot be joined)
   // Todo: error message when failure
   const session = driver.session();
@@ -645,7 +630,7 @@ app.post('/set_group_restriction', check_authentication, (req, res) => {
   .finally( () => { session.close() })
 })
 
-app.post('/update_avatar', check_authentication, (req, res) => {
+app.post('/update_avatar', auth.authenticate, (req, res) => {
   // Route to update the avatar of the group
   const session = driver.session();
   session
@@ -664,7 +649,7 @@ app.post('/update_avatar', check_authentication, (req, res) => {
     .finally( () => session.close())
 })
 
-app.post('/rename_group', check_authentication, (req, res) => {
+app.post('/rename_group', auth.authenticate, (req, res) => {
   // Route to update the name of the group
   const session = driver.session();
   session
@@ -683,7 +668,7 @@ app.post('/rename_group', check_authentication, (req, res) => {
     .finally( () => session.close())
 })
 
-app.post('/set_group_officiality', check_authentication, (req, res) => {
+app.post('/set_group_officiality', auth.authenticate, (req, res) => {
   // Route to make a group official
   // Can only be done by admins
   // Todo: error message when failure
