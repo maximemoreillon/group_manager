@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@moreillon/authentication_middleware": "^1.0.2",
     "axios": "^0.19.2",
     "cors": "^2.8.5",
     "dotenv": "^8.2.0",
