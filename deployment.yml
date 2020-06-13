@@ -13,7 +13,6 @@ spec:
       labels:
         app: ${APPLICATION_NAME}
     spec:
-
       containers:
       - name: ${APPLICATION_NAME}
         image: ${CONTAINER_REGISTRY}/group-manager
