@@ -19,5 +19,9 @@ spec:
         imagePullPolicy: Always
         ports:
         - containerPort: 80
+        # Get environment variables from secret
+        envFrom:
+        - secretRef:
+           name: environment-variables
       imagePullSecrets:
       - name: registry-credentials # Credentials to pull image from registry
