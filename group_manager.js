@@ -1,12 +1,12 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
+const express = require('express')
+const bodyParser = require('body-parser')
+const cors = require('cors')
 const neo4j = require('neo4j-driver')
 const axios = require('axios')
-const dotenv = require('dotenv');
+const dotenv = require('dotenv')
 const auth = require('@moreillon/authentication_middleware')
 
-dotenv.config();
+dotenv.config()
 
 var app_port = 80
 if(process.env.APP_PORT) app_port=process.env.APP_PORT
