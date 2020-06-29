@@ -113,15 +113,23 @@ exports.remove_user_from_administrators = (req, res) => {
 
 exports.get_groups_of_administrator = (req, res) => {
   // Route to retrieve a user's groups
+  let administrator_id = req.params.administrator_id
+    || req.body.administrator_id
+    || req.body.id
+    || req.query.administrator_id
+    || req.query.id
+
+  if(administrator_id === 'self') administrator_id = res.locals.user.identity.low
+
   const session = driver.session();
   session
   .run(`
     MATCH (user:User)<-[:ADMINISTRATED_BY]-(group:Group)
-    WHERE id(user)=toInt({id})
+    WHERE id(user)=toInt({administrator_id})
     RETURN group
     `,
     {
-      id: auth.get_user_id_for_viewing(req, res),
+      administrator_id: administrator_id,
     })
   .then(result => { res.send(result.records) })
   .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })

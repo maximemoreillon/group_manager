@@ -35,6 +35,8 @@ exports.add_member_to_group = (req, res) => {
     || req.body.user_id
     || req.params.member_id
 
+  console.log(user_id)
+
   const session = driver.session();
   session
   .run(`
@@ -45,7 +47,8 @@ exports.add_member_to_group = (req, res) => {
     // Find the group
     WITH user
     MATCH (group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
-    WHERE id(group)=toInt({group_id}) AND id(administrator)=toInt({current_user_id})
+    WHERE id(group)=toInt({group_id})
+      AND id(administrator)=toInt({current_user_id})
 
     // MERGE relationship
     MERGE (user)-[:BELONGS_TO]->(group)
@@ -110,6 +113,8 @@ exports.get_groups_of_user = (req, res) => {
     || req.query.id
     || req.params.member_id
     || res.locals.user.identity.low
+
+  if(member_id === 'self') member_id = res.locals.user.identity.low
 
   const session = driver.session()
   session

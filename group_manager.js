@@ -29,16 +29,13 @@ app.get('/', (req, res) => {
   res.send('Group management API, Maxime MOREILLON')
 })
 
-const group_controller = require('./controllers/group.js')
-const member_controller = require('./controllers/member.js')
-const administrator_controller = require('./controllers/administrator.js')
-const subgroup_controller = require('./controllers/subgroup.js')
+const group_controller = require('./controllers/groups.js')
+const member_controller = require('./controllers/members.js')
+const administrator_controller = require('./controllers/administrators.js')
 
 
-app.route('/group')
-  .get(group_controller.get_group) // alternative way to get a single group
+app.route('/groups')
   .post(group_controller.create_group)
-  .delete(group_controller.delete_group)
 
 app.route('/groups/top_level')
   .get(group_controller.get_top_level_groups)
@@ -56,40 +53,37 @@ app.route('/groups/:group_id')
 
 // Subgroups
 app.route('/groups/:group_id/groups')
-  .get(subgroup_controller.get_groups_of_group)
+  .get(group_controller.get_groups_of_group)
+
+app.route('/groups/:group_id/groups/direct')
+  .get(group_controller.get_groups_directly_belonging_to_group)
 
 app.route('/groups/:group_id/parent_groups')
   .get(group_controller.get_parent_groups_of_group)
 
-app.route('/groups/:group_id/groups/:subgroup_id')
-  .post(subgroup_controller.add_group_to_group)
-  .delete(subgroup_controller.remove_group_from_group)
+app.route('/groups/:group_id/groups')
+  .post(group_controller.add_group_to_group)
+  .delete(group_controller.remove_group_from_group)
 
-app.route('/groups/:group_id/group')
-  .post(subgroup_controller.add_group_to_group)
-  .delete(subgroup_controller.remove_group_from_group)
+app.route('/groups/:group_id/groups/:subgroup_id')
+  .post(group_controller.add_group_to_group)
+  .delete(group_controller.remove_group_from_group)
 
 // Members
-app.route('/groups_of_user')
+app.route('/members/:member_id/groups')
   .get(member_controller.get_groups_of_user)
 
-app.route('/member/:member_id/groups')
-  .get(member_controller.get_groups_of_user)
+app.route('/groups/none/members')
+  .get(member_controller.users_with_no_group)
 
 app.route('/groups/:group_id/members')
   .get(member_controller.get_members_of_group)
-
-app.route('/groups/:group_id/member')
-  .post(member_controller.add_member_to_group)
-  .delete(member_controller.remove_user_from_group)
+  .post(member_controller.add_member_to_group) // providing user id in the request body
+  .delete(member_controller.remove_user_from_group) // providing user id in the query
 
 app.route('/groups/:group_id/members/:member_id')
-  .post(member_controller.add_member_to_group)
-  .delete(member_controller.remove_user_from_group)
-
-app.route('/users_with_no_group')
-  .get(member_controller.users_with_no_group)
-
+  .post(member_controller.add_member_to_group) // providing user id in the url
+  .delete(member_controller.remove_user_from_group) // providing user id in the url
 
 // Administrators
 app.route('/groups/:group_id/administrators')
@@ -103,7 +97,7 @@ app.route('/groups/:group_id/administrators/:administrator_id')
   .post(administrator_controller.make_user_administrator_of_group)
   .delete(administrator_controller.remove_user_from_administrators)
 
-app.route('/administrator/:administrator_id/groups')
+app.route('/administrators/:administrator_id/groups')
   .get(administrator_controller.get_groups_of_administrator)
 
 app.route('/groups_of_administrator')
@@ -119,6 +113,7 @@ app.get('/group_by_id', group_controller.get_group)
 app.post('/create_group', group_controller.create_group)
 app.post('/delete_group', group_controller.delete_group)
 
+
 app.get('/groups_directly_belonging_to_group', group_controller.get_groups_directly_belonging_to_group)
 app.get('/parent_groups_of_group', group_controller.get_parent_groups_of_group)
 app.get('/top_level_groups', group_controller.get_top_level_groups)
@@ -132,15 +127,15 @@ app.post('/leave_group', group_controller.leave_group)
 
 // Users
 app.get('/users_of_group', member_controller.get_members_of_group)
-
+app.get('/groups_of_user', member_controller.get_groups_of_user)
+app.get('/users_with_no_group', member_controller.users_with_no_group)
 app.post('/remove_user_from_group', member_controller.remove_user_from_group)
 app.post('/add_user_to_group', member_controller.add_member_to_group)
 
-
 // Subgroups
-app.get('/groups_of_group', subgroup_controller.get_groups_of_group)
-app.post('/add_group_to_group', subgroup_controller.add_group_to_group)
-app.post('/remove_group_from_group', subgroup_controller.remove_group_from_group)
+app.get('/groups_of_group', group_controller.get_groups_of_group)
+app.post('/add_group_to_group', group_controller.add_group_to_group)
+app.post('/remove_group_from_group', group_controller.remove_group_from_group)
 
 // Administrators
 app.get('/administrators_of_group', administrator_controller.get_administrators_of_group)
