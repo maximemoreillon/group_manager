@@ -22,6 +22,7 @@ var driver = neo4j.driver(
 var app = express()
 app.use(bodyParser.json())
 app.use(cors())
+app.use(auth.identify_if_possible)
 
 app.get('/', (req, res) => {
   // Splash screen
@@ -61,36 +62,36 @@ app.route('/groups/:group_id/parent_groups')
   .get(group_controller.get_parent_groups_of_group)
 
 app.route('/groups/:group_id/groups')
-  .post(auth.authenticate, group_controller.add_group_to_group)
-  .delete(auth.authenticate, group_controller.remove_group_from_group)
+  .post(group_controller.add_group_to_group)
+  .delete(group_controller.remove_group_from_group)
 
 app.route('/groups/:group_id/groups/:subgroup_id')
-  .post(auth.authenticate, group_controller.add_group_to_group)
-  .delete(auth.authenticate, group_controller.remove_group_from_group)
+  .post(group_controller.add_group_to_group)
+  .delete(group_controller.remove_group_from_group)
 
 // Members
 app.route('/members/:member_id/groups')
-  .get(auth.authenticate, member_controller.get_groups_of_user)
+  .get(member_controller.get_groups_of_user)
 
 app.route('/groups/none/members')
   .get(member_controller.users_with_no_group)
 
 app.route('/groups/:group_id/members')
   .get(member_controller.get_members_of_group)
-  .post(auth.authenticate, member_controller.add_member_to_group) // providing user id in the request body
-  .delete(auth.authenticate, member_controller.remove_user_from_group) // providing user id in the query
+  .post(member_controller.add_member_to_group) // providing user id in the request body
+  .delete(member_controller.remove_user_from_group) // providing user id in the query
 
 app.route('/groups/:group_id/members/:member_id')
-  .post(auth.authenticate, member_controller.add_member_to_group) // providing user id in the url
-  .delete(auth.authenticate, member_controller.remove_user_from_group) // providing user id in the url
+  .post(member_controller.add_member_to_group) // providing user id in the url
+  .delete(member_controller.remove_user_from_group) // providing user id in the url
 
 // Administrators
 app.route('/groups/:group_id/administrators')
   .get(administrator_controller.get_administrators_of_group)
 
 app.route('/groups/:group_id/administrator')
-  .post(auth.authenticate, administrator_controller.make_user_administrator_of_group)
-  .delete(auth.authenticate, administrator_controller.remove_user_from_administrators)
+  .post(administrator_controller.make_user_administrator_of_group)
+  .delete(administrator_controller.remove_user_from_administrators)
 
 app.route('/groups/:group_id/administrators/:administrator_id')
   .post(administrator_controller.make_user_administrator_of_group)
