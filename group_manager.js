@@ -68,6 +68,9 @@ app.route('/groups/:group_id/groups/:subgroup_id')
   .delete(group_controller.remove_group_from_group)
 
 // Members
+app.route('/members/:member_id')
+  .get(member_controller.get_user)
+
 app.route('/members/:member_id/groups')
   .get(member_controller.get_groups_of_user)
 

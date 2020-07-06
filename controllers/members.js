@@ -1,6 +1,29 @@
 const driver = require('../neo4j_driver.js')
 const auth = require('../auth.js')
 
+exports.get_user = (req, res) => {
+  // Route to retrieve a user's info
+
+  let user_id = req.params.member_id
+    || req.params.user_id
+    || req.query.member_id
+    || req.query.user_id
+    || req.query.id
+
+  const session = driver.session();
+  session
+  .run(`
+    MATCH (user:User)
+    WHERE id(user)=toInt({user_id})
+    RETURN user
+    `,
+    {
+      user_id: user_id,
+    })
+  .then(result => { res.send(result.records) })
+  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .finally( () => { session.close() })
+}
 
 exports.get_members_of_group = (req, res) => {
   // Route to retrieve a user's groups

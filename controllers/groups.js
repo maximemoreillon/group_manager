@@ -3,7 +3,9 @@ const auth = require('../auth.js')
 
 exports.get_group = (req, res) => {
 
-  let group_id = req.params.group_id || req.query.id || req.body.id
+  let group_id = req.params.group_id
+    || req.query.id
+    || req.query.group_id
 
   const session = driver.session()
   session
@@ -58,7 +60,12 @@ exports.create_group = (req, res) => {
 
 
 exports.delete_group = (req, res) => {
-  // Routeto delete a group
+  // Route to delete a group
+
+  let group_id = req.params.group_id
+    || req.query.id
+    || req.query.group_id
+
   const session = driver.session();
   session
   .run(`
@@ -68,7 +75,7 @@ exports.delete_group = (req, res) => {
     RETURN "success"
     `, {
     user_id: res.locals.user.identity.low,
-    group_id: req.body.id,
+    group_id: group_id,
   })
   .then(result => {
     if(result.records.length < 1) return res.status(404).send('Error deleting node')
