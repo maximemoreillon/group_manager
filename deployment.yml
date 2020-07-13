@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: ${APPLICATION_NAME}
-        image: ${CONTAINER_REGISTRY}/${APPLICATION_NAME}
+        image: ${DOCKER_IMAGE}
         imagePullPolicy: Always
         ports:
         - containerPort: 80
@@ -23,5 +23,6 @@ spec:
         envFrom:
         - secretRef:
            name: environment-variables
+      # Credentials to pull image from registry
       imagePullSecrets:
-      - name: registry-credentials # Credentials to pull image from registry
+      - name: registry-credentials

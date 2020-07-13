@@ -33,6 +33,8 @@ exports.get_members_of_group = (req, res) => {
     || req.params.id
     || req.params.group_id
 
+  // Todo: allow user to pass what key tey want to query
+  
   const session = driver.session();
   session
   .run(`
