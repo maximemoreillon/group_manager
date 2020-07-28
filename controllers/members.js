@@ -10,6 +10,10 @@ exports.get_user = (req, res) => {
     || req.query.user_id
     || req.query.id
 
+  if(!user_id) return res.status(400).send('User ID not defined')
+
+  if(user_id === 'self') user_id = res.locals.user.identity.low
+
   const session = driver.session();
   session
   .run(`
@@ -33,8 +37,9 @@ exports.get_members_of_group = (req, res) => {
     || req.params.id
     || req.params.group_id
 
+  if(!group_id) return res.status(400).send('Group ID not defined')
   // Todo: allow user to pass what key tey want to query
-  
+
   const session = driver.session();
   session
   .run(`
@@ -56,11 +61,11 @@ exports.add_member_to_group = (req, res) => {
   let group_id = req.body.group_id
     || req.params.group_id
 
+  if(!group_id) return res.status(400).send('Group ID not defined')
+
   let user_id = req.body.member_id
     || req.body.user_id
     || req.params.member_id
-
-  console.log(user_id)
 
   const session = driver.session();
   session
@@ -96,6 +101,8 @@ exports.remove_user_from_group = (req, res) => {
 
   let group_id = req.body.group_id
     || req.params.group_id
+
+  if(!group_id) return res.status(400).send('Group ID not defined')
 
   let user_id = req.body.member_id
     || req.body.user_id

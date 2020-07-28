@@ -66,6 +66,8 @@ exports.delete_group = (req, res) => {
     || req.query.id
     || req.query.group_id
 
+  if(!group_id) return res.status(400).send('Group ID not defined')
+
   const session = driver.session();
   session
   .run(`
@@ -92,6 +94,10 @@ exports.join_group = (req, res) => {
   let group_id = req.params.group_id
     || req.body.group_id
 
+  if(!group_id) return res.status(400).send('Group ID not defined')
+
+  let user_id = res.locals.user.identity.low
+
   const session = driver.session();
   session
   .run(`
@@ -112,7 +118,7 @@ exports.join_group = (req, res) => {
     RETURN user
     `,
     {
-      user_id: auth.get_user_id_for_modification(req, res),
+      user_id: user_id,
       group_id: group_id,
     })
   .then(result => {
@@ -125,8 +131,14 @@ exports.join_group = (req, res) => {
 
 
 exports.leave_group = (req, res) => {
-  // TODO: Could be combined with make user member of group
   // Route to leave a group
+
+  let group_id = req.params.group_id
+    || req.body.group_id
+
+  if(!group_id) return res.status(400).send('Group ID not defined')
+
+  let user_id = res.locals.user.identity.low
 
   const session = driver.session();
   session
@@ -142,8 +154,8 @@ exports.leave_group = (req, res) => {
     RETURN user
     `,
     {
-      user_id: auth.get_user_id_for_modification(req, res),
-      group_id: req.body.group_id
+      user_id: user_id,
+      group_id: group_id,
     })
   .then(result => {
     if(result.records.length < 1) return res.send(`Error leaving group`)
@@ -215,12 +227,19 @@ exports.get_top_level_non_official_groups = (req, res) => {
 
 exports.get_groups_directly_belonging_to_group = (req, res) => {
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
+
+  let group_id = req.query.id
+    || req.query.group_id
+    || req.params.group_id
+
+  if(!group_id) return res.status(400).send('Group ID not defined')
+
   const session = driver.session();
   session
   .run(`
     // Match the parent node
     MATCH (parent_group:Group)
-    WHERE id(parent_group)=toInt({id})
+    WHERE id(parent_group)=toInt({group_id})
 
     // Match children that only have a direct connection to parent
     WITH parent_group
@@ -231,7 +250,7 @@ exports.get_groups_directly_belonging_to_group = (req, res) => {
     RETURN DISTINCT(group)
     `,
     {
-      id: req.query.id
+      group_id: group_id
     })
   .then(result => { res.send(result.records); })
   .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
@@ -244,6 +263,9 @@ exports.get_parent_groups_of_group = (req, res) => {
   let subgroup_id = req.params.group_id
     || req.query.id
     || req.query.group_id
+
+  if(!subgroup_id) return res.status(400).send('Group ID not defined')
+
 
   const session = driver.session();
   session
@@ -269,12 +291,16 @@ exports.patch_group = (req, res) => {
     || req.body.group_id
     || req.params.group_id
 
+  if(!group_id) return res.status(400).send('Group ID not defined')
+
+
   let customizable_fields = [
     'avatar_src',
     'name',
     'restricted',
   ]
 
+  // Allow master admin to make groups officials
   if(res.locals.user.properties.isAdmin){
     customizable_fields.push('official')
   }

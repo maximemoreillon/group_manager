@@ -8,8 +8,7 @@ const auth = require('@moreillon/authentication_middleware')
 
 dotenv.config()
 
-var app_port = 80
-if(process.env.APP_PORT) app_port=process.env.APP_PORT
+const APP_PORT = process.env.APP_PORT || 80
 
 var driver = neo4j.driver(
   process.env.NEO4J_URL,
@@ -22,11 +21,17 @@ var driver = neo4j.driver(
 var app = express()
 app.use(bodyParser.json())
 app.use(cors())
+
+// THIS SHOULD BE CHANGED TO AUTHENTICATE!
 app.use(auth.identify_if_possible)
 
 app.get('/', (req, res) => {
   // Splash screen
-  res.send('Group management API, Maxime MOREILLON')
+  res.send({
+    application_name: 'Group Manager API',
+    neo4j_url: process.env.NEO4J_URL,
+    authentication_api_url: process.env.AUTHENTICATION_API_URL,
+  })
 })
 
 const group_controller = require('./controllers/groups.js')
@@ -35,27 +40,33 @@ const administrator_controller = require('./controllers/administrators.js')
 
 
 app.route('/groups')
-  .post(group_controller.create_group) // Would require auth
+  .post(group_controller.create_group)
 
 app.route('/groups/top_level')
-  .get(group_controller.get_top_level_groups) // No auth OK
+  .get(group_controller.get_top_level_groups)
 
 app.route('/groups/top_level/official')
-  .get(group_controller.get_top_level_official_groups) // No auth OK
+  .get(group_controller.get_top_level_official_groups)
 
 app.route('/groups/top_level/non_official')
-  .get(group_controller.get_top_level_non_official_groups) // No auth OK
+  .get(group_controller.get_top_level_non_official_groups)
 
 app.route('/groups/:group_id')
-  .get(group_controller.get_group) // No auth OK
-  .patch(group_controller.patch_group) // Requires auth
-  .delete(group_controller.delete_group) // Requires auth
+  .get(group_controller.get_group)
+  .patch(group_controller.patch_group)
+  .delete(group_controller.delete_group)
+
+app.route('/groups/:group_id/join')
+  .post(group_controller.join_group)
+
+app.route('/groups/:group_id/leave')
+  .post(group_controller.leave_group)
 
 // Subgroups
 app.route('/groups/:group_id/groups')
   .get(group_controller.get_groups_of_group)
-  .post(group_controller.add_group_to_group) // Requires auth
-  .delete(group_controller.remove_group_from_group) // Requires auth
+  .post(group_controller.add_group_to_group)
+  .delete(group_controller.remove_group_from_group)
 
 app.route('/groups/:group_id/groups/direct')
   .get(group_controller.get_groups_directly_belonging_to_group)
@@ -83,6 +94,25 @@ app.route('/groups/:group_id/members')
   .delete(member_controller.remove_user_from_group) // providing user id in the query
 
 app.route('/groups/:group_id/members/:member_id')
+  .post(member_controller.add_member_to_group) // providing user id in the url
+  .delete(member_controller.remove_user_from_group) // providing user id in the url
+
+// Aliases for members
+app.route('/users/:member_id')
+  .get(member_controller.get_user)
+
+app.route('/users/:member_id/groups')
+  .get(member_controller.get_groups_of_user)
+
+app.route('/groups/none/users')
+  .get(member_controller.users_with_no_group)
+
+app.route('/groups/:group_id/users')
+  .get(member_controller.get_members_of_group)
+  .post(member_controller.add_member_to_group) // providing user id in the request body
+  .delete(member_controller.remove_user_from_group) // providing user id in the query
+
+app.route('/groups/:group_id/users/:member_id')
   .post(member_controller.add_member_to_group) // providing user id in the url
   .delete(member_controller.remove_user_from_group) // providing user id in the url
 
@@ -138,19 +168,6 @@ app.post('/make_user_administrator_of_group', administrator_controller.make_user
 app.post('/remove_user_from_administrators', administrator_controller.remove_user_from_administrators)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-app.listen(app_port, () => {
-  console.log(`Group manager listening on port ${app_port}`)
+app.listen(APP_PORT, () => {
+  console.log(`Group manager listening on port ${APP_PORT}`)
 })
