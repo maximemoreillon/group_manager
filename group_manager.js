@@ -21,9 +21,7 @@ var driver = neo4j.driver(
 var app = express()
 app.use(bodyParser.json())
 app.use(cors())
-
-// THIS SHOULD BE CHANGED TO AUTHENTICATE!
-app.use(auth.identify_if_possible)
+app.use(auth.authenticate)
 
 app.get('/', (req, res) => {
   // Splash screen

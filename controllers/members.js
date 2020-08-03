@@ -67,6 +67,8 @@ exports.add_member_to_group = (req, res) => {
     || req.body.user_id
     || req.params.member_id
 
+  if(!user_id) return res.status(400).send('User ID not defined')
+
   const session = driver.session();
   session
   .run(`
@@ -107,6 +109,8 @@ exports.remove_user_from_group = (req, res) => {
   let user_id = req.body.member_id
     || req.body.user_id
     || req.params.member_id
+
+  if(!user_id) return res.status(400).send('User ID not defined')
 
   const session = driver.session();
   session
