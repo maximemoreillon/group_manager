@@ -11,10 +11,10 @@ exports.get_group = (req, res) => {
   session
   .run(`
     MATCH (group)
-    WHERE id(group)=toInteger($id)
+    WHERE id(group)=toInteger($group_id)
     RETURN group
     `, {
-    id: group_id,
+    group_id: group_id,
   })
   .then(result => {
     // Not too usre about sendig only one record
@@ -33,7 +33,7 @@ exports.create_group = (req, res) => {
   .run(`
     // Create the group
     CREATE (group:Group)
-    SET group.name = {group_name}
+    SET group.name = $group_name
 
     // Create creation relationship
     WITH group
@@ -72,7 +72,8 @@ exports.delete_group = (req, res) => {
   session
   .run(`
     MATCH (group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
-    WHERE id(group)=toInteger($group_id) AND id(administrator)=toInteger($user_id)
+    WHERE id(group)=toInteger($group_id)
+      AND id(administrator)=toInteger($user_id)
     DETACH DELETE group
     RETURN "success"
     `, {
@@ -172,7 +173,7 @@ exports.get_top_level_groups = (req, res) => {
   session
   .run(`
     // Find groups
-    MATCH (group:Group) // Final
+    MATCH (group:Group)
 
     // That do not belong to any group
     WHERE NOT (group)-[:BELONGS_TO]->(:Group)
@@ -191,7 +192,7 @@ exports.get_top_level_official_groups = (req, res) => {
   session
   .run(`
     // Find groups
-    MATCH (group:Group) // Final
+    MATCH (group:Group)
 
     // That do not belong to any group
     WHERE NOT (group)-[:BELONGS_TO *1..]->(:Group {official: true})
@@ -244,7 +245,7 @@ exports.get_groups_directly_belonging_to_group = (req, res) => {
     // Match children that only have a direct connection to parent
     WITH parent_group
     MATCH (parent_group)<-[:BELONGS_TO]-(group:Group)
-    WHERE NOT (group)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(parent_group) // temporary
+    WHERE NOT (group)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(parent_group)
 
     // DISTINCT JUST IN CASE
     RETURN DISTINCT(group)
@@ -271,11 +272,11 @@ exports.get_parent_groups_of_group = (req, res) => {
   session
   .run(`
     MATCH (child:Group)-[:BELONGS_TO]->(group:Group)
-    WHERE id(child)=toInteger({id})
+    WHERE id(child)=toInteger($subgroup_id)
     RETURN group
     `,
     {
-      id: subgroup_id
+      subgroup_id: subgroup_id
     })
   .then(result => { res.send(result.records) })
   .catch(error => {
@@ -322,7 +323,7 @@ exports.patch_group = (req, res) => {
 
     // Patch properties
     // += implies update of existing properties
-    SET group += {properties}
+    SET group += $properties
 
     RETURN group
     `, {
@@ -342,15 +343,20 @@ exports.patch_group = (req, res) => {
 exports.get_groups_of_group = (req, res) => {
   // Route to retrieve groups inside a group
 
+  let group_id = req.query.id
+    || req.query.group_id
+    || req.params.group_id
+    || req.params.id
+
   const session = driver.session();
   session
   .run(`
     MATCH (group:Group)-[:BELONGS_TO]->(parent:Group)
-    WHERE id(parent)=toInteger({id})
+    WHERE id(parent)=toInteger($group_id)
     RETURN group
     `,
     {
-      id: req.query.id
+      group_id: group_id
     })
   .then(result => { res.send(result.records) })
   .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
