@@ -11,7 +11,7 @@ exports.get_group = (req, res) => {
   session
   .run(`
     MATCH (group)
-    WHERE id(group)=toInt({id})
+    WHERE id(group)=toInteger($id)
     RETURN group
     `, {
     id: group_id,
@@ -38,7 +38,7 @@ exports.create_group = (req, res) => {
     // Create creation relationship
     WITH group
     MATCH (creator:User)
-    WHERE id(creator)=toInt({user_id})
+    WHERE id(creator)=toInteger($user_id)
     CREATE (group)-[:ADMINISTRATED_BY]->(creator)
     CREATE (group)-[:CREATED_BY]->(creator) // TODO: ADD DATE
     CREATE (group)<-[:BELONGS_TO]-(creator)
@@ -72,7 +72,7 @@ exports.delete_group = (req, res) => {
   session
   .run(`
     MATCH (group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
-    WHERE id(group)=toInt({group_id}) AND id(administrator)=toInt({user_id})
+    WHERE id(group)=toInteger($group_id) AND id(administrator)=toInteger($user_id)
     DETACH DELETE group
     RETURN "success"
     `, {
@@ -103,12 +103,12 @@ exports.join_group = (req, res) => {
   .run(`
     // Find the user
     MATCH (user:User)
-    WHERE id(user)=toInt({user_id})
+    WHERE id(user)=toInteger($user_id)
 
     // Find the group
     WITH user
     MATCH (group:Group)
-    WHERE id(group)=toInt({group_id})
+    WHERE id(group)=toInteger($group_id)
       AND (NOT EXISTS(group.restricted) OR NOT group.restricted)
 
     // MERGE relationship
@@ -145,7 +145,7 @@ exports.leave_group = (req, res) => {
   .run(`
     // Find the user and the group
     MATCH (user:User)-[r:BELONGS_TO]->(group:Group)
-    WHERE id(user)=toInt({user_id}) AND id(group)=toInt({group_id})
+    WHERE id(user)=toInteger($user_id) AND id(group)=toInteger($group_id)
 
     // delete relationship
     DELETE r
@@ -239,7 +239,7 @@ exports.get_groups_directly_belonging_to_group = (req, res) => {
   .run(`
     // Match the parent node
     MATCH (parent_group:Group)
-    WHERE id(parent_group)=toInt({group_id})
+    WHERE id(parent_group)=toInteger($group_id)
 
     // Match children that only have a direct connection to parent
     WITH parent_group
@@ -271,7 +271,7 @@ exports.get_parent_groups_of_group = (req, res) => {
   session
   .run(`
     MATCH (child:Group)-[:BELONGS_TO]->(group:Group)
-    WHERE id(child)=toInt({id})
+    WHERE id(child)=toInteger({id})
     RETURN group
     `,
     {
@@ -317,8 +317,8 @@ exports.patch_group = (req, res) => {
   .run(`
     // Find the group
     MATCH (group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
-    WHERE id(group)=toInt({group_id})
-      AND id(administrator)=toInt({current_user_id})
+    WHERE id(group)=toInteger($group_id)
+      AND id(administrator)=toInteger($current_user_id)
 
     // Patch properties
     // += implies update of existing properties
@@ -346,7 +346,7 @@ exports.get_groups_of_group = (req, res) => {
   session
   .run(`
     MATCH (group:Group)-[:BELONGS_TO]->(parent:Group)
-    WHERE id(parent)=toInt({id})
+    WHERE id(parent)=toInteger({id})
     RETURN group
     `,
     {
@@ -374,14 +374,14 @@ exports.add_group_to_group = (req, res) => {
   .run(`
     // Find the group to put in the parent group
     MATCH (child_group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
-    WHERE id(child_group)=toInt({child_group_id})
-      AND id(administrator)=toInt({current_user_id})
+    WHERE id(child_group)=toInteger({child_group_id})
+      AND id(administrator)=toInteger($current_user_id)
 
     // Find the parent group
     WITH child_group
     MATCH (parent_group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
-    WHERE id(parent_group)=toInt({parent_group_id})
-      AND id(administrator)=toInt({current_user_id})
+    WHERE id(parent_group)=toInteger({parent_group_id})
+      AND id(administrator)=toInteger($current_user_id)
       // Prevent cyclic graphs
       AND NOT (parent_group)-[:BELONGS_TO]->(child_group)
       AND NOT (parent_group)-[:BELONGS_TO *1..]->(:Group)-[:BELONGS_TO]->(child_group)
@@ -420,9 +420,9 @@ exports.remove_group_from_group = (req, res) => {
   .run(`
     // Find the parent_group and the child_group
     MATCH (child_group:Group)-[r:BELONGS_TO]->(parent_group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
-    WHERE id(child_group)=toInt({child_group_id})
-      AND id(parent_group)=toInt({parent_group_id})
-      AND id(administrator)=toInt({current_user_id})
+    WHERE id(child_group)=toInteger({child_group_id})
+      AND id(parent_group)=toInteger({parent_group_id})
+      AND id(administrator)=toInteger($current_user_id)
 
     // delete relationship
     DELETE r

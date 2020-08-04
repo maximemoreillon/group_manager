@@ -13,11 +13,11 @@ exports.get_administrators_of_group = (req, res) => {
   session
   .run(`
     MATCH (user:User)<-[:ADMINISTRATED_BY]-(group:Group)
-    WHERE id(group)=toInt({id})
+    WHERE id(group)=toInteger($group_id)
     RETURN user
     `,
     {
-      id: group_id
+      group_id: group_id
     })
   .then(result => { res.send(result.records) })
   .catch(error => {
@@ -43,12 +43,13 @@ exports.make_user_administrator_of_group = (req, res) => {
   .run(`
     // Find the user and administrator
     MATCH (user:User)
-    WHERE id(user)=toInt({user_id})
+    WHERE id(user)=toInteger($user_id)
 
     // Find the group and its administrator
     WITH user
     MATCH (group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
-    WHERE id(group)=toInt({group_id}) AND id(administrator)=toInt({current_user_id})
+    WHERE id(group)=toInteger($group_id)
+      AND id(administrator)=toInteger($current_user_id)
 
     // Merge relationship
     MERGE (group)-[:ADMINISTRATED_BY]->(user)
@@ -85,11 +86,12 @@ exports.remove_user_from_administrators = (req, res) => {
   .run(`
     // Find the group (only an admin can remove an admin)
     MATCH (group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
-    WHERE id(group)=toInt({group_id}) AND id(administrator)=toInt({current_user_id})
+    WHERE id(group)=toInteger($group_id)
+      AND id(administrator)=toInteger($current_user_id)
 
     WITH group
     MATCH (user:User)<-[r:ADMINISTRATED_BY]-(group)
-    WHERE id(user)=toInt({user_id})
+    WHERE id(user)=toInteger($user_id)
 
     // Delete relationship
     DELETE r
@@ -125,7 +127,7 @@ exports.get_groups_of_administrator = (req, res) => {
   session
   .run(`
     MATCH (user:User)<-[:ADMINISTRATED_BY]-(group:Group)
-    WHERE id(user)=toInt({administrator_id})
+    WHERE id(user)=toInteger($administrator_id)
     RETURN group
     `,
     {

@@ -18,7 +18,7 @@ exports.get_user = (req, res) => {
   session
   .run(`
     MATCH (user:User)
-    WHERE id(user)=toInt({user_id})
+    WHERE id(user)=toInteger($user_id)
     RETURN user
     `,
     {
@@ -44,7 +44,7 @@ exports.get_members_of_group = (req, res) => {
   session
   .run(`
     MATCH (user:User)-[:BELONGS_TO]->(group:Group)
-    WHERE id(group)=toInt({id})
+    WHERE id(group)=toInteger($id)
     RETURN user
     `,
     {
@@ -74,13 +74,13 @@ exports.add_member_to_group = (req, res) => {
   .run(`
     // Find the user
     MATCH (user:User)
-    WHERE id(user)=toInt({user_id})
+    WHERE id(user)=toInteger($user_id)
 
     // Find the group
     WITH user
     MATCH (group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
-    WHERE id(group)=toInt({group_id})
-      AND id(administrator)=toInt({current_user_id})
+    WHERE id(group)=toInteger($group_id)
+      AND id(administrator)=toInteger($current_user_id)
 
     // MERGE relationship
     MERGE (user)-[:BELONGS_TO]->(group)
@@ -117,9 +117,9 @@ exports.remove_user_from_group = (req, res) => {
   .run(`
     // Find the user and the group
     MATCH (user:User)-[r:BELONGS_TO]->(group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
-    WHERE id(user)=toInt({user_id})
-      AND id(group)=toInt({group_id})
-      AND id(administrator)=toInt({current_user_id})
+    WHERE id(user)=toInteger($user_id)
+      AND id(group)=toInteger($group_id)
+      AND id(administrator)=toInteger($current_user_id)
 
     // delete relationship
     DELETE r
@@ -156,7 +156,7 @@ exports.get_groups_of_user = (req, res) => {
   session
   .run(`
     MATCH (user:User)-[:BELONGS_TO]->(group:Group)
-    WHERE id(user)=toInt({id})
+    WHERE id(user)=toInteger($id)
     RETURN group
     `,
     {
