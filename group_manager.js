@@ -10,7 +10,6 @@ dotenv.config()
 
 const APP_PORT = process.env.APP_PORT || 80
 
-
 const app = express()
 app.use(bodyParser.json())
 app.use(cors())
