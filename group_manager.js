@@ -1,32 +1,25 @@
 const express = require('express')
 const bodyParser = require('body-parser')
 const cors = require('cors')
-const neo4j = require('neo4j-driver')
 const axios = require('axios')
 const dotenv = require('dotenv')
 const auth = require('@moreillon/authentication_middleware')
+const pjson = require('./package.json')
 
 dotenv.config()
 
 const APP_PORT = process.env.APP_PORT || 80
 
-var driver = neo4j.driver(
-  process.env.NEO4J_URL,
-  neo4j.auth.basic(
-    process.env.NEO4J_USERNAME,
-    process.env.NEO4J_PASSWORD
-  )
-)
 
-var app = express()
+const app = express()
 app.use(bodyParser.json())
 app.use(cors())
 app.use(auth.authenticate)
 
 app.get('/', (req, res) => {
-  // Splash screen
   res.send({
     application_name: 'Group Manager API',
+    version: pjson.version,
     neo4j_url: process.env.NEO4J_URL,
     authentication_api_url: process.env.AUTHENTICATION_API_URL,
   })
