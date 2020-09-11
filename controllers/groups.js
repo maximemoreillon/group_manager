@@ -22,7 +22,10 @@ exports.get_group = (req, res) => {
     if(result.records.length < 1) return res.status(404).send('Not found')
     res.send(result.records[0].get('group'))
   })
-  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .catch(error => {
+    console.log(error)
+    res.status(400).send(`Error accessing DB: ${error}`)
+  })
   .finally( () => { session.close() })
 }
 
@@ -40,8 +43,11 @@ exports.create_group = (req, res) => {
     MATCH (creator:User)
     WHERE id(creator)=toInteger($user_id)
     CREATE (group)-[:ADMINISTRATED_BY]->(creator)
-    CREATE (group)-[:CREATED_BY]->(creator) // TODO: ADD DATE
+    CREATE (group)-[creation:CREATED_BY]->(creator)
     CREATE (group)<-[:BELONGS_TO]-(creator)
+
+    // Setting creation date
+    SET creation.date = date()
 
     // Could have a CREATED_BY relationship
 
@@ -54,7 +60,10 @@ exports.create_group = (req, res) => {
     if(result.records.length < 1) return res.status(500).send('Error creating node')
     res.send(result.records[0].get('group'))
   })
-  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .catch(error => {
+    console.log(error)
+    res.status(400).send(`Error accessing DB: ${error}`)
+  })
   .finally( () => { session.close() })
 }
 
@@ -71,20 +80,41 @@ exports.delete_group = (req, res) => {
   const session = driver.session();
   session
   .run(`
-    MATCH (group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
+    // Find the current user
+    MATCH (current_user:User)
+    WHERE id(current_user) = toInteger($current_user_id)
+
+    // Find group
+    WITH current_user
+    MATCH (group:Group)
+
+    // Allow only group admin or super admin to delete a group
     WHERE id(group)=toInteger($group_id)
-      AND id(administrator)=toInteger($user_id)
+      AND ( (group)-[:ADMINISTRATED_BY]->(current_user)
+        OR current_user.isAdmin )
+
+    // Delete the group
     DETACH DELETE group
+
     RETURN "success"
     `, {
-    user_id: res.locals.user.identity.low,
+    current_user_id: res.locals.user.identity.low,
     group_id: group_id,
   })
   .then(result => {
-    if(result.records.length < 1) return res.status(404).send('Error deleting node')
+    if(result.records.length < 1) {
+      console.log(`Error while deleting group ${group_id}`)
+      res.status(400).send('Error deleting node')
+      return
+    }
+
     res.send(result.records[0])
+    console.log(`Group ${group_id} deleted`)
   })
-  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .catch(error => {
+    console.log(error)
+    res.status(400).send(`Error accessing DB: ${error}`)
+  })
   .finally( () => { session.close() })
 }
 
@@ -124,9 +154,13 @@ exports.join_group = (req, res) => {
     })
   .then(result => {
     if(result.records.length < 1) return res.send(`Error joining group`)
+    console.log(`User ${user_id} joined group ${group_id}`)
     res.send(result.records)
   })
-  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .catch(error => {
+    console.log(error)
+    res.status(400).send(`Error accessing DB: ${error}`)
+  })
   .finally( () => { session.close() })
 }
 
@@ -159,10 +193,14 @@ exports.leave_group = (req, res) => {
       group_id: group_id,
     })
   .then(result => {
-    if(result.records.length < 1) return res.send(`Error leaving group`)
+    if(result.records.length < 1) return res.status(400).send(`Error leaving group`)
+    console.log(`User ${user_id} left group ${group_id}`)
     res.send(result.records)
   })
-  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .catch(error => {
+    console.log(error)
+    res.status(400).send(`Error accessing DB: ${error}`)
+  })
   .finally( () => { session.close() })
 }
 
@@ -182,7 +220,10 @@ exports.get_top_level_groups = (req, res) => {
     RETURN DISTINCT(group)
     `, {})
   .then(result => { res.send(result.records); })
-  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .catch(error => {
+    console.log(error)
+    res.status(400).send(`Error accessing DB: ${error}`)
+  })
   .finally( () => { session.close() })
 }
 
@@ -202,7 +243,10 @@ exports.get_top_level_official_groups = (req, res) => {
     RETURN DISTINCT(group)
     `, {})
   .then(result => { res.send(result.records); })
-  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .catch(error => {
+    console.log(error)
+    res.status(400).send(`Error accessing DB: ${error}`)
+  })
   .finally( () => { session.close() })
 }
 
@@ -222,7 +266,10 @@ exports.get_top_level_non_official_groups = (req, res) => {
     RETURN DISTINCT(group)
     `, {})
   .then(result => { res.send(result.records); })
-  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .catch(error => {
+    console.log(error)
+    res.status(400).send(`Error accessing DB: ${error}`)
+  })
   .finally( () => { session.close() })
 }
 
@@ -316,10 +363,20 @@ exports.patch_group = (req, res) => {
   var session = driver.session()
   session
   .run(`
-    // Find the group
-    MATCH (group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
+    // Find the current user
+    MATCH (current_user:User)
+    WHERE id(current_user) = toInteger($current_user_id)
+
+    // Find group
+    WITH current_user
+    MATCH (group:Group)
+
+    // Allow only group admin or super admin to delete a group
     WHERE id(group)=toInteger($group_id)
-      AND id(administrator)=toInteger($current_user_id)
+      AND (
+        (group)-[:ADMINISTRATED_BY]->(current_user)
+        OR current_user.isAdmin
+      )
 
     // Patch properties
     // += implies update of existing properties
@@ -334,7 +391,10 @@ exports.patch_group = (req, res) => {
   .then(result => {
     res.send(result.records)
   })
-  .catch(error => { res.status(500).send(`Error updating group: ${error}`) })
+  .catch(error => {
+    console.log(error)
+    res.status(400).send(`Error accessing DB: ${error}`)
+  })
   .finally(() => session.close())
 
 }
@@ -378,16 +438,26 @@ exports.add_group_to_group = (req, res) => {
   const session = driver.session();
   session
   .run(`
-    // Find the group to put in the parent group
-    MATCH (child_group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
-    WHERE id(child_group)=toInteger({child_group_id})
-      AND id(administrator)=toInteger($current_user_id)
+    // Find the current user
+    MATCH (current_user:User)
+    WHERE id(current_user) = toInteger($current_user_id)
+
+    // Find group
+    WITH current_user
+    MATCH (child_group:Group)
+
+    // Allow only group admin or super admin to delete a group
+    WHERE id(child_group)=toInteger($child_group_id)
+      AND ( (child_group)-[:ADMINISTRATED_BY]->(current_user)
+        OR current_user.isAdmin )
 
     // Find the parent group
-    WITH child_group
-    MATCH (parent_group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
-    WHERE id(parent_group)=toInteger({parent_group_id})
-      AND id(administrator)=toInteger($current_user_id)
+    WITH child_group, current_user
+    MATCH (parent_group:Group)
+    WHERE id(parent_group)=toInteger($parent_group_id)
+      AND ( (parent_group)-[:ADMINISTRATED_BY]->(current_user)
+        OR current_user.isAdmin )
+
       // Prevent cyclic graphs
       AND NOT (parent_group)-[:BELONGS_TO]->(child_group)
       AND NOT (parent_group)-[:BELONGS_TO *1..]->(:Group)-[:BELONGS_TO]->(child_group)
@@ -404,7 +474,10 @@ exports.add_group_to_group = (req, res) => {
       child_group_id: child_group_id,
     })
   .then(result => { res.send(result.records) })
-  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .catch(error => {
+    console.log(error)
+    res.status(400).send(`Error accessing DB: ${error}`)
+  })
   .finally( () => { session.close() })
 }
 
@@ -442,6 +515,9 @@ exports.remove_group_from_group = (req, res) => {
       child_group_id: child_group_id,
     })
   .then(result => { res.send(result.records) })
-  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .catch(error => {
+    console.log(error)
+    res.status(400).send(`Error accessing DB: ${error}`)
+  })
   .finally( () => { session.close() })
 }

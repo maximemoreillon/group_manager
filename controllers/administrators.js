@@ -41,21 +41,29 @@ exports.make_user_administrator_of_group = (req, res) => {
   const session = driver.session();
   session
   .run(`
-    // Find the user and administrator
+    // Find the current user
+    MATCH (current_user:User)
+    WHERE id(current_user) = toInteger($current_user_id)
+
+    // Find group
+    WITH current_user
+    MATCH (group:Group)
+
+    // Allow only group admin or super admin to delete a group
+    WHERE id(group)=toInteger($group_id)
+      AND ( (group)-[:ADMINISTRATED_BY]->(current_user)
+        OR current_user.isAdmin )
+
+    // Find the user
+    WITH group
     MATCH (user:User)
     WHERE id(user)=toInteger($user_id)
-
-    // Find the group and its administrator
-    WITH user
-    MATCH (group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
-    WHERE id(group)=toInteger($group_id)
-      AND id(administrator)=toInteger($current_user_id)
 
     // Merge relationship
     MERGE (group)-[:ADMINISTRATED_BY]->(user)
 
     // Return
-    RETURN user
+    RETURN user, group
     `,
     {
       current_user_id: res.locals.user.identity.low,
@@ -63,10 +71,14 @@ exports.make_user_administrator_of_group = (req, res) => {
       group_id: group_id,
     })
   .then(result => {
-    if(result.records.length < 1) return res.send(`Error leaving group`)
+    if(result.records.length < 1) return res.status(400).send(`Error adding user to administrators`)
+    console.log(`User ${user_id} added to administrators of group ${group_id}`)
     res.send(result.records)
   })
-  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .catch(error => {
+    console.log(error)
+    res.status(400).send(`Error accessing DB: ${error}`)
+  })
   .finally( () => { session.close() })
 }
 
@@ -84,20 +96,29 @@ exports.remove_user_from_administrators = (req, res) => {
   const session = driver.session();
   session
   .run(`
-    // Find the group (only an admin can remove an admin)
-    MATCH (group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
-    WHERE id(group)=toInteger($group_id)
-      AND id(administrator)=toInteger($current_user_id)
+    // Find the current user
+    MATCH (current_user:User)
+    WHERE id(current_user) = toInteger($current_user_id)
 
+    // Find group
+    WITH current_user
+    MATCH (group:Group)
+
+    // Allow only group admin or super admin to delete a group
+    WHERE id(group)=toInteger($group_id)
+      AND ( (group)-[:ADMINISTRATED_BY]->(current_user)
+        OR current_user.isAdmin )
+
+    // Find the user
     WITH group
-    MATCH (user:User)<-[r:ADMINISTRATED_BY]-(group)
-    WHERE id(user)=toInteger($user_id)
+    MATCH (group)-[r:ADMINISTRATED_BY]->(administrator:User)
+    WHERE id(administrator)=toInteger($user_id)
 
     // Delete relationship
     DELETE r
 
     // Return
-    RETURN user
+    RETURN administrator, group
     `,
     {
       current_user_id: res.locals.user.identity.low,
@@ -105,10 +126,14 @@ exports.remove_user_from_administrators = (req, res) => {
       group_id: group_id,
     })
   .then(result => {
-    if(result.records.length < 1) return res.send(`Error removing from administrators`)
+    if(result.records.length < 1) return res.status(400).send(`Error removing from administrators`)
+    console.log(`User ${user_id} removed from administrators of group ${group_id}`)
     res.send(result.records)
   })
-  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .catch(error => {
+    console.error(error)
+    res.status(400).send(`Error accessing DB: ${error}`)
+  })
   .finally( () => { session.close() })
 }
 
@@ -134,6 +159,9 @@ exports.get_groups_of_administrator = (req, res) => {
       administrator_id: administrator_id,
     })
   .then(result => { res.send(result.records) })
-  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .catch(error => {
+    console.log(error)
+    res.status(400).send(`Error accessing DB: ${error}`)
+  })
   .finally( () => { session.close() })
 }

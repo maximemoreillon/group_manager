@@ -25,7 +25,10 @@ exports.get_user = (req, res) => {
       user_id: user_id,
     })
   .then(result => { res.send(result.records) })
-  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .catch(error => {
+    console.log(error)
+    res.status(400).send(`Error accessing DB: ${error}`)
+  })
   .finally( () => { session.close() })
 }
 
@@ -51,7 +54,10 @@ exports.get_members_of_group = (req, res) => {
       id: group_id,
     })
   .then(result => { res.send(result.records) })
-  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .catch(error => {
+    console.log(error)
+    res.status(400).send(`Error accessing DB: ${error}`)
+  })
   .finally( () => { session.close() })
 }
 
@@ -72,15 +78,23 @@ exports.add_member_to_group = (req, res) => {
   const session = driver.session();
   session
   .run(`
+    // Find the current user
+    MATCH (current_user:User)
+    WHERE id(current_user) = toInteger($current_user_id)
+
+    // Find group
+    WITH current_user
+    MATCH (group:Group)
+
+    // Allow only group admin or super admin to delete a group
+    WHERE id(group)=toInteger($group_id)
+      AND ( (group)-[:ADMINISTRATED_BY]->(current_user)
+        OR current_user.isAdmin )
+
     // Find the user
+    WITH group
     MATCH (user:User)
     WHERE id(user)=toInteger($user_id)
-
-    // Find the group
-    WITH user
-    MATCH (group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
-    WHERE id(group)=toInteger($group_id)
-      AND id(administrator)=toInteger($current_user_id)
 
     // MERGE relationship
     MERGE (user)-[:BELONGS_TO]->(group)
@@ -93,8 +107,18 @@ exports.add_member_to_group = (req, res) => {
       user_id: user_id,
       group_id: group_id
     })
-  .then(result => { res.send(result.records) })
-  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .then(result => {
+    if(result.records.length < 1){
+      console.log(`Error adding user to group`)
+      return res.status(400).send(`Error adding user to group`)
+    }
+    console.log(`Added user ${user_id} to group ${group_id}`)
+    res.send(result.records)
+  })
+  .catch(error => {
+    console.log(error)
+    res.status(400).send(`Error accessing DB: ${error}`)
+  })
   .finally( () => { session.close() })
 }
 
@@ -115,17 +139,30 @@ exports.remove_user_from_group = (req, res) => {
   const session = driver.session();
   session
   .run(`
-    // Find the user and the group
-    MATCH (user:User)-[r:BELONGS_TO]->(group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
+
+    // Find the current user
+    MATCH (current_user:User)
+    WHERE id(current_user) = toInteger($current_user_id)
+
+    // Find group
+    WITH current_user
+    MATCH (group:Group)
+
+    // Allow only group admin or super admin to delete a group
+    WHERE id(group)=toInteger($group_id)
+      AND ( (group)-[:ADMINISTRATED_BY]->(current_user)
+        OR current_user.isAdmin )
+
+    // Find the user
+    WITH group
+    MATCH (user:User)-[r:BELONGS_TO]->(group)
     WHERE id(user)=toInteger($user_id)
-      AND id(group)=toInteger($group_id)
-      AND id(administrator)=toInteger($current_user_id)
 
     // delete relationship
     DELETE r
 
     // Return
-    RETURN user
+    RETURN user, group
     `,
     {
       current_user_id: res.locals.user.identity.low,
@@ -133,10 +170,17 @@ exports.remove_user_from_group = (req, res) => {
       group_id: group_id,
     })
   .then(result => {
-    if(result.records.length < 1) return res.send(`Error removing from group`)
+    if(result.records.length < 1){
+      console.log(`Error removing user from group`)
+      return res.status(400).send(`Error removing user from group`)
+    }
+    console.log(`Removed user ${user_id} from group ${group_id}`)
     res.send(result.records)
   })
-  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .catch(error => {
+    console.log(error)
+    res.status(400).send(`Error accessing DB: ${error}`)
+  })
   .finally( () => { session.close() })
 }
 
@@ -182,6 +226,9 @@ exports.users_with_no_group = (req, res) => {
     `,
     {})
   .then(result => { res.send(result.records) })
-  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .catch(error => {
+    console.log(error)
+    res.status(400).send(`Error accessing DB: ${error}`)
+  })
   .finally( () => { session.close() })
 }
