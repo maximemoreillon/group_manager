@@ -20,6 +20,7 @@ exports.get_group = (req, res) => {
     // Not too usre about sendig only one record
     // How about sending all records and let the front end deal with it?
     if(result.records.length < 1) return res.status(404).send('Not found')
+    //console.log(`User ${res.locals.user.identity.low} requested group ${group_id}`)
     res.send(result.records[0].get('group'))
   })
   .catch(error => {
@@ -58,6 +59,7 @@ exports.create_group = (req, res) => {
   })
   .then(result => {
     if(result.records.length < 1) return res.status(500).send('Error creating node')
+    console.log(`User ${res.locals.user.identity.low} created group ${result.records[0].get('group').identity.low}`)
     res.send(result.records[0].get('group'))
   })
   .catch(error => {
@@ -109,7 +111,7 @@ exports.delete_group = (req, res) => {
     }
 
     res.send(result.records[0])
-    console.log(`Group ${group_id} deleted`)
+    console.log(`User ${res.locals.user.identity.low} deleted group ${group_id}`)
   })
   .catch(error => {
     console.log(error)
@@ -127,14 +129,13 @@ exports.join_group = (req, res) => {
 
   if(!group_id) return res.status(400).send('Group ID not defined')
 
-  let user_id = res.locals.user.identity.low
 
   const session = driver.session();
   session
   .run(`
     // Find the user
     MATCH (user:User)
-    WHERE id(user)=toInteger($user_id)
+    WHERE id(user)=toInteger($current_user_id)
 
     // Find the group
     WITH user
@@ -149,12 +150,12 @@ exports.join_group = (req, res) => {
     RETURN user
     `,
     {
-      user_id: user_id,
+      current_user_id: res.locals.user.identity.low,
       group_id: group_id,
     })
   .then(result => {
-    if(result.records.length < 1) return res.send(`Error joining group`)
-    console.log(`User ${user_id} joined group ${group_id}`)
+    if(result.records.length < 1) return res.status(400).send(`Error joining group`)
+    console.log(`User ${res.locals.user.identity.low} joined group ${group_id}`)
     res.send(result.records)
   })
   .catch(error => {
@@ -173,14 +174,13 @@ exports.leave_group = (req, res) => {
 
   if(!group_id) return res.status(400).send('Group ID not defined')
 
-  let user_id = res.locals.user.identity.low
-
   const session = driver.session();
   session
   .run(`
     // Find the user and the group
     MATCH (user:User)-[r:BELONGS_TO]->(group:Group)
-    WHERE id(user)=toInteger($user_id) AND id(group)=toInteger($group_id)
+    WHERE id(user)=toInteger($current_user_id)
+      AND id(group)=toInteger($group_id)
 
     // delete relationship
     DELETE r
@@ -189,12 +189,12 @@ exports.leave_group = (req, res) => {
     RETURN user
     `,
     {
-      user_id: user_id,
+      current_user_id: res.locals.user.identity.low,
       group_id: group_id,
     })
   .then(result => {
     if(result.records.length < 1) return res.status(400).send(`Error leaving group`)
-    console.log(`User ${user_id} left group ${group_id}`)
+    console.log(`User ${res.locals.user.identity.low} left group ${group_id}`)
     res.send(result.records)
   })
   .catch(error => {
@@ -265,7 +265,7 @@ exports.get_top_level_non_official_groups = (req, res) => {
     // NOT SURE WHY DISTINCT NEEDED
     RETURN DISTINCT(group)
     `, {})
-  .then(result => { res.send(result.records); })
+  .then(result => { res.send(result.records) })
   .catch(error => {
     console.log(error)
     res.status(400).send(`Error accessing DB: ${error}`)
@@ -389,6 +389,7 @@ exports.patch_group = (req, res) => {
     properties: req.body,
   })
   .then(result => {
+    console.log(`User ${res.locals.user.identity.low} patched group ${group_id}`)
     res.send(result.records)
   })
   .catch(error => {
@@ -473,7 +474,10 @@ exports.add_group_to_group = (req, res) => {
       parent_group_id: parent_group_id,
       child_group_id: child_group_id,
     })
-  .then(result => { res.send(result.records) })
+  .then(result => {
+    console.log(`User ${res.locals.user.identity.low} added group ${child_group_id} to group ${parent_group_id}`)
+    res.send(result.records)
+  })
   .catch(error => {
     console.log(error)
     res.status(400).send(`Error accessing DB: ${error}`)
@@ -497,11 +501,25 @@ exports.remove_group_from_group = (req, res) => {
   const session = driver.session();
   session
   .run(`
-    // Find the parent_group and the child_group
-    MATCH (child_group:Group)-[r:BELONGS_TO]->(parent_group:Group)-[:ADMINISTRATED_BY]->(administrator:User)
-    WHERE id(child_group)=toInteger({child_group_id})
-      AND id(parent_group)=toInteger({parent_group_id})
-      AND id(administrator)=toInteger($current_user_id)
+    // Find the current user
+    MATCH (current_user:User)
+    WHERE id(current_user) = toInteger($current_user_id)
+
+    // Find the child group group
+    WITH current_user
+    MATCH (child_group:Group)
+
+    // Allow only group admin or super admin to delete a group
+    WHERE id(child_group)=toInteger($child_group_id)
+      AND ( (child_group)-[:ADMINISTRATED_BY]->(current_user)
+        OR current_user.isAdmin )
+
+    // Find the parent group
+    WITH child_group, current_user
+    MATCH (parent_group:Group)-[r:BELONGS_TO]->(parent_group)
+    WHERE id(parent_group)=toInteger($parent_group_id)
+      AND ( (parent_group)-[:ADMINISTRATED_BY]->(current_user)
+        OR current_user.isAdmin )
 
     // delete relationship
     DELETE r
@@ -514,7 +532,10 @@ exports.remove_group_from_group = (req, res) => {
       parent_group_id: parent_group_id,
       child_group_id: child_group_id,
     })
-  .then(result => { res.send(result.records) })
+  .then(result => {
+    console.log(`User ${res.locals.user.identity.low} removed group ${child_group_id} from group ${parent_group_id}`)
+    res.send(result.records)
+  })
   .catch(error => {
     console.log(error)
     res.status(400).send(`Error accessing DB: ${error}`)
