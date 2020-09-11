@@ -459,9 +459,12 @@ exports.add_group_to_group = (req, res) => {
       AND ( (parent_group)-[:ADMINISTRATED_BY]->(current_user)
         OR current_user.isAdmin )
 
-      // Prevent cyclic graphs
+      // Prevent cyclic graphs (NOT WORKING)
       AND NOT (parent_group)-[:BELONGS_TO]->(child_group)
       AND NOT (parent_group)-[:BELONGS_TO *1..]->(:Group)-[:BELONGS_TO]->(child_group)
+
+      // Prevent self group
+      AND NOT id(parent_group)=id(child_group)
 
     // MERGE relationship
     MERGE (child_group)-[:BELONGS_TO]->(parent_group)
@@ -475,6 +478,7 @@ exports.add_group_to_group = (req, res) => {
       child_group_id: child_group_id,
     })
   .then(result => {
+    if(result.records.length < 1) return res.status(400).send(`Error adding group to group`)
     console.log(`User ${res.locals.user.identity.low} added group ${child_group_id} to group ${parent_group_id}`)
     res.send(result.records)
   })
@@ -509,15 +513,15 @@ exports.remove_group_from_group = (req, res) => {
     WITH current_user
     MATCH (child_group:Group)
 
-    // Allow only group admin or super admin to delete a group
+    // Allow only group admin or super admin to remove a group
     WHERE id(child_group)=toInteger($child_group_id)
       AND ( (child_group)-[:ADMINISTRATED_BY]->(current_user)
         OR current_user.isAdmin )
 
     // Find the parent group
     WITH child_group, current_user
-    MATCH (parent_group:Group)-[r:BELONGS_TO]->(parent_group)
-    WHERE id(parent_group)=toInteger($parent_group_id)
+    MATCH (child_group)-[r:BELONGS_TO]->(parent_group:Group)
+    WHERE id(parent_group) = toInteger($parent_group_id)
       AND ( (parent_group)-[:ADMINISTRATED_BY]->(current_user)
         OR current_user.isAdmin )
 
@@ -525,7 +529,7 @@ exports.remove_group_from_group = (req, res) => {
     DELETE r
 
     // Return
-    RETURN child_group
+    RETURN child_group, parent_group
     `,
     {
       current_user_id: res.locals.user.identity.low,
@@ -533,6 +537,7 @@ exports.remove_group_from_group = (req, res) => {
       child_group_id: child_group_id,
     })
   .then(result => {
+    if(result.records.length < 1) return res.status(400).send(`Error removing group from group`)
     console.log(`User ${res.locals.user.identity.low} removed group ${child_group_id} from group ${parent_group_id}`)
     res.send(result.records)
   })
