@@ -1,6 +1,6 @@
 {
   "name": "group_manager",
-  "version": "1.0.5",
+  "version": "1.1.0",
   "description": "",
   "main": "group_manager.js",
   "scripts": {
@@ -14,6 +14,8 @@
     "cors": "^2.8.5",
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
-    "neo4j-driver": "^4.1.1"
+    "neo4j-driver": "^4.1.1",
+    "prom-client": "^12.0.0",
+    "prometheus-api-metrics": "^3.1.0"
   }
 }

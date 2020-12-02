@@ -3,6 +3,8 @@ const bodyParser = require('body-parser')
 const cors = require('cors')
 const axios = require('axios')
 const dotenv = require('dotenv')
+const apiMetrics = require('prometheus-api-metrics')
+
 const auth = require('@moreillon/authentication_middleware')
 const pjson = require('./package.json')
 
@@ -13,6 +15,7 @@ const APP_PORT = process.env.APP_PORT || 80
 const app = express()
 app.use(bodyParser.json())
 app.use(cors())
+app.use(apiMetrics())
 app.use(auth.authenticate)
 
 app.get('/', (req, res) => {
