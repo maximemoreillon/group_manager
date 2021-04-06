@@ -125,42 +125,6 @@ app.route('/administrators/:administrator_id/groups')
   .get(administrator_controller.get_groups_of_administrator)
 
 
-
-////////////
-// LEGACY //
-////////////
-
-// Groups
-app.get('/group_by_id', group_controller.get_group)
-app.post('/create_group', group_controller.create_group)
-app.post('/delete_group', group_controller.delete_group)
-app.get('/parent_groups_of_group', group_controller.get_parent_groups_of_group)
-app.get('/top_level_groups', group_controller.get_top_level_groups)
-app.get('/top_level_groups/official', group_controller.get_top_level_official_groups)
-app.get('/top_level_groups/non_official', group_controller.get_top_level_non_official_groups)
-app.post('/join_group', group_controller.join_group)
-app.post('/leave_group', group_controller.leave_group)
-
-// Subgroups
-app.get('/groups_of_group', group_controller.get_groups_of_group)
-app.get('/groups_directly_belonging_to_group', group_controller.get_groups_directly_belonging_to_group)
-app.post('/add_group_to_group', group_controller.add_group_to_group)
-app.post('/remove_group_from_group', group_controller.remove_group_from_group)
-
-// Users
-app.get('/users_of_group', member_controller.get_members_of_group)
-app.get('/groups_of_user', member_controller.get_groups_of_user)
-app.get('/users_with_no_group', member_controller.users_with_no_group)
-app.post('/remove_user_from_group', member_controller.remove_user_from_group)
-app.post('/add_user_to_group', member_controller.add_member_to_group)
-
-// Administrators
-app.get('/administrators_of_group', administrator_controller.get_administrators_of_group)
-app.get('groups_of_administrator', administrator_controller.get_groups_of_administrator)
-app.post('/make_user_administrator_of_group', administrator_controller.make_user_administrator_of_group)
-app.post('/remove_user_from_administrators', administrator_controller.remove_user_from_administrators)
-
-
 app.listen(APP_PORT, () => {
   console.log(`Group manager listening on port ${APP_PORT}`)
 })

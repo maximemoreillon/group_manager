@@ -1,16 +1,12 @@
+// This file is potentially unused
 exports.get_user_id_for_viewing = (req, res) => {
 
-  // Returns the user ID specified in the body is available
-  // otherwise returns ID of the current user
-
-  if('employee_id' in req.body) return req.body.employee_id
-  if('employee_id' in req.query) return req.query.employee_id
-
-  if('user_id' in req.body) return req.body.user_id
-  if('user_id' in req.query) return req.query.user_id
-
-  // if nothing, just use the logged in user
-  return res.locals.user.identity.low
+  return req.body.user_id
+    ?? req.query.user_id
+    ?? req.body.employee_id
+    ?? req.query.employee_id
+    ?? res.locals.user.identity.low
+    ?? res.locals.user.identity
 }
 
 exports.get_user_id_for_modification = (req, res) => {

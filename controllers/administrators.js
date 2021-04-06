@@ -1,13 +1,15 @@
 const driver = require('../neo4j_driver.js')
-const auth = require('../auth.js')
+
+function get_current_user_id(res){
+  return res.locals.user.identity.low
+    ?? res.locals.user.identity
+}
 
 exports.get_administrators_of_group = (req, res) => {
   // Route to retrieve a user's groups
 
-  let group_id = req.query.group_id
-    || req.params.group_id
-
-
+  const group_id = req.query.group_id
+    ?? req.params.group_id
 
   const session = driver.session();
   session
@@ -16,9 +18,7 @@ exports.get_administrators_of_group = (req, res) => {
     WHERE id(group)=toInteger($group_id)
     RETURN user
     `,
-    {
-      group_id: group_id
-    })
+    { group_id })
   .then(result => { res.send(result.records) })
   .catch(error => {
     console.log(error)
@@ -30,13 +30,13 @@ exports.get_administrators_of_group = (req, res) => {
 exports.make_user_administrator_of_group = (req, res) => {
   // Route to leave a group
 
-  let group_id = req.body.group_id
-    || req.params.group_id
+  const group_id = req.body.group_id
+    ?? req.params.group_id
 
-  let user_id = req.body.member_id
-    || req.body.user_id
-    || req.body.administrator_id
-    || req.params.administrator_id
+  const user_id = req.body.member_id
+    ?? req.body.user_id
+    ?? req.body.administrator_id
+    ?? req.params.administrator_id
 
   const session = driver.session();
   session
@@ -66,9 +66,9 @@ exports.make_user_administrator_of_group = (req, res) => {
     RETURN user, group
     `,
     {
-      current_user_id: res.locals.user.identity.low,
-      user_id: user_id,
-      group_id: group_id,
+      current_user_id: get_current_user_id(res),
+      user_id,
+      group_id,
     })
   .then(result => {
     if(result.records.length < 1) return res.status(400).send(`Error adding user to administrators`)
@@ -85,10 +85,10 @@ exports.make_user_administrator_of_group = (req, res) => {
 exports.remove_user_from_administrators = (req, res) => {
   // Route to remove a user from the administrators of a group
 
-  let group_id = req.body.group_id
+  const group_id = req.body.group_id
     || req.params.group_id
 
-  let user_id = req.body.member_id
+  const user_id = req.body.member_id
     || req.body.user_id
     || req.body.administrator_id
     || req.params.administrator_id
@@ -121,9 +121,9 @@ exports.remove_user_from_administrators = (req, res) => {
     RETURN administrator, group
     `,
     {
-      current_user_id: res.locals.user.identity.low,
-      user_id: user_id,
-      group_id: group_id,
+      current_user_id: get_current_user_id(res),
+      user_id,
+      group_id,
     })
   .then(result => {
     if(result.records.length < 1) return res.status(400).send(`Error removing from administrators`)
@@ -141,12 +141,12 @@ exports.remove_user_from_administrators = (req, res) => {
 exports.get_groups_of_administrator = (req, res) => {
   // Route to retrieve a user's groups
   let administrator_id = req.params.administrator_id
-    || req.body.administrator_id
-    || req.body.id
-    || req.query.administrator_id
-    || req.query.id
+    ?? req.body.administrator_id
+    ?? req.body.id
+    ?? req.query.administrator_id
+    ?? req.query.id
 
-  if(administrator_id === 'self') administrator_id = res.locals.user.identity.low
+  if(administrator_id === 'self') administrator_id = get_current_user_id(res)
 
   const session = driver.session();
   session
@@ -155,9 +155,7 @@ exports.get_groups_of_administrator = (req, res) => {
     WHERE id(user)=toInteger($administrator_id)
     RETURN group
     `,
-    {
-      administrator_id: administrator_id,
-    })
+    { administrator_id, })
   .then(result => { res.send(result.records) })
   .catch(error => {
     console.log(error)

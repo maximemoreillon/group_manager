@@ -1,29 +1,31 @@
 const driver = require('../neo4j_driver.js')
-const auth = require('../auth.js')
+
+function get_current_user_id(res){
+  return res.locals.user.identity.low
+    ?? res.locals.user.identity
+}
 
 exports.get_user = (req, res) => {
   // Route to retrieve a user's info
 
   let user_id = req.params.member_id
-    || req.params.user_id
-    || req.query.member_id
-    || req.query.user_id
-    || req.query.id
+    ?? req.params.user_id
+    ?? req.query.member_id
+    ?? req.query.user_id
+    ?? req.query.id
+
+  if(user_id === 'self') user_id = get_current_user_id(res)
 
   if(!user_id) return res.status(400).send('User ID not defined')
 
-  if(user_id === 'self') user_id = res.locals.user.identity.low
-
-  const session = driver.session();
+  const session = driver.session()
   session
   .run(`
     MATCH (user:User)
     WHERE id(user)=toInteger($user_id)
     RETURN user
     `,
-    {
-      user_id: user_id,
-    })
+    { user_id })
   .then(result => { res.send(result.records) })
   .catch(error => {
     console.log(error)
@@ -35,24 +37,24 @@ exports.get_user = (req, res) => {
 exports.get_members_of_group = (req, res) => {
   // Route to retrieve a user's groups
 
-  let group_id = req.query.id
-    || req.query.group_id
-    || req.params.id
-    || req.params.group_id
+  const group_id = req.query.id
+    ?? req.query.group_id
+    ?? req.params.id
+    ?? req.params.group_id
 
   if(!group_id) return res.status(400).send('Group ID not defined')
+
   // Todo: allow user to pass what key tey want to query
+  // IDEA: Could be done with GraphQL
 
   const session = driver.session();
   session
   .run(`
     MATCH (user:User)-[:BELONGS_TO]->(group:Group)
-    WHERE id(group)=toInteger($id)
+    WHERE id(group)=toInteger($group_id)
     RETURN user
     `,
-    {
-      id: group_id,
-    })
+    { group_id })
   .then(result => { res.send(result.records) })
   .catch(error => {
     console.log(error)
@@ -64,14 +66,14 @@ exports.get_members_of_group = (req, res) => {
 exports.add_member_to_group = (req, res) => {
   // Route to make a user join a group
 
-  let group_id = req.body.group_id
-    || req.params.group_id
+  const group_id = req.body.group_id
+    ?? req.params.group_id
 
   if(!group_id) return res.status(400).send('Group ID not defined')
 
-  let user_id = req.body.member_id
-    || req.body.user_id
-    || req.params.member_id
+  const user_id = req.body.member_id
+    ?? req.body.user_id
+    ?? req.params.member_id
 
   if(!user_id) return res.status(400).send('User ID not defined')
 
@@ -103,9 +105,9 @@ exports.add_member_to_group = (req, res) => {
     RETURN user, group
     `,
     {
-      current_user_id: res.locals.user.identity.low,
-      user_id: user_id,
-      group_id: group_id
+      current_user_id: get_current_user_id(res),
+      user_id,
+      group_id
     })
   .then(result => {
     if(result.records.length < 1){
@@ -126,13 +128,13 @@ exports.remove_user_from_group = (req, res) => {
   // Route to make a user leave a group
 
   let group_id = req.body.group_id
-    || req.params.group_id
+    ?? req.params.group_id
 
   if(!group_id) return res.status(400).send('Group ID not defined')
 
   let user_id = req.body.member_id
-    || req.body.user_id
-    || req.params.member_id
+    ?? req.body.user_id
+    ?? req.params.member_id
 
   if(!user_id) return res.status(400).send('User ID not defined')
 
@@ -165,9 +167,9 @@ exports.remove_user_from_group = (req, res) => {
     RETURN user, group
     `,
     {
-      current_user_id: res.locals.user.identity.low,
-      user_id: user_id,
-      group_id: group_id,
+      current_user_id: get_current_user_id(res),
+      user_id,
+      group_id,
     })
   .then(result => {
     if(result.records.length < 1){
@@ -189,24 +191,25 @@ exports.get_groups_of_user = (req, res) => {
   // Route to retrieve a user's groups
 
   let member_id = req.query.member_id
-    || req.query.user_id
-    || req.query.id
-    || req.params.member_id
-    || res.locals.user.identity.low
+    ?? req.query.user_id
+    ?? req.query.id
+    ?? req.params.member_id
+    ?? get_current_user_id(res)
 
-  if(member_id === 'self') member_id = res.locals.user.identity.low
+  if(member_id === 'self') member_id = get_current_user_id(res)
 
   const session = driver.session()
   session
   .run(`
     MATCH (user:User)-[:BELONGS_TO]->(group:Group)
-    WHERE id(user)=toInteger($id)
+    WHERE id(user)=toInteger($member_id)
     RETURN group
     `,
-    {
-      id: member_id,
-    })
-  .then(result => { res.send(result.records) })
+    { member_id })
+  .then(result => {
+    console.log(`Groups of user ${member_id} queried`)
+    res.send(result.records)
+   })
   .catch(error => {
     console.log(error)
     res.status(400).send(`Error accessing DB: ${error}`)
@@ -223,8 +226,7 @@ exports.users_with_no_group = (req, res) => {
     MATCH (user:User)
     WHERE NOT (user)-[:BELONGS_TO]->(:Group)
     RETURN user
-    `,
-    {})
+    `, {})
   .then(result => { res.send(result.records) })
   .catch(error => {
     console.log(error)

@@ -1,9 +1,13 @@
 const driver = require('../neo4j_driver.js')
-const auth = require('../auth.js')
+
+function get_current_user_id(res){
+  return res.locals.user.identity.low
+    ?? res.locals.user.identity
+}
 
 exports.get_group = (req, res) => {
 
-  let group_id = req.params.group_id
+  const group_id = req.params.group_id
     || req.query.id
     || req.query.group_id
 
@@ -14,13 +18,13 @@ exports.get_group = (req, res) => {
     WHERE id(group)=toInteger($group_id)
     RETURN group
     `, {
-    group_id: group_id,
+    group_id,
   })
   .then(result => {
-    // Not too usre about sendig only one record
+    // NOTE: Not too sure about sendig only one record
     // How about sending all records and let the front end deal with it?
     if(result.records.length < 1) return res.status(404).send('Not found')
-    //console.log(`User ${res.locals.user.identity.low} requested group ${group_id}`)
+    console.log(`User ${get_current_user_id(res)} requested group ${group_id}`)
     res.send(result.records[0].get('group'))
   })
   .catch(error => {
@@ -32,6 +36,8 @@ exports.get_group = (req, res) => {
 
 exports.create_group = (req, res) => {
   // Create a group
+  // TODO: validation
+
   const session = driver.session();
   session
   .run(`
@@ -54,12 +60,12 @@ exports.create_group = (req, res) => {
 
     RETURN group
     `, {
-    user_id: res.locals.user.identity.low,
+    user_id: get_current_user_id(res),
     group_name: req.body.name,
   })
   .then(result => {
     if(result.records.length < 1) return res.status(500).send('Error creating node')
-    console.log(`User ${res.locals.user.identity.low} created group ${result.records[0].get('group').identity.low}`)
+    console.log(`User ${get_current_user_id(res)} created group ${result.records[0].get('group').identity}`)
     res.send(result.records[0].get('group'))
   })
   .catch(error => {
@@ -73,9 +79,9 @@ exports.create_group = (req, res) => {
 exports.delete_group = (req, res) => {
   // Route to delete a group
 
-  let group_id = req.params.group_id
-    || req.query.id
-    || req.query.group_id
+  const group_id = req.params.group_id
+    ?? req.query.id
+    ?? req.query.group_id
 
   if(!group_id) return res.status(400).send('Group ID not defined')
 
@@ -100,8 +106,8 @@ exports.delete_group = (req, res) => {
 
     RETURN "success"
     `, {
-    current_user_id: res.locals.user.identity.low,
-    group_id: group_id,
+    current_user_id: get_current_user_id(res),
+    group_id,
   })
   .then(result => {
     if(result.records.length < 1) {
@@ -111,7 +117,7 @@ exports.delete_group = (req, res) => {
     }
 
     res.send(result.records[0])
-    console.log(`User ${res.locals.user.identity.low} deleted group ${group_id}`)
+    console.log(`User ${get_current_user_id(res)} deleted group ${group_id}`)
   })
   .catch(error => {
     console.log(error)
@@ -124,7 +130,7 @@ exports.join_group = (req, res) => {
   // TODO: Could be combined with make user member of group
   // Route to join a group (only works if group is not private)
 
-  let group_id = req.params.group_id
+  const group_id = req.params.group_id
     || req.body.group_id
 
   if(!group_id) return res.status(400).send('Group ID not defined')
@@ -150,12 +156,12 @@ exports.join_group = (req, res) => {
     RETURN user
     `,
     {
-      current_user_id: res.locals.user.identity.low,
-      group_id: group_id,
+      current_user_id: get_current_user_id(res),
+      group_id,
     })
   .then(result => {
     if(result.records.length < 1) return res.status(400).send(`Error joining group`)
-    console.log(`User ${res.locals.user.identity.low} joined group ${group_id}`)
+    console.log(`User ${get_current_user_id(res)} joined group ${group_id}`)
     res.send(result.records)
   })
   .catch(error => {
@@ -169,7 +175,7 @@ exports.join_group = (req, res) => {
 exports.leave_group = (req, res) => {
   // Route to leave a group
 
-  let group_id = req.params.group_id
+  const group_id = req.params.group_id
     || req.body.group_id
 
   if(!group_id) return res.status(400).send('Group ID not defined')
@@ -189,12 +195,12 @@ exports.leave_group = (req, res) => {
     RETURN user
     `,
     {
-      current_user_id: res.locals.user.identity.low,
-      group_id: group_id,
+      current_user_id: get_current_user_id(res),
+      group_id,
     })
   .then(result => {
     if(result.records.length < 1) return res.status(400).send(`Error leaving group`)
-    console.log(`User ${res.locals.user.identity.low} left group ${group_id}`)
+    console.log(`User ${get_current_user_id(res)} left group ${group_id}`)
     res.send(result.records)
   })
   .catch(error => {
@@ -207,6 +213,7 @@ exports.leave_group = (req, res) => {
 
 exports.get_top_level_groups = (req, res) => {
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
+
   const session = driver.session();
   session
   .run(`
@@ -236,6 +243,7 @@ exports.get_top_level_official_groups = (req, res) => {
     MATCH (group:Group)
 
     // That do not belong to any group
+    // Not sure what *1.. is for anymore
     WHERE NOT (group)-[:BELONGS_TO *1..]->(:Group {official: true})
       AND group.official
 
@@ -276,9 +284,9 @@ exports.get_top_level_non_official_groups = (req, res) => {
 exports.get_groups_directly_belonging_to_group = (req, res) => {
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
 
-  let group_id = req.query.id
-    || req.query.group_id
-    || req.params.group_id
+  const group_id = req.query.id
+    ?? req.query.group_id
+    ?? req.params.group_id
 
   if(!group_id) return res.status(400).send('Group ID not defined')
 
@@ -297,10 +305,11 @@ exports.get_groups_directly_belonging_to_group = (req, res) => {
     // DISTINCT JUST IN CASE
     RETURN DISTINCT(group)
     `,
-    {
-      group_id: group_id
-    })
-  .then(result => { res.send(result.records); })
+    { group_id })
+  .then(result => {
+    console.log(`Direct subgroups of group ${group_id} queried`)
+    res.send(result.records)
+   })
   .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
   .finally( () => { session.close() })
 }
@@ -308,24 +317,25 @@ exports.get_groups_directly_belonging_to_group = (req, res) => {
 exports.get_parent_groups_of_group = (req, res) => {
   // Route to retrieve groups inside a group
 
-  let subgroup_id = req.params.group_id
-    || req.query.id
-    || req.query.group_id
+  const subgroup_id = req.params.group_id
+    ?? req.query.id
+    ?? req.query.group_id
 
   if(!subgroup_id) return res.status(400).send('Group ID not defined')
 
 
-  const session = driver.session();
+  const session = driver.session()
   session
   .run(`
     MATCH (child:Group)-[:BELONGS_TO]->(group:Group)
     WHERE id(child)=toInteger($subgroup_id)
     RETURN group
     `,
-    {
-      subgroup_id: subgroup_id
-    })
-  .then(result => { res.send(result.records) })
+    { subgroup_id, })
+  .then(result => {
+    console.log(`Parent groups of group ${subgroup_id} queried`)
+    res.send(result.records)
+  })
   .catch(error => {
     console.log(error)
     res.status(400).send(`Error accessing DB: ${error}`)
@@ -335,9 +345,9 @@ exports.get_parent_groups_of_group = (req, res) => {
 
 exports.patch_group = (req, res) => {
 
-  let group_id = req.body.id
-    || req.body.group_id
-    || req.params.group_id
+  const group_id = req.body.id
+    ?? req.body.group_id
+    ?? req.params.group_id
 
   if(!group_id) return res.status(400).send('Group ID not defined')
 
@@ -357,10 +367,11 @@ exports.patch_group = (req, res) => {
   for (let [key, value] of Object.entries(req.body)) {
     if(!customizable_fields.includes(key)) {
       delete req.body[key]
+      // TODO: forbid changes
     }
   }
 
-  var session = driver.session()
+  const session = driver.session()
   session
   .run(`
     // Find the current user
@@ -384,12 +395,12 @@ exports.patch_group = (req, res) => {
 
     RETURN group
     `, {
-    current_user_id: res.locals.user.identity.low,
-    group_id: group_id,
+    current_user_id: get_current_user_id(res),
+    group_id,
     properties: req.body,
   })
   .then(result => {
-    console.log(`User ${res.locals.user.identity.low} patched group ${group_id}`)
+    console.log(`User ${get_current_user_id(res)} patched group ${group_id}`)
     res.send(result.records)
   })
   .catch(error => {
@@ -404,10 +415,10 @@ exports.patch_group = (req, res) => {
 exports.get_groups_of_group = (req, res) => {
   // Route to retrieve groups inside a group
 
-  let group_id = req.query.id
-    || req.query.group_id
-    || req.params.group_id
-    || req.params.id
+  const group_id = req.query.id
+    ?? req.query.group_id
+    ?? req.params.group_id
+    ?? req.params.id
 
   const session = driver.session();
   session
@@ -416,10 +427,11 @@ exports.get_groups_of_group = (req, res) => {
     WHERE id(parent)=toInteger($group_id)
     RETURN group
     `,
-    {
-      group_id: group_id
-    })
-  .then(result => { res.send(result.records) })
+    { group_id })
+  .then(result => {
+    console.log(`Subgroups of group ${group_id} queried`)
+    res.send(result.records)
+   })
   .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
   .finally( () => { session.close() })
 }
@@ -428,15 +440,15 @@ exports.add_group_to_group = (req, res) => {
   // Route to make a group join a group
   // Can only be done if user is admin of both groups
 
-  let parent_group_id = req.body.parent_group_id
-    || req.params.group_id
-    || req.body.group_id
+  const parent_group_id = req.body.parent_group_id
+    ?? req.params.group_id
+    ?? req.body.group_id
 
-  let child_group_id = req.body.child_group_id
-    || req.body.subgroup_id
-    || req.params.subgroup_id
+  const child_group_id = req.body.child_group_id
+    ?? req.body.subgroup_id
+    ?? req.params.subgroup_id
 
-  const session = driver.session();
+  const session = driver.session()
   session
   .run(`
     // Find the current user
@@ -473,13 +485,13 @@ exports.add_group_to_group = (req, res) => {
     RETURN child_group
     `,
     {
-      current_user_id: res.locals.user.identity.low,
-      parent_group_id: parent_group_id,
-      child_group_id: child_group_id,
+      current_user_id: get_current_user_id(res),
+      parent_group_id,
+      child_group_id,
     })
   .then(result => {
     if(result.records.length < 1) return res.status(400).send(`Error adding group to group`)
-    console.log(`User ${res.locals.user.identity.low} added group ${child_group_id} to group ${parent_group_id}`)
+    console.log(`User ${get_current_user_id(res)} added group ${child_group_id} to group ${parent_group_id}`)
     res.send(result.records)
   })
   .catch(error => {
@@ -494,13 +506,13 @@ exports.remove_group_from_group = (req, res) => {
 
   // TODO: Should the user be admin of child group?
 
-  let parent_group_id = req.body.parent_group_id
-    || req.params.group_id
-    || req.body.group_id
+  const parent_group_id = req.body.parent_group_id
+    ?? req.params.group_id
+    ?? req.body.group_id
 
-  let child_group_id = req.body.child_group_id
-    || req.body.subgroup_id
-    || req.params.subgroup_id
+  const child_group_id = req.body.child_group_id
+    ?? req.body.subgroup_id
+    ?? req.params.subgroup_id
 
   const session = driver.session();
   session
@@ -532,13 +544,13 @@ exports.remove_group_from_group = (req, res) => {
     RETURN child_group, parent_group
     `,
     {
-      current_user_id: res.locals.user.identity.low,
-      parent_group_id: parent_group_id,
-      child_group_id: child_group_id,
+      current_user_id: get_current_user_id(res),
+      parent_group_id,
+      child_group_id,
     })
   .then(result => {
     if(result.records.length < 1) return res.status(400).send(`Error removing group from group`)
-    console.log(`User ${res.locals.user.identity.low} removed group ${child_group_id} from group ${parent_group_id}`)
+    console.log(`User ${get_current_user_id(res)} removed group ${child_group_id} from group ${parent_group_id}`)
     res.send(result.records)
   })
   .catch(error => {
