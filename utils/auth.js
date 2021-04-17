@@ -1,4 +1,5 @@
-// This file is potentially unused
+// NOTE: This file is potentially unused
+
 exports.get_user_id_for_viewing = (req, res) => {
 
   return req.body.user_id

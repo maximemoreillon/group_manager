@@ -1,4 +1,4 @@
-const driver = require('../neo4j_driver.js')
+const driver = require('../../utils/neo4j_driver_v2.js')
 
 function get_current_user_id(res){
   return res.locals.user.identity.low
@@ -26,7 +26,11 @@ exports.get_user = (req, res) => {
     RETURN user
     `,
     { user_id })
-  .then(result => { res.send(result.records) })
+  .then( ({records}) => {
+    if(records.length < 1) return res.status(400).send(`Error adding group to group`)
+    console.log(`User ${user_id} queried`)
+    res.send(records[0].get('user'))
+   })
   .catch(error => {
     console.log(error)
     res.status(400).send(`Error accessing DB: ${error}`)
@@ -37,10 +41,7 @@ exports.get_user = (req, res) => {
 exports.get_members_of_group = (req, res) => {
   // Route to retrieve a user's groups
 
-  const group_id = req.query.id
-    ?? req.query.group_id
-    ?? req.params.id
-    ?? req.params.group_id
+  const group_id = req.params.id ?? req.params.group_id
 
   if(!group_id) return res.status(400).send('Group ID not defined')
 
@@ -55,7 +56,11 @@ exports.get_members_of_group = (req, res) => {
     RETURN user
     `,
     { group_id })
-  .then(result => { res.send(result.records) })
+  .then(({records}) => {
+    console.log(`Users of group ${group_id} queried`)
+    const users = records.map(record => record.get('user'))
+    res.send(users)
+   })
   .catch(error => {
     console.log(error)
     res.status(400).send(`Error accessing DB: ${error}`)
@@ -115,7 +120,7 @@ exports.add_member_to_group = (req, res) => {
       return res.status(400).send(`Error adding user to group`)
     }
     console.log(`Added user ${user_id} to group ${group_id}`)
-    res.send(result.records)
+    res.send(result.records[0].get('user'))
   })
   .catch(error => {
     console.log(error)
@@ -177,7 +182,7 @@ exports.remove_user_from_group = (req, res) => {
       return res.status(400).send(`Error removing user from group`)
     }
     console.log(`Removed user ${user_id} from group ${group_id}`)
-    res.send(result.records)
+    res.send(result.records[0].get('user'))
   })
   .catch(error => {
     console.log(error)
@@ -206,9 +211,10 @@ exports.get_groups_of_user = (req, res) => {
     RETURN group
     `,
     { member_id })
-  .then(result => {
+  .then(({records}) => {
     console.log(`Groups of user ${member_id} queried`)
-    res.send(result.records)
+    const groups = records.map(record => record.get('group'))
+    res.send(groups)
    })
   .catch(error => {
     console.log(error)
@@ -227,7 +233,10 @@ exports.users_with_no_group = (req, res) => {
     WHERE NOT (user)-[:BELONGS_TO]->(:Group)
     RETURN user
     `, {})
-  .then(result => { res.send(result.records) })
+  .then(result => { 
+    const users = records.map(record => record.get('user'))
+    res.send(users)
+  })
   .catch(error => {
     console.log(error)
     res.status(400).send(`Error accessing DB: ${error}`)
