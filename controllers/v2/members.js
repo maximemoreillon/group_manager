@@ -233,9 +233,10 @@ exports.users_with_no_group = (req, res) => {
     WHERE NOT (user)-[:BELONGS_TO]->(:Group)
     RETURN user
     `, {})
-  .then(result => { 
+  .then(({records}) => {
     const users = records.map(record => record.get('user'))
     res.send(users)
+    console.log(`[Neo4J] Queried users with no group`)
   })
   .catch(error => {
     console.log(error)
