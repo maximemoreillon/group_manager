@@ -24,8 +24,8 @@ exports.get_group = (req, res) => {
     // NOTE: Not too sure about sendig only one record
     // How about sending all records and let the front end deal with it?
     if(result.records.length < 1) return res.status(404).send('Not found')
-    console.log(`User ${get_current_user_id(res)} requested group ${group_id}`)
     res.send(result.records[0].get('group'))
+    console.log(`User ${get_current_user_id(res)} requested group ${group_id}`)
   })
   .catch(error => {
     console.log(error)
@@ -437,18 +437,29 @@ exports.get_groups_of_group = (req, res) => {
     ?? req.params.group_id
     ?? req.params.id
 
+
+  const direct_only_query = `
+  // Match children that only have a direct connection to parent
+  WITH parent
+  MATCH (parent)<-[:BELONGS_TO]-(group:Group)
+  WHERE NOT (group)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(parent)
+  `
+
   const session = driver.session();
   session
   .run(`
     MATCH (group:Group)-[:BELONGS_TO]->(parent:Group)
     WHERE id(parent)=toInteger($group_id)
-    RETURN group
+
+    ${req.query.direct === 'true' ? direct_only_query : ''}
+
+    RETURN DISTINCT(group)
     `,
     { group_id })
    .then( ({records}) => {
-     console.log(`Subgroups of group ${group_id} queried`)
      const groups = records.map(record => record.get('group'))
      res.send(groups)
+     console.log(`Subgroups of group ${group_id} queried`)
     })
   .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
   .finally( () => { session.close() })
