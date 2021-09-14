@@ -295,39 +295,7 @@ exports.get_top_level_non_official_groups = (req, res) => {
   .finally( () => { session.close() })
 }
 
-exports.get_groups_directly_belonging_to_group = (req, res) => {
-  // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
 
-  const group_id = req.query.id
-    ?? req.query.group_id
-    ?? req.params.group_id
-
-  if(!group_id) return res.status(400).send('Group ID not defined')
-
-  const session = driver.session();
-  session
-  .run(`
-    // Match the parent node
-    MATCH (parent_group:Group)
-    WHERE id(parent_group)=toInteger($group_id)
-
-    // Match children that only have a direct connection to parent
-    WITH parent_group
-    MATCH (parent_group)<-[:BELONGS_TO]-(group:Group)
-    WHERE NOT (group)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(parent_group)
-
-    // DISTINCT JUST IN CASE
-    RETURN DISTINCT(group)
-    `,
-    { group_id })
-   .then( ({records}) => {
-     console.log(`Direct subgroups of group ${group_id} queried`)
-     const groups = records.map(record => record.get('group'))
-     res.send(groups)
-    })
-  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
-  .finally( () => { session.close() })
-}
 
 exports.get_parent_groups_of_group = (req, res) => {
   // Route to retrieve groups inside a group
@@ -338,19 +306,25 @@ exports.get_parent_groups_of_group = (req, res) => {
 
   if(!subgroup_id) return res.status(400).send('Group ID not defined')
 
+  const direct_only_query = `
+    AND NOT (child)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(group)
+    `
+
 
   const session = driver.session()
   session
   .run(`
     MATCH (child:Group)-[:BELONGS_TO]->(group:Group)
     WHERE id(child)=toInteger($subgroup_id)
+    ${req.query.direct === 'true' ? direct_only_query : ''}
+
     RETURN group
     `,
     { subgroup_id, })
   .then( ({records}) => {
-    console.log(`Parent groups of group ${subgroup_id} queried`)
     const groups = records.map(record => record.get('group'))
     res.send(groups)
+    console.log(`Parent groups of group ${subgroup_id} queried`)
    })
   .catch(error => {
     console.log(error)
@@ -439,11 +413,8 @@ exports.get_groups_of_group = (req, res) => {
 
 
   const direct_only_query = `
-  // Match children that only have a direct connection to parent
-  WITH parent
-  MATCH (parent)<-[:BELONGS_TO]-(group:Group)
-  WHERE NOT (group)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(parent)
-  `
+    AND NOT (group)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(parent)
+    `
 
   const session = driver.session();
   session
@@ -460,6 +431,42 @@ exports.get_groups_of_group = (req, res) => {
      const groups = records.map(record => record.get('group'))
      res.send(groups)
      console.log(`Subgroups of group ${group_id} queried`)
+    })
+  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
+  .finally( () => { session.close() })
+}
+
+exports.get_groups_directly_belonging_to_group = (req, res) => {
+  // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
+
+  // Note: Use GET_CHILD_GROUPS with qyerfy filter
+
+  const group_id = req.query.id
+    ?? req.query.group_id
+    ?? req.params.group_id
+
+  if(!group_id) return res.status(400).send('Group ID not defined')
+
+  const session = driver.session();
+  session
+  .run(`
+    // Match the parent node
+    MATCH (parent_group:Group)
+    WHERE id(parent_group)=toInteger($group_id)
+
+    // Match children that only have a direct connection to parent
+    WITH parent_group
+    MATCH (parent_group)<-[:BELONGS_TO]-(group:Group)
+    WHERE NOT (group)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(parent_group)
+
+    // DISTINCT JUST IN CASE
+    RETURN DISTINCT(group)
+    `,
+    { group_id })
+   .then( ({records}) => {
+     console.log(`Direct subgroups of group ${group_id} queried`)
+     const groups = records.map(record => record.get('group'))
+     res.send(groups)
     })
   .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
   .finally( () => { session.close() })
