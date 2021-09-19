@@ -27,9 +27,17 @@ exports.get_user = (req, res) => {
     `,
     { user_id })
   .then( ({records}) => {
-    if(records.length < 1) return res.status(400).send(`Error adding group to group`)
+
+    if(!records.length) {
+      console.log(`[neo4J] User ${user_id} not found`)
+      return res.status(404).send(`User ${user_id} not found`)
+    }
+
+    const user = records[0].get('user')
+    delete user.properties.password_hashed
+
+    res.send(user)
     console.log(`User ${user_id} queried`)
-    res.send(records[0].get('user'))
    })
   .catch(error => {
     console.log(error)
@@ -57,9 +65,10 @@ exports.get_members_of_group = (req, res) => {
     `,
     { group_id })
   .then(({records}) => {
-    console.log(`Users of group ${group_id} queried`)
     const users = records.map(record => record.get('user'))
+    users.forEach( user => { delete user.properties.password_hashed })
     res.send(users)
+    console.log(`Users of group ${group_id} queried`)
    })
   .catch(error => {
     console.log(error)
@@ -235,6 +244,8 @@ exports.users_with_no_group = (req, res) => {
     `, {})
   .then(({records}) => {
     const users = records.map(record => record.get('user'))
+    users.forEach( user => { delete user.properties.password_hashed })
+
     res.send(users)
     console.log(`[Neo4J] Queried users with no group`)
   })
