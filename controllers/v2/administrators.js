@@ -21,7 +21,7 @@ exports.get_administrators_of_group = (req, res) => {
     { group_id })
   .then(({records}) => {
     const admins = records.map(record => record.get('admin'))
-    admins.forEach( user => { delete admin.properties.password_hashed })
+    admins.forEach( admin => { delete admin.properties.password_hashed })
     res.send(admins)
    })
   .catch(error => {
