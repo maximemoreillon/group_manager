@@ -218,6 +218,7 @@ exports.leave_group = (req, res) => {
 
 exports.get_top_level_groups = (req, res) => {
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
+  // TODO; Should Top level should be a parameter of GET groups
 
   const session = driver.session();
   session

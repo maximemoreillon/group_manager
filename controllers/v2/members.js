@@ -232,6 +232,46 @@ exports.get_groups_of_user = (req, res) => {
   .finally( () => { session.close() })
 }
 
+exports.get_groups_of_users = (req, res) => {
+  // Retrieve a multiple users' groups
+  // Still in beta
+
+  const user_ids = req.query.user_ids
+    || req.query.member_ids
+    || req.query.ids
+
+  const query = `
+  UNWIND $user_ids AS user_id
+  MATCH (user:User)
+  WHERE id(user)=toInteger(user_id)
+
+  WITH user
+  MATCH (user)-[:BELONGS_TO]->(group:Group)
+  RETURN user, COLLECT(group) AS groups
+  `
+
+  const params = { user_ids }
+
+  const session = driver.session()
+  session.run(query, params)
+  .then(({records}) => {
+
+    const output = records.map(record => {
+      const user = record.get('user')
+      user.groups = record.get('groups')
+      return user
+    })
+
+    res.send(output)
+   })
+  .catch(error => {
+    console.log(error)
+    res.status(400).send(`Error accessing DB: ${error}`)
+  })
+  .finally( () => { session.close() })
+}
+
+
 exports.users_with_no_group = (req, res) => {
   // Route to retrieve users without a group
 

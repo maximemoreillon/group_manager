@@ -71,6 +71,9 @@ router.route('/groups/:group_id/members/:member_id')
   .delete(member_controller.remove_user_from_group) // providing user id in the url
 
 // Aliases for members
+router.route('/users/groups')
+  .get(member_controller.get_groups_of_users)
+
 router.route('/users/:member_id')
   .get(member_controller.get_user)
 
