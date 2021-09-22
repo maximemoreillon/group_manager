@@ -24,6 +24,9 @@ router.route('/groups/top_level/official')
 router.route('/groups/top_level/non_official')
   .get(group_controller.get_top_level_non_official_groups)
 
+router.route('/groups/members')
+  .get(member_controller.get_members_of_groups)
+
 router.route('/groups/:group_id')
   .get(group_controller.get_group)
   .patch(group_controller.patch_group)

@@ -77,6 +77,47 @@ exports.get_members_of_group = (req, res) => {
   .finally( () => { session.close() })
 }
 
+exports.get_members_of_groups = (req, res) => {
+  // Retrieve a multiple groups' members
+  // Still in beta
+
+  const group_ids = req.query.group_ids
+    || req.query.ids
+
+  const query = `
+  UNWIND $group_ids AS group_id
+  MATCH (group:Group)
+  WHERE id(group)=toInteger(group_id)
+
+  WITH group
+  MATCH (member:User)-[:BELONGS_TO]->(group)
+  RETURN group, COLLECT(member) AS members
+  `
+
+  const params = { group_ids }
+
+  const session = driver.session()
+  session.run(query, params)
+  .then(({records}) => {
+
+    const output = records.map(record => {
+      const group = record.get('group')
+      group.members = record.get('members')
+      return group
+    })
+
+    res.send(output)
+
+    console.log(`Members of groups ${group_ids.join(', ')} queried`)
+   })
+  .catch(error => {
+    console.log(error)
+    res.status(400).send(`Error accessing DB: ${error}`)
+  })
+  .finally( () => { session.close() })
+
+}
+
 exports.add_member_to_group = (req, res) => {
   // Route to make a user join a group
 
