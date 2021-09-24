@@ -6,6 +6,8 @@ const dotenv = require('dotenv')
 const apiMetrics = require('prometheus-api-metrics')
 const router_v1 = require('./routes/v1/routes.js')
 const router_v2 = require('./routes/v2/routes.js')
+const router_v3 = require('./routes/v3/routes.js')
+
 const pjson = require('./package.json')
 
 dotenv.config()
@@ -29,6 +31,7 @@ app.get('/', (req, res) => {
 
 app.use('/', router_v1)
 app.use('/v2', router_v2)
+app.use('/v3', router_v3)
 
 
 
