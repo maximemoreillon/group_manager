@@ -17,7 +17,7 @@ containerization:
     # Build the docker image
     - docker build -t ${CONTAINER_IMAGE} .
     # Tag
-    - docker tag -t ${CONTAINER_IMAGE} ${CONTAINER_IMAGE_TAGGED}
+    - docker tag ${CONTAINER_IMAGE} ${CONTAINER_IMAGE_TAGGED}
     # Pushing all
     - docker push ${CONTAINER_IMAGE}
     - docker push ${CONTAINER_IMAGE_TAGGED}
