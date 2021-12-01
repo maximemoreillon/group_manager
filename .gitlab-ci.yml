@@ -4,7 +4,8 @@ stages:
 
 variables:
   APPLICATION_NAME: group-manager
-  DOCKER_IMAGE: ${DOCKER_HUB_USERNAME}/${APPLICATION_NAME}
+  CONTAINER_IMAGE: ${DOCKER_HUB_USERNAME}/${APPLICATION_NAME}
+  CONTAINER_IMAGE_TAGGED: ${CONTAINER_IMAGE}:${CI_COMMIT_SHORT_SHA}
 
 containerization:
   stage: containerization
@@ -14,10 +15,15 @@ containerization:
     # Docker hub login
     - echo "${DOCKER_HUB_PASSWORD}" | docker login --username ${DOCKER_HUB_USERNAME} --password-stdin
     # Build the docker image
-    - docker build -t ${DOCKER_IMAGE} .
-    - docker push ${DOCKER_IMAGE}
+    - docker build -t ${CONTAINER_IMAGE} .
+    # Tag
+    - docker tag -t ${CONTAINER_IMAGE} ${CONTAINER_IMAGE_TAGGED}
+    # Pushing all
+    - docker push ${CONTAINER_IMAGE}
+    - docker push ${CONTAINER_IMAGE_TAGGED}
     # Cleanup
-    - docker image rm ${DOCKER_IMAGE}
+    - docker image rm ${CONTAINER_IMAGE}
+    - docker image rm ${CONTAINER_IMAGE_TAGGED}
 
 deployment:
   stage: deployment

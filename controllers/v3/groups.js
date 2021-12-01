@@ -41,9 +41,9 @@ exports.get_groups = async (req, res) => {
   .then( ({records}) => {
 
     const output = records.map(r => ({
-      group_count: r.get('group_count'),
       batch_size,
       start_index,
+      group_count: r.get('group_count'),
       groups: r.get('group_batch'),
     }))
 
