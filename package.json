@@ -9,14 +9,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@moreillon/authentication_middleware": "^1.0.7",
-    "@moreillon/express_identification_middleware": "^1.0.5",
-    "axios": "^0.19.2",
+    "@moreillon/authentication_middleware": "^1.0.9",
+    "@moreillon/express_identification_middleware": "^1.1.0",
+    "axios": "^0.24.0",
     "cors": "^2.8.5",
-    "dotenv": "^8.2.0",
+    "dotenv": "^8.6.0",
     "express": "^4.17.1",
-    "neo4j-driver": "^4.1.1",
+    "neo4j-driver": "^4.4.1",
     "prom-client": "^12.0.0",
-    "prometheus-api-metrics": "^3.1.0"
+    "prometheus-api-metrics": "^3.2.0"
   }
 }
