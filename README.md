@@ -6,9 +6,7 @@ The user and group information is stored in a Neo4J database.
 ### Groups
 | Endpoint | Method | query/body | Description |
 | --- | --- | --- | --- |
-| /v2/groups/top_level | GET | none | Returns the top level groups, i.e. groups that do not belong to any other group |
-| /v2/groups/top_level/official | GET | none | Returns the official top level groups |
-| /v2/groups/top_level/non_official | GET | none | Returns the non-official top level groups |
+| /v3/groups/ | GET | tbd | Returns list of groups |
 | /v2/groups/{group_id} | GET | - | Returns information about the group corresponding to the provided ID |
 | /v2/groups/{group_id} | PATCH | properties | Updates properties of a group |
 | /v2/groups/{group_id} | DELETE | - | Deletes a group |

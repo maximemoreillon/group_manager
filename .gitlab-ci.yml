@@ -10,6 +10,10 @@ variables:
   CONTAINER_IMAGE_TEST: ${CONTAINER_IMAGE}:test
   CONTAINER_IMAGE_LATEST: ${CONTAINER_IMAGE}:latest
   CONTAINER_IMAGE_TAGGED: ${CONTAINER_IMAGE}:${CI_COMMIT_SHORT_SHA}
+  TEST_NETWORK: tdd
+  TEST_DB: tdd-db
+  K8S_INGRESS_DOMAIN: api.groups.maximemoreillon.com
+
 
 
 # Needed for Docker in docker build
@@ -34,6 +38,21 @@ test:
     - dind
   before_script:
     - echo "${DOCKER_HUB_PASSWORD}" | docker login --username ${DOCKER_HUB_USERNAME} --password-stdin
+       # Creating network for TDD
+    - docker network create ${TEST_NETWORK}
+    # Creating DB container in network
+    - >
+      docker run
+      -d
+      --rm
+      --name ${TEST_DB}
+      --network ${TEST_NETWORK}
+      --hostname ${TEST_DB}
+      --env NEO4J_AUTH=none
+      neo4j
+    - sleep 100 # Wait for Neo4J to become available
+    # Todo: Add user manager here
+
   script:
     # Run test
     - >

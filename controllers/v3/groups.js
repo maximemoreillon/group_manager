@@ -4,11 +4,9 @@ exports.get_groups = async (req, res) => {
 
   // Queries: official vs non official, top level vs normal, type
 
+  // WARNING: Querying top level official groups means groups whith no parent THAT ARE OFFICIAL
   const batch_size = req.query.batch_size || 100
   const start_index = req.query.start_index || 0
-
-  // WARNING: Querying top level official groups means groups whith no parent THAT ARE OFFICIAL
-
   const top_level_query = req.query.top == null ? '' : 'WITH group WHERE NOT (group)-[:BELONGS_TO]->(:Group)'
   const official_query = req.query.official == null ? '' : 'WITH group WHERE group.official'
   const non_official_query = req.query.nonofficial == null ? '' : 'WITH group WHERE (NOT EXISTS(group.official) OR NOT group.official)'
