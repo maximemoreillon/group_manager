@@ -1,6 +1,6 @@
 {
   "name": "group_manager",
-  "version": "2.0.5",
+  "version": "2.1.1",
   "description": "",
   "main": "group_manager.js",
   "scripts": {
@@ -9,7 +9,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@moreillon/authentication_middleware": "^1.0.9",
     "@moreillon/express_identification_middleware": "^1.1.0",
     "axios": "^0.24.0",
     "chai": "^4.3.4",
