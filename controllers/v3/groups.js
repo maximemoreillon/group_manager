@@ -1,6 +1,4 @@
-const driver = require('../../utils/neo4j_driver_v2.js')
-
-
+const {drivers: {v2: driver}} = require('../../db.js')
 
 exports.get_groups = async (req, res) => {
 
@@ -16,7 +14,6 @@ exports.get_groups = async (req, res) => {
   const non_official_query = req.query.nonofficial == null ? '' : 'WITH group WHERE (NOT EXISTS(group.official) OR NOT group.official)'
 
   const batching = `WITH group_count, all_groups[toInteger($start_index)..toInteger($start_index)+toInteger($batch_size)] AS group_batch`
-
 
   const query = `
     MATCH (group:Group)

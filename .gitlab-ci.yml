@@ -1,50 +1,49 @@
 stages:
-  - containerization
-  - deployment
+  - build
+  - test
 
 variables:
   APPLICATION_NAME: group-manager
-  CONTAINER_IMAGE: ${DOCKER_HUB_USERNAME}/${APPLICATION_NAME}
+  CONTAINER_REGISTRY: ${DOCKER_HUB_USERNAME}
+  CONTAINER_IMAGE: ${CONTAINER_REGISTRY}/${APPLICATION_NAME}
+  CONTAINER_IMAGE_TEST: ${CONTAINER_IMAGE}:test
+  CONTAINER_IMAGE_LATEST: ${CONTAINER_IMAGE}:latest
   CONTAINER_IMAGE_TAGGED: ${CONTAINER_IMAGE}:${CI_COMMIT_SHORT_SHA}
 
-containerization:
-  stage: containerization
+
+# Needed for Docker in docker build
+services:
+  - name: docker:19.03.12-dind
+
+build:
+  stage: build
   tags:
-    - moreillon
-  script:
+    - dind
+  before_script:
     # Docker hub login
     - echo "${DOCKER_HUB_PASSWORD}" | docker login --username ${DOCKER_HUB_USERNAME} --password-stdin
-    # Build the docker image
-    - docker build -t ${CONTAINER_IMAGE} .
-    # Tag
-    - docker tag ${CONTAINER_IMAGE} ${CONTAINER_IMAGE_TAGGED}
-    # Pushing all
-    - docker push ${CONTAINER_IMAGE}
-    - docker push ${CONTAINER_IMAGE_TAGGED}
-    # Cleanup
-    - docker image rm ${CONTAINER_IMAGE}
-    - docker image rm ${CONTAINER_IMAGE_TAGGED}
-
-deployment:
-  stage: deployment
-  tags:
-    - moreillon
   script:
-    #- envsubst < kubernetes/deployment.yml | kubectl apply -f -
-    - kubectl rollout restart deployment/${APPLICATION_NAME}
-    # If a nodeport is specified, serve app through a nodeport service
-    #- >
-    #  if [ -z ${SERVICE_PORT} ];
-    #  then echo "SERVICE_PORT not set, skipping creation of NodePort service";
-    #  else envsubst < kubernetes/nodeport_service.yml | kubectl apply -f -;
-    #  fi
-    # if a domain name is specified, serve app through an ingress
-    #- >
-    #  if [ -z ${CERTIFICATE_DOMAIN} ];
-    #  then echo "CERTIFICATE_DOMAIN not set, skipping creation of ingress";
-    #  else envsubst < kubernetes/ingress.yml | kubectl apply -f -;
-    #  fi
-  environment:
-    name: production
-    kubernetes:
-      namespace: ${KUBERNETES_NAMESPACE}
+    - echo {\"commit\":\"${CI_COMMIT_SHORT_SHA}\"} > commit.json
+    - docker build -t ${CONTAINER_IMAGE_TEST} .
+    - docker push ${CONTAINER_IMAGE_TEST}
+
+test:
+  stage: test
+  tags:
+    - dind
+  before_script:
+    - echo "${DOCKER_HUB_PASSWORD}" | docker login --username ${DOCKER_HUB_USERNAME} --password-stdin
+  script:
+    # Run test
+    - >
+      docker run
+      --rm
+      --name tdd
+      ${CONTAINER_IMAGE_TEST}
+      npm run test
+    # Tagging
+    - docker tag ${CONTAINER_IMAGE_TEST} ${CONTAINER_IMAGE_TAGGED}
+    - docker tag ${CONTAINER_IMAGE_TEST} ${CONTAINER_IMAGE_LATEST}
+    # Pushing
+    - docker push ${CONTAINER_IMAGE_TAGGED}
+    - docker push ${CONTAINER_IMAGE_LATEST}

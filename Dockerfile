@@ -11,7 +11,7 @@ COPY . .
 RUN npm install
 
 # Expose port
-EXPOSE 7000
+EXPOSE 80
 
 # Run the app
-CMD [ "node", "group_manager.js" ]
+CMD [ "node", "index.js" ]

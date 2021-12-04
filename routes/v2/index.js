@@ -1,16 +1,11 @@
 const express = require('express')
-const auth = require('@moreillon/authentication_middleware')
 
-const group_controller = require('../../controllers/v1/groups.js')
-const member_controller = require('../../controllers/v1/members.js')
-const administrator_controller = require('../../controllers/v1/administrators.js')
+const group_controller = require('../../controllers/v2/groups.js')
+const member_controller = require('../../controllers/v2/members.js')
+const administrator_controller = require('../../controllers/v2/administrators.js')
 
 
 const router = express.Router()
-
-// use the router
-
-router.use(auth.authenticate)
 
 router.route('/groups')
   .post(group_controller.create_group)
@@ -23,6 +18,9 @@ router.route('/groups/top_level/official')
 
 router.route('/groups/top_level/non_official')
   .get(group_controller.get_top_level_non_official_groups)
+
+router.route('/groups/members')
+  .get(member_controller.get_members_of_groups)
 
 router.route('/groups/:group_id')
   .get(group_controller.get_group)
@@ -71,6 +69,9 @@ router.route('/groups/:group_id/members/:member_id')
   .delete(member_controller.remove_user_from_group) // providing user id in the url
 
 // Aliases for members
+router.route('/users/groups')
+  .get(member_controller.get_groups_of_users)
+
 router.route('/users/:member_id')
   .get(member_controller.get_user)
 
