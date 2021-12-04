@@ -37,7 +37,7 @@ test:
   before_script:
     - echo "${DOCKER_HUB_PASSWORD}" | docker login --username ${DOCKER_HUB_USERNAME} --password-stdin
        # Creating network for TDD
-    - docker network create ${TEST_NETWORK}
+    - docker network create tdd
     # Creating DB container in network
     - >
       docker run
