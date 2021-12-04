@@ -10,8 +10,6 @@ variables:
   CONTAINER_IMAGE_TEST: ${CONTAINER_IMAGE}:test
   CONTAINER_IMAGE_LATEST: ${CONTAINER_IMAGE}:latest
   CONTAINER_IMAGE_TAGGED: ${CONTAINER_IMAGE}:${CI_COMMIT_SHORT_SHA}
-  TEST_NETWORK: tdd
-  TEST_DB: tdd-db
   K8S_INGRESS_DOMAIN: api.groups.maximemoreillon.com
 
 
@@ -45,20 +43,34 @@ test:
       docker run
       -d
       --rm
-      --name ${TEST_DB}
-      --network ${TEST_NETWORK}
-      --hostname ${TEST_DB}
+      --name tdd-db
+      --network tdd
+      --hostname tdd-db
       --env NEO4J_AUTH=none
       neo4j
     - sleep 100 # Wait for Neo4J to become available
     # Todo: Add user manager here
+    - >
+      docker run
+      -d
+      --rm
+      --name tdd-user-manager
+      --network tdd
+      --hostname tdd-user-manager
+      --env NEO4J_URL=bolt://tdd-db
+      --env JWT_SECRET=keyboardcat
+      moreillon/user-manager
 
   script:
     # Run test
     - >
       docker run
       --rm
-      --name tdd
+      --name tdd-app
+      --env IDENTIFICATION_URL=http://tdd-user-manager/users/self
+      --env LOGIN_URL=http://tdd-user-manager/auth/login
+      --env TEST_USER_USERNAME=admin
+      --env TEST_USER_PASSWORD=admin
       ${CONTAINER_IMAGE_TEST}
       npm run test
     # Tagging
