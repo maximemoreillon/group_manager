@@ -1,6 +1,7 @@
 stages:
   - build
   - test
+  - deploy
 
 variables:
   APPLICATION_NAME: group-manager
@@ -47,3 +48,14 @@ test:
     # Pushing
     - docker push ${CONTAINER_IMAGE_TAGGED}
     - docker push ${CONTAINER_IMAGE_LATEST}
+
+deploy:
+  stage: deploy
+  tags:
+    - moreillon
+  script:
+    - envsubst < kubernetes/deployment.yml | kubectl apply -f -
+  environment:
+    name: production
+    kubernetes:
+      namespace: ${KUBERNETES_NAMESPACE}
