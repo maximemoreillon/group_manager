@@ -18,7 +18,7 @@ dotenv.config()
 
 const APP_PORT = process.env.APP_PORT || 80
 
-const identification_url = process.env.AUTHENTICATION_API_URL
+const identification_url = process.env.IDENTIFICATION_URL
   || `${process.env.AUTHENTICATION_API_URL}/v2/whoami`
 
 const auth_options = { url:  identification_url}
