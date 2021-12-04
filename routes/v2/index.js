@@ -1,11 +1,13 @@
-const express = require('express')
+const {Router} = require('express')
+
+const administrator_router = require('./administrators.js')
 
 const group_controller = require('../../controllers/v2/groups.js')
 const member_controller = require('../../controllers/v2/members.js')
 const administrator_controller = require('../../controllers/v2/administrators.js')
 
 
-const router = express.Router()
+const router = Router()
 
 router.route('/groups')
   .post(group_controller.create_group)
@@ -91,18 +93,7 @@ router.route('/groups/:group_id/users/:member_id')
   .delete(member_controller.remove_user_from_group) // providing user id in the url
 
 // Administrators
-router.route('/groups/:group_id/administrators')
-  .get(administrator_controller.get_administrators_of_group)
-
-router.route('/groups/:group_id/administrator')
-  .post(administrator_controller.make_user_administrator_of_group)
-  .delete(administrator_controller.remove_user_from_administrators)
-
-router.route('/groups/:group_id/administrators/:administrator_id')
-  .post(administrator_controller.make_user_administrator_of_group)
-  .delete(administrator_controller.remove_user_from_administrators)
-
-router.route('/administrators/:administrator_id/groups')
-  .get(administrator_controller.get_groups_of_administrator)
+router.use('/groups/:group_id/administrators', administrator_router)
+router.use('/administrators', administrator_router)
 
 module.exports = router

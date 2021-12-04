@@ -6,6 +6,7 @@ const {
 
 exports.get_user = (req, res) => {
   // Route to retrieve a user's info
+  // This should not be a feature of group manager
 
   let user_id = req.params.member_id
     ?? req.params.user_id
