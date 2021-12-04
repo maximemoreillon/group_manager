@@ -6,7 +6,7 @@
   "scripts": {
     "test": "mocha --timeout 10000 --exit"
   },
-  "author": "",
+  "author": "Maxime MOREILLON",
   "license": "ISC",
   "dependencies": {
     "@moreillon/express_identification_middleware": "^1.1.0",
