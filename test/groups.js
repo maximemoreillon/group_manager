@@ -41,8 +41,33 @@ describe("/groups", () => {
         .send({name: 'tdd'})
         .set('Authorization', `Bearer ${jwt}`)
 
+      group_id = body.identity
+
+      expect(status).to.equal(200)
+    })
+
+  })
+
+  describe("GET /groups", () => {
+    it("Should allow the query of groups", async () => {
+      const {status, body} = await request(app)
+        .get("/v3/groups")
+        .set('Authorization', `Bearer ${jwt}`)
+
       console.log(body)
 
+      expect(status).to.equal(200)
+    })
+
+  })
+
+  describe("GET /group/:group_id", () => {
+    it("Should allow the query of a single group", async () => {
+      const {status, body} = await request(app)
+        .post(`/v3/groups/${group_id}`)
+        .set('Authorization', `Bearer ${jwt}`)
+
+      console.log(body)
 
 
       expect(status).to.equal(200)
