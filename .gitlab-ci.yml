@@ -67,6 +67,7 @@ test:
       docker run
       --rm
       --name tdd-app
+      --network tdd
       --env IDENTIFICATION_URL=http://tdd-user-manager/users/self
       --env LOGIN_URL=http://tdd-user-manager/auth/login
       --env TEST_USER_USERNAME=admin
