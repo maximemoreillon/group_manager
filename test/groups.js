@@ -1,6 +1,7 @@
 const request = require("supertest")
 const {expect} = require("chai")
 const {app} = require("../index.js")
+const axios = require('axios')
 
 const {
   LOGIN_URL,
