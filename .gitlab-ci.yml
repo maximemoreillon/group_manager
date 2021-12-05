@@ -48,7 +48,7 @@ test:
       --hostname tdd-db
       --env NEO4J_AUTH=none
       neo4j
-    - sleep 100 # Wait for Neo4J to become available
+    - sleep 120 # Wait for Neo4J to become available
     # Todo: Add user manager here
     - >
       docker run
@@ -68,6 +68,7 @@ test:
       --rm
       --name tdd-app
       --network tdd
+      --env NEO4J_URL=bolt://tdd-db
       --env IDENTIFICATION_URL=http://tdd-user-manager/users/self
       --env LOGIN_URL=http://tdd-user-manager/auth/login
       --env TEST_USER_USERNAME=admin
