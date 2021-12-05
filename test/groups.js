@@ -64,7 +64,7 @@ describe("/groups", () => {
   describe("GET /group/:group_id", () => {
     it("Should allow the query of a single group", async () => {
       const {status, body} = await request(app)
-        .post(`/v3/groups/${group_id}`)
+        .post(`/v2/groups/${group_id}`)
         .set('Authorization', `Bearer ${jwt}`)
 
       console.log(body)
