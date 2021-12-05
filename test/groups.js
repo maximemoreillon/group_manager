@@ -29,7 +29,7 @@ describe("/groups", () => {
 
 
   beforeEach( async () => {
-    //console.log = function () {}
+    console.log = function () {}
     jwt = await login()
     user = await whoami(jwt)
   })
@@ -54,8 +54,6 @@ describe("/groups", () => {
         .get("/v3/groups")
         .set('Authorization', `Bearer ${jwt}`)
 
-      console.log(body)
-
       expect(status).to.equal(200)
     })
 
@@ -64,13 +62,37 @@ describe("/groups", () => {
   describe("GET /group/:group_id", () => {
     it("Should allow the query of a single group", async () => {
       const {status, body} = await request(app)
-        .post(`/v2/groups/${group_id}`)
+        .get(`/v2/groups/${group_id}`)
         .set('Authorization', `Bearer ${jwt}`)
 
-      console.log(body)
+      expect(status).to.equal(200)
+    })
 
+    it("Should respond 404 to inexistent group", async () => {
+      const {status, body} = await request(app)
+        .get(`/v2/groups/111111`)
+        .set('Authorization', `Bearer ${jwt}`)
+
+      expect(status).to.equal(404)
+    })
+
+  })
+
+  describe("DELETE /group/:group_id", () => {
+    it("Should allow the deletion of a single group", async () => {
+      const {status, body} = await request(app)
+        .delete(`/v2/groups/${group_id}`)
+        .set('Authorization', `Bearer ${jwt}`)
 
       expect(status).to.equal(200)
+    })
+
+    it("Should respond 404 to the deletion of an inexistent group", async () => {
+      const {status, body} = await request(app)
+        .delete(`/v2/groups/111111`)
+        .set('Authorization', `Bearer ${jwt}`)
+
+      expect(status).to.equal(404)
     })
 
   })

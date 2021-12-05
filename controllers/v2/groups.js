@@ -1,6 +1,7 @@
 const {drivers: {v2: driver}} = require('../../db.js')
 const {
   get_current_user_id,
+  error_handling,
 } = require('../../utils.js')
 
 
@@ -10,26 +11,20 @@ exports.get_group = (req, res) => {
     || req.query.id
     || req.query.group_id
 
-  const session = driver.session()
-  session
-  .run(`
+  const query = `
     MATCH (group)
     WHERE id(group)=toInteger($group_id)
     RETURN group
-    `, {
-    group_id,
-  })
-  .then(result => {
-    // NOTE: Not too sure about sendig only one record
-    // How about sending all records and let the front end deal with it?
-    if(result.records.length < 1) return res.status(404).send('Not found')
-    res.send(result.records[0].get('group'))
+    `
+
+  const session = driver.session()
+  session.run(query, { group_id })
+  .then(({records}) => {
+    if(!records.length) throw {code: 404, message: `Group ${group_id} not found`}
+    res.send(records[0].get('group'))
     console.log(`User ${get_current_user_id(res)} requested group ${group_id}`)
   })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
+  .catch(error => { error_handling(error, res) })
   .finally( () => { session.close() })
 }
 
@@ -88,12 +83,12 @@ exports.delete_group = (req, res) => {
 
   if(!group_id) return res.status(400).send('Group ID not defined')
 
-  const session = driver.session();
-  session
-  .run(`
+  const user_id = get_current_user_id(res)
+
+  const query = `
     // Find the current user
     MATCH (current_user:User)
-    WHERE id(current_user) = toInteger($current_user_id)
+    WHERE id(current_user) = toInteger($user_id)
 
     // Find group
     WITH current_user
@@ -108,25 +103,16 @@ exports.delete_group = (req, res) => {
     DETACH DELETE group
 
     RETURN "success"
-    `, {
-    current_user_id: get_current_user_id(res),
-    group_id,
-  })
-  .then(result => {
+    `
 
-    if(result.records.length < 1) {
-      console.log(`Error while deleting group ${group_id}`)
-      res.status(400).send('Error deleting node')
-      return
-    }
-
-    res.send({deleted_group_id: group_id})
-    console.log(`User ${get_current_user_id(res)} deleted group ${group_id}`)
+  const session = driver.session();
+  session.run(query, { user_id, group_id })
+  .then( ({records}) => {
+    if(!records.length) throw {code: 404, message: `Group ${group_id} not found`}
+    res.send({group_id})
+    console.log(`User ${user_id} deleted group ${group_id}`)
   })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
+  .catch(error => { error_handling(error, res) })
   .finally( () => { session.close() })
 }
 
