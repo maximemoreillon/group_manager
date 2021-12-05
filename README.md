@@ -7,6 +7,7 @@ The user and group information is stored in a Neo4J database.
 | Endpoint | Method | query/body | Description |
 | --- | --- | --- | --- |
 | /v3/groups/ | GET | tbd | Returns list of groups |
+| /v3/groups/ | GET | tbd | Returns list of groups |
 | /v2/groups/{group_id} | GET | - | Returns information about the group corresponding to the provided ID |
 | /v2/groups/{group_id} | PATCH | properties | Updates properties of a group |
 | /v2/groups/{group_id} | DELETE | - | Deletes a group |

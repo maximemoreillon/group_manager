@@ -35,14 +35,18 @@ exports.get_group = (req, res) => {
 
 exports.create_group = (req, res) => {
   // Create a group
-  // TODO: validation
+  // TODO: validation with joy
 
-  const session = driver.session();
-  session
-  .run(`
+  const user_id = get_current_user_id(res)
+  const {name} = req.body
+  if(!name) return res.status(400).send(`Missing 'name'`)
+
+  const session = driver.session()
+
+  const query = `
     // Create the group
     CREATE (group:Group)
-    SET group.name = $group_name
+    SET group.name = $name
 
     // Create creation relationship
     WITH group
@@ -58,19 +62,18 @@ exports.create_group = (req, res) => {
     // Could have a CREATED_BY relationship
 
     RETURN group
-    `, {
-    user_id: get_current_user_id(res),
-    group_name: req.body.name,
-  })
+    `
+
+  session.run(query, { user_id,name })
   .then(({records}) => {
-    if(records.length < 1) return res.status(500).send('Error creating node')
+    if(!records.length) return res.status(500).send('Error creating group')
     const group = records[0].get('group')
     res.send(group)
     console.log(`User ${get_current_user_id(res)} created group ${group.identity}`)
   })
   .catch(error => {
     console.log(error)
-    res.status(400).send(error)
+    res.status(500).send(error)
   })
   .finally( () => { session.close() })
 }

@@ -32,15 +32,20 @@ describe("/groups", () => {
     //console.log = function () {}
     jwt = await login()
     user = await whoami(jwt)
-    console.log(user)
   })
 
-  describe("GET /groups", () => {
-    it("Should respond with the application info", async () => {
-      const res = await request(app)
-        .get("/")
+  describe("POST /groups", () => {
+    it("Should allow the creation of a group", async () => {
+      const {status, body} = await request(app)
+        .post("/v2/groups")
+        .send({name: 'tdd'})
+        .set('Authorization', `Bearer ${jwt}`)
 
-      expect(res.status).to.equal(200)
+      console.log(body)
+
+
+
+      expect(status).to.equal(200)
     })
 
   })
