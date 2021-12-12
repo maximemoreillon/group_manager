@@ -39,6 +39,7 @@ app.get('/', (req, res) => {
     author,
     neo4j: {
       url: neo4j_url,
+      connected: neo4j_connected()
     },
     identification_url,
     commit,
