@@ -32,7 +32,7 @@ describe("/v2/", () => {
 
 
   before( async () => {
-    //console.log = function () {}
+    console.log = function () {}
     jwt = await login()
     user = await whoami(jwt)
 
@@ -203,7 +203,7 @@ describe("/v2/", () => {
   })
 
   describe("GET /v2/groups/:group_id/parents/", () => {
-    it("Should allow the query of parent groups", async () => {
+    it("Should allow querying parents of a group", async () => {
       const {status, body} = await request(app)
         .get(`/v2/groups/${group_id}/parents/`)
         .set('Authorization', `Bearer ${jwt}`)
@@ -213,7 +213,7 @@ describe("/v2/", () => {
   })
 
   describe("GET /v2/groups/:group_id/administrators", () => {
-    it("Should allow the query of a group's admins", async () => {
+    it("Should allow querying the administrators of a group", async () => {
       const {status, body} = await request(app)
         .get(`/v2/groups/${group_id}/administrators`)
         .set('Authorization', `Bearer ${jwt}`)
@@ -223,7 +223,7 @@ describe("/v2/", () => {
   })
 
   describe("DELETE /v2/groups/:group_id/administrators/:administrator_id", () => {
-    it("Should to make remove a group admin", async () => {
+    it("Should to make remove a group administrator", async () => {
 
       const {status, body} = await request(app)
         .delete(`/v2/groups/${group_id}/administrators/${user.properties._id}`)
@@ -234,7 +234,7 @@ describe("/v2/", () => {
   })
 
   describe("POST /v2/groups/:group_id/administrators", () => {
-    it("Should to make one user admin of a group", async () => {
+    it("Should to make one user administrator of a group", async () => {
       const {status, body} = await request(app)
         .post(`/v2/groups/${group_id}/administrators`)
         .send({user_id: user.properties._id})
@@ -244,8 +244,8 @@ describe("/v2/", () => {
     })
   })
 
-  describe("GET /v2/administrators/self/groups", () => {
-    it("Should allow the query of a one's administrated groups", async () => {
+  describe("GET /v2/administrators/:user_id/groups", () => {
+    it("Should allow querying groups administrated by a user", async () => {
       const {status, body} = await request(app)
         .get(`/v2/administrators/self/groups`)
         .set('Authorization', `Bearer ${jwt}`)
@@ -255,7 +255,7 @@ describe("/v2/", () => {
   })
 
   describe("DELETE /v2/groups/:group_id/groups/:subgroup_id", () => {
-    it("Should allow removal of subgroup", async () => {
+    it("Should allow the removal of a subgroup", async () => {
       const {status, body} = await request(app)
         .delete(`/v2/groups/${group_id}/groups/${subgroup_id}`)
         .set('Authorization', `Bearer ${jwt}`)
@@ -266,7 +266,7 @@ describe("/v2/", () => {
   })
 
   describe("DELETE /v2/groups/:group_id", () => {
-    it("Should allow the deletion of a single group", async () => {
+    it("Should allow the deletion of a group", async () => {
       const {status, body} = await request(app)
         .delete(`/v2/groups/${group_id}`)
         .set('Authorization', `Bearer ${jwt}`)
@@ -274,7 +274,7 @@ describe("/v2/", () => {
       expect(status).to.equal(200)
     })
 
-    it("Should allow the deletion of the subgroup", async () => {
+    it("Should allow the deletion of another group", async () => {
       const {status, body} = await request(app)
         .delete(`/v2/groups/${subgroup_id}`)
         .set('Authorization', `Bearer ${jwt}`)

@@ -32,7 +32,7 @@ describe("/v1", () => {
 
 
   before( async () => {
-    //console.log = function () {}
+    console.log = function () {}
     jwt = await login()
     user = await whoami(jwt)
 
