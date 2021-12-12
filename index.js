@@ -11,14 +11,18 @@ const auth = require('@moreillon/express_identification_middleware')
 const {
   url: neo4j_url,
   connected: neo4j_connected,
+  init: db_init,
 } = require('./db.js')
 
 dotenv.config()
 
+console.log(`= Group manager v${version} =`)
+
+db_init()
+
 const APP_PORT = process.env.APP_PORT || 80
 
-const identification_url = process.env.IDENTIFICATION_URL
-  || `${process.env.AUTHENTICATION_API_URL}/v2/whoami`
+const identification_url = process.env.IDENTIFICATION_URL || `${process.env.AUTHENTICATION_API_URL}/v2/whoami`
 
 const auth_options = { url:  identification_url}
 
@@ -50,7 +54,7 @@ app.use('/v2', router_v2)
 
 
 app.listen(APP_PORT, () => {
-  console.log(`Group manager listening on port ${APP_PORT}`)
+  console.log(`[Express] listening on port ${APP_PORT}`)
 })
 
 exports.app = app

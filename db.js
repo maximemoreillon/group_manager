@@ -23,21 +23,40 @@ const drivers = {
 }
 
 let connected = false
-const connection_check = async () => {
+const init = async () => {
+  console.log('[Neo4J] Initializing DB')
+
+  const id_setting_query = `
+  MATCH (g:Group)
+  WHERE NOT EXISTS(g._id)
+  SET g._id = toString(id(g))
+  RETURN COUNT(g) as count
+  `
+
+  const index_query = `CREATE INDEX ON :Group(_id)`
+
+  const session = drivers.v2.session()
+
   try {
-    const session = drivers.v2.session()
-    await session.run(`RETURN 'OK'`)
-    console.log(`[Neo4J] connected`)
+    const {records} = await session.run(id_setting_query)
+    const count = records[0].get('count')
+    console.log(`[Neo4J] ID of ${count} groups have been set`)
+    await session.run(index_query)
     connected = true
   }
   catch (e) {
     console.log(e)
-    console.log(`[Neo4J] connection error`)
+    console.log(`[Neo4J] init failed, retrying in 10s`)
+    setTimeout(init,10000)
   }
+  finally {
+    session.close()
+  }
+
 }
 
-connection_check()
 
 exports.url = NEO4J_URL
 exports.get_connected = () => connected
 exports.drivers = drivers
+exports.init = init
