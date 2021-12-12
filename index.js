@@ -5,7 +5,6 @@ const dotenv = require('dotenv')
 const apiMetrics = require('prometheus-api-metrics')
 const router_v1 = require('./routes/v1/index.js')
 const router_v2 = require('./routes/v2/index.js')
-const router_v3 = require('./routes/v3/index.js')
 const {version, author} = require('./package.json')
 const {commit} = require('./commit.json')
 const auth = require('@moreillon/express_identification_middleware')
@@ -47,7 +46,6 @@ app.use(auth(auth_options))
 app.use('/', router_v1)
 app.use('/v1', router_v1) //alias
 app.use('/v2', router_v2)
-app.use('/v3', router_v3)
 
 
 

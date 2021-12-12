@@ -8,7 +8,7 @@ const administrator_controller = require('../../controllers/v1/administrators.js
 const router = express.Router()
 
 router.route('/groups')
-  .post(group_controller.create_group)
+  .post(group_controller.create_group) // deprecated
 
 router.route('/groups/top_level')
   .get(group_controller.get_top_level_groups)
@@ -21,14 +21,11 @@ router.route('/groups/top_level/non_official')
 
 router.route('/groups/:group_id')
   .get(group_controller.get_group)
-  .patch(group_controller.patch_group)
-  .delete(group_controller.delete_group)
+  .patch(group_controller.patch_group) // deprecated
+  .delete(group_controller.delete_group) // deprecated
 
-router.route('/groups/:group_id/join')
-  .post(group_controller.join_group)
-
-router.route('/groups/:group_id/leave')
-  .post(group_controller.leave_group)
+router.route('/groups/:group_id/join').post(group_controller.join_group) // deprecated
+router.route('/groups/:group_id/leave').post(group_controller.leave_group) // deprecated
 
 // Subgroups
 router.route('/groups/:group_id/groups')
@@ -86,17 +83,17 @@ router.route('/groups/:group_id/users/:member_id')
 
 // Administrators
 router.route('/groups/:group_id/administrators')
-  .get(administrator_controller.get_administrators_of_group)
+  .get(administrator_controller.get_administrators_of_group) // deprecated
 
 router.route('/groups/:group_id/administrator')
-  .post(administrator_controller.make_user_administrator_of_group)
-  .delete(administrator_controller.remove_user_from_administrators)
+  .post(administrator_controller.make_user_administrator_of_group) // deprecated
+  .delete(administrator_controller.remove_user_from_administrators) // deprecated
 
 router.route('/groups/:group_id/administrators/:administrator_id')
-  .post(administrator_controller.make_user_administrator_of_group)
-  .delete(administrator_controller.remove_user_from_administrators)
+  .post(administrator_controller.make_user_administrator_of_group) // deprecated
+  .delete(administrator_controller.remove_user_from_administrators) // deprecated
 
 router.route('/administrators/:administrator_id/groups')
-  .get(administrator_controller.get_groups_of_administrator)
+  .get(administrator_controller.get_groups_of_administrator) // deprecated
 
 module.exports = router

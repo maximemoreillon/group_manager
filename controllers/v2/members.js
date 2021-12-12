@@ -1,12 +1,19 @@
 const {drivers: {v2: driver}} = require('../../db.js')
 const {
+  error_handling,
   get_current_user_id,
+  user_query,
+  group_query,
+  group_id_filter,
+  user_id_filter,
+  current_user_query,
 } = require('../../utils.js')
 
 
 exports.get_user = (req, res) => {
   // Route to retrieve a user's info
   // This should not be a feature of group manager
+  // Used in front-end
 
   let user_id = req.params.member_id
     ?? req.params.user_id
@@ -21,8 +28,7 @@ exports.get_user = (req, res) => {
   const session = driver.session()
   session
   .run(`
-    MATCH (user:User)
-    WHERE id(user)=toInteger($user_id)
+    ${user_query}
     RETURN user
     `,
     { user_id })
@@ -39,37 +45,185 @@ exports.get_user = (req, res) => {
     res.send(user)
     console.log(`User ${user_id} queried`)
    })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
+  .catch(error => { error_handling(error,res) })
   .finally( () => { session.close() })
 }
 
 exports.get_members_of_group = (req, res) => {
   // Route to retrieve a user's groups
 
-  const group_id = req.params.id ?? req.params.group_id
-
+  const group_id = req.params.group_id || req.query.group_id
   if(!group_id) return res.status(400).send('Group ID not defined')
 
   // Todo: allow user to pass what key tey want to query
   // IDEA: Could be done with GraphQL
 
-  const session = driver.session();
-  session
-  .run(`
-    MATCH (user:User)-[:BELONGS_TO]->(group:Group)
-    WHERE id(group)=toInteger($group_id)
-    RETURN user
-    `,
-    { group_id })
+  const session = driver.session()
+
+  const query = `
+    ${group_query}
+    WITH group
+    OPTIONAL MATCH (user:User)-[:BELONGS_TO]->(group)
+    RETURN collect(user) as users, group
+    `
+
+  session.run(query,  { group_id })
   .then(({records}) => {
-    const users = records.map(record => record.get('user'))
+    if(!records.length) throw {code: 404, message: `Member query: group ${group_id} not found`}
+    const users = records[0].get('users')
     users.forEach( user => { delete user.properties.password_hashed })
     res.send(users)
     console.log(`Users of group ${group_id} queried`)
    })
+  .catch(error => { error_handling(error,res) })
+  .finally( () => { session.close() })
+}
+
+
+
+exports.add_member_to_group = (req, res) => {
+  // Route to make a user join a group
+
+  const {group_id} = req.params
+  const {user_id} = req.body
+
+  if(!group_id) return res.status(400).send('Group ID not defined')
+  if(!user_id) return res.status(400).send('User ID not defined')
+
+  const current_user_id = get_current_user_id(res)
+
+  const session = driver.session()
+
+  const query = `
+    // Find the current user
+    ${current_user_query}
+
+    // Find group
+    WITH current_user
+    ${group_query}
+    // Allow only group admin or super admin to delete a group
+      AND ( (group)-[:ADMINISTRATED_BY]->(current_user)
+        OR current_user.isAdmin )
+
+    // Find the user
+    WITH group
+    ${user_query}
+
+    // MERGE relationship
+    MERGE (user)-[:BELONGS_TO]->(group)
+
+    // Return
+    RETURN user, group
+    `
+
+  const params = { current_user_id, user_id, group_id }
+
+  session.run(query, params)
+  .then( ({records}) => {
+
+    if(!records.length) throw {code: 404, message: `Error adding using ${user_id} from group ${group_id}`}
+    console.log(`User ${current_user_id} added user ${user_id} to group ${group_id}`)
+
+    const user = records[0].get('user')
+    res.send(user)
+  })
+  .catch(error => { error_handling(error,res) })
+  .finally( () => { session.close() })
+}
+
+exports.remove_user_from_group = (req, res) => {
+  // Route to make a user leave a group
+
+  const {group_id, member_id: user_id} = req.params
+
+  if(!group_id) return res.status(400).send('Group ID not defined')
+  if(!user_id) return res.status(400).send('User ID not defined')
+
+  const current_user_id = get_current_user_id(res)
+
+  const session = driver.session()
+
+  const query = `
+    // Find the current user
+    ${current_user_query}
+
+    // Find group
+    WITH current_user
+    ${group_query}
+    AND ( (group)-[:ADMINISTRATED_BY]->(current_user) OR current_user.isAdmin )
+
+    // Find the user
+    WITH group
+    MATCH (user:User)-[r:BELONGS_TO]->(group)
+    ${user_id_filter}
+
+    // delete relationship
+    DELETE r
+
+    // Return
+    RETURN user, group
+    `
+
+  const params = { current_user_id, user_id, group_id }
+  session
+
+  .run(query,params)
+  .then( ({records}) => {
+
+    if(!records.length) throw {code: 404, message: `Error removing using ${user_id} from group ${group_id}`}
+    console.log(`User ${current_user_id}  removed user ${user_id} from group ${group_id}`)
+
+    const user = records[0].get('user')
+    res.send(user)
+  })
+  .catch(error => { error_handling(error, res) })
+  .finally( () => { session.close() })
+}
+
+
+exports.get_groups_of_user = (req, res) => {
+  // Route to retrieve a user's groups
+
+  let {member_id: user_id} = req.params
+  if(user_id === 'self') user_id = get_current_user_id(res)
+
+  const session = driver.session()
+
+  const query = `
+    ${user_query}
+    WITH user
+    MATCH (user)-[:BELONGS_TO]->(group:Group)
+    RETURN collect(group) as groups
+    `
+
+  session.run(query,{ user_id })
+  .then(({records}) => {
+    if(!records.length) throw {code: 404, message: `User ${user_id} not found`}
+    console.log(`Groups of user ${user_id} queried`)
+    const groups = records[0].get('groups')
+    res.send(groups)
+   })
+  .catch(error => { error_handling(error, res) })
+  .finally( () => { session.close() })
+}
+
+exports.users_with_no_group = (req, res) => {
+  // Route to retrieve users without a group
+
+  const session = driver.session();
+  session
+  .run(`
+    MATCH (user:User)
+    WHERE NOT (user)-[:BELONGS_TO]->(:Group)
+    RETURN user
+    `, {})
+  .then(({records}) => {
+    const users = records.map(record => record.get('user'))
+    users.forEach( user => { delete user.properties.password_hashed })
+
+    res.send(users)
+    console.log(`Queried users with no group`)
+  })
   .catch(error => {
     console.log(error)
     res.status(400).send(`Error accessing DB: ${error}`)
@@ -86,8 +240,10 @@ exports.get_members_of_groups = (req, res) => {
 
   const query = `
   UNWIND $group_ids AS group_id
+
+  // CANNOT USE QUERY TEMPLATE BECAUSE NOT $group_id
   MATCH (group:Group)
-  WHERE id(group)=toInteger(group_id)
+  WHERE group._id = group_id
 
   WITH group
   MATCH (member:User)-[:BELONGS_TO]->(group)
@@ -110,167 +266,9 @@ exports.get_members_of_groups = (req, res) => {
 
     console.log(`Members of groups ${group_ids.join(', ')} queried`)
    })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
+  .catch(error => { error_handling(error,res) })
   .finally( () => { session.close() })
 
-}
-
-exports.add_member_to_group = (req, res) => {
-  // Route to make a user join a group
-
-  const group_id = req.body.group_id
-    ?? req.params.group_id
-
-  if(!group_id) return res.status(400).send('Group ID not defined')
-
-  const user_id = req.body.member_id
-    ?? req.body.user_id
-    ?? req.params.member_id
-
-  if(!user_id) return res.status(400).send('User ID not defined')
-
-  const session = driver.session();
-  session
-  .run(`
-    // Find the current user
-    MATCH (current_user:User)
-    WHERE id(current_user) = toInteger($current_user_id)
-
-    // Find group
-    WITH current_user
-    MATCH (group:Group)
-
-    // Allow only group admin or super admin to delete a group
-    WHERE id(group)=toInteger($group_id)
-      AND ( (group)-[:ADMINISTRATED_BY]->(current_user)
-        OR current_user.isAdmin )
-
-    // Find the user
-    WITH group
-    MATCH (user:User)
-    WHERE id(user)=toInteger($user_id)
-
-    // MERGE relationship
-    MERGE (user)-[:BELONGS_TO]->(group)
-
-    // Return
-    RETURN user, group
-    `,
-    {
-      current_user_id: get_current_user_id(res),
-      user_id,
-      group_id
-    })
-  .then(result => {
-    if(result.records.length < 1){
-      console.log(`Error adding user to group`)
-      return res.status(400).send(`Error adding user to group`)
-    }
-    console.log(`Added user ${user_id} to group ${group_id}`)
-    res.send(result.records[0].get('user'))
-  })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
-  .finally( () => { session.close() })
-}
-
-exports.remove_user_from_group = (req, res) => {
-  // Route to make a user leave a group
-
-  let group_id = req.body.group_id
-    ?? req.params.group_id
-
-  if(!group_id) return res.status(400).send('Group ID not defined')
-
-  let user_id = req.body.member_id
-    ?? req.body.user_id
-    ?? req.params.member_id
-
-  if(!user_id) return res.status(400).send('User ID not defined')
-
-  const session = driver.session();
-  session
-  .run(`
-
-    // Find the current user
-    MATCH (current_user:User)
-    WHERE id(current_user) = toInteger($current_user_id)
-
-    // Find group
-    WITH current_user
-    MATCH (group:Group)
-
-    // Allow only group admin or super admin to delete a group
-    WHERE id(group)=toInteger($group_id)
-      AND ( (group)-[:ADMINISTRATED_BY]->(current_user)
-        OR current_user.isAdmin )
-
-    // Find the user
-    WITH group
-    MATCH (user:User)-[r:BELONGS_TO]->(group)
-    WHERE id(user)=toInteger($user_id)
-
-    // delete relationship
-    DELETE r
-
-    // Return
-    RETURN user, group
-    `,
-    {
-      current_user_id: get_current_user_id(res),
-      user_id,
-      group_id,
-    })
-  .then(result => {
-    if(result.records.length < 1){
-      console.log(`Error removing user from group`)
-      return res.status(400).send(`Error removing user from group`)
-    }
-    console.log(`Removed user ${user_id} from group ${group_id}`)
-    res.send(result.records[0].get('user'))
-  })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
-  .finally( () => { session.close() })
-}
-
-
-exports.get_groups_of_user = (req, res) => {
-  // Route to retrieve a user's groups
-
-  let member_id = req.query.member_id
-    ?? req.query.user_id
-    ?? req.query.id
-    ?? req.params.member_id
-    ?? get_current_user_id(res)
-
-  if(member_id === 'self') member_id = get_current_user_id(res)
-
-  const session = driver.session()
-  session
-  .run(`
-    MATCH (user:User)-[:BELONGS_TO]->(group:Group)
-    WHERE id(user)=toInteger($member_id)
-    RETURN group
-    `,
-    { member_id })
-  .then(({records}) => {
-    console.log(`Groups of user ${member_id} queried`)
-    const groups = records.map(record => record.get('group'))
-    res.send(groups)
-   })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
-  .finally( () => { session.close() })
 }
 
 exports.get_groups_of_users = (req, res) => {
@@ -284,7 +282,8 @@ exports.get_groups_of_users = (req, res) => {
   const query = `
   UNWIND $user_ids AS user_id
   MATCH (user:User)
-  WHERE id(user)=toInteger(user_id)
+  // CANNOT USE QUERY TEMPLATE BECAUSE NOT $group_id
+  WHERE user._id = user_id
 
   WITH user
   MATCH (user)-[:BELONGS_TO]->(group:Group)
@@ -305,31 +304,6 @@ exports.get_groups_of_users = (req, res) => {
 
     res.send(output)
    })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
-  .finally( () => { session.close() })
-}
-
-
-exports.users_with_no_group = (req, res) => {
-  // Route to retrieve users without a group
-
-  const session = driver.session();
-  session
-  .run(`
-    MATCH (user:User)
-    WHERE NOT (user)-[:BELONGS_TO]->(:Group)
-    RETURN user
-    `, {})
-  .then(({records}) => {
-    const users = records.map(record => record.get('user'))
-    users.forEach( user => { delete user.properties.password_hashed })
-
-    res.send(users)
-    console.log(`[Neo4J] Queried users with no group`)
-  })
   .catch(error => {
     console.log(error)
     res.status(400).send(`Error accessing DB: ${error}`)

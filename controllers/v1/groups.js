@@ -1,6 +1,7 @@
 const {drivers: {v1: driver}} = require('../../db.js')
 const {
   get_current_user_id,
+  group_query,
 } = require('../../utils.js')
 
 exports.get_group = (req, res) => {
@@ -12,59 +13,17 @@ exports.get_group = (req, res) => {
   const session = driver.session()
   session
   .run(`
-    MATCH (group)
-    WHERE id(group)=toInteger($group_id)
+    ${group_query}
     RETURN group
     `, {
     group_id,
   })
-  .then(result => {
+  .then( ({records}) => {
     // NOTE: Not too sure about sendig only one record
     // How about sending all records and let the front end deal with it?
-    if(result.records.length < 1) return res.status(404).send('Not found')
-    console.log(`User ${get_current_user_id(res)} requested group ${group_id}`)
-    res.send(result.records[0].get('group'))
-  })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
-  .finally( () => { session.close() })
-}
-
-exports.create_group = (req, res) => {
-  // Create a group
-  // TODO: validation
-
-  const session = driver.session();
-  session
-  .run(`
-    // Create the group
-    CREATE (group:Group)
-    SET group.name = $group_name
-
-    // Create creation relationship
-    WITH group
-    MATCH (creator:User)
-    WHERE id(creator)=toInteger($user_id)
-    CREATE (group)-[:ADMINISTRATED_BY]->(creator)
-    CREATE (group)-[creation:CREATED_BY]->(creator)
-    CREATE (group)<-[:BELONGS_TO]-(creator)
-
-    // Setting creation date
-    SET creation.date = date()
-
-    // Could have a CREATED_BY relationship
-
-    RETURN group
-    `, {
-    user_id: get_current_user_id(res),
-    group_name: req.body.name,
-  })
-  .then(result => {
-    if(result.records.length < 1) return res.status(500).send('Error creating node')
-    console.log(`User ${get_current_user_id(res)} created group ${result.records[0].get('group').identity}`)
-    res.send(result.records[0].get('group'))
+    if(records.length < 1) return res.status(404).send('Not found')
+    console.log(`Group ${group_id} (LEGACY)`)
+    res.send(records[0].get('group'))
   })
   .catch(error => {
     console.log(error)
@@ -74,139 +33,6 @@ exports.create_group = (req, res) => {
 }
 
 
-exports.delete_group = (req, res) => {
-  // Route to delete a group
-
-  const group_id = req.params.group_id
-    ?? req.query.id
-    ?? req.query.group_id
-
-  if(!group_id) return res.status(400).send('Group ID not defined')
-
-  const session = driver.session();
-  session
-  .run(`
-    // Find the current user
-    MATCH (current_user:User)
-    WHERE id(current_user) = toInteger($current_user_id)
-
-    // Find group
-    WITH current_user
-    MATCH (group:Group)
-
-    // Allow only group admin or super admin to delete a group
-    WHERE id(group)=toInteger($group_id)
-      AND ( (group)-[:ADMINISTRATED_BY]->(current_user)
-        OR current_user.isAdmin )
-
-    // Delete the group
-    DETACH DELETE group
-
-    RETURN "success"
-    `, {
-    current_user_id: get_current_user_id(res),
-    group_id,
-  })
-  .then(result => {
-    if(result.records.length < 1) {
-      console.log(`Error while deleting group ${group_id}`)
-      res.status(400).send('Error deleting node')
-      return
-    }
-
-    res.send(result.records[0])
-    console.log(`User ${get_current_user_id(res)} deleted group ${group_id}`)
-  })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
-  .finally( () => { session.close() })
-}
-
-exports.join_group = (req, res) => {
-  // TODO: Could be combined with make user member of group
-  // Route to join a group (only works if group is not private)
-
-  const group_id = req.params.group_id
-    || req.body.group_id
-
-  if(!group_id) return res.status(400).send('Group ID not defined')
-
-
-  const session = driver.session();
-  session
-  .run(`
-    // Find the user
-    MATCH (user:User)
-    WHERE id(user)=toInteger($current_user_id)
-
-    // Find the group
-    WITH user
-    MATCH (group:Group)
-    WHERE id(group)=toInteger($group_id)
-      AND (NOT EXISTS(group.restricted) OR NOT group.restricted)
-
-    // MERGE relationship
-    MERGE (user)-[:BELONGS_TO]->(group)
-
-    // Return
-    RETURN user
-    `,
-    {
-      current_user_id: get_current_user_id(res),
-      group_id,
-    })
-  .then(result => {
-    if(result.records.length < 1) return res.status(400).send(`Error joining group`)
-    console.log(`User ${get_current_user_id(res)} joined group ${group_id}`)
-    res.send(result.records)
-  })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
-  .finally( () => { session.close() })
-}
-
-
-exports.leave_group = (req, res) => {
-  // Route to leave a group
-
-  const group_id = req.params.group_id
-    || req.body.group_id
-
-  if(!group_id) return res.status(400).send('Group ID not defined')
-
-  const session = driver.session();
-  session
-  .run(`
-    // Find the user and the group
-    MATCH (user:User)-[r:BELONGS_TO]->(group:Group)
-    WHERE id(user)=toInteger($current_user_id)
-      AND id(group)=toInteger($group_id)
-
-    // delete relationship
-    DELETE r
-
-    // Return
-    RETURN user
-    `,
-    {
-      current_user_id: get_current_user_id(res),
-      group_id,
-    })
-  .then(result => {
-    if(result.records.length < 1) return res.status(400).send(`Error leaving group`)
-    console.log(`User ${get_current_user_id(res)} left group ${group_id}`)
-    res.send(result.records)
-  })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
-  .finally( () => { session.close() })
-}
 
 
 exports.get_top_level_groups = (req, res) => {
@@ -224,7 +50,10 @@ exports.get_top_level_groups = (req, res) => {
     // NOT SURE WHY DISTINCT NEEDED
     RETURN DISTINCT(group)
     `, {})
-  .then(result => { res.send(result.records); })
+  .then(result => {
+    res.send(result.records)
+    console.log(`Top level groups queried (V1 LEGACY)`)
+  })
   .catch(error => {
     console.log(error)
     res.status(400).send(`Error accessing DB: ${error}`)
@@ -234,6 +63,7 @@ exports.get_top_level_groups = (req, res) => {
 
 exports.get_top_level_official_groups = (req, res) => {
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
+
   const session = driver.session();
   session
   .run(`
@@ -248,7 +78,10 @@ exports.get_top_level_official_groups = (req, res) => {
     // NOT SURE WHY DISTINCT NEEDED
     RETURN DISTINCT(group)
     `, {})
-  .then(result => { res.send(result.records); })
+  .then(result => {
+    res.send(result.records)
+    console.log(`Top level official groups queried (V1 LEGACY)`)
+   })
   .catch(error => {
     console.log(error)
     res.status(400).send(`Error accessing DB: ${error}`)
@@ -258,6 +91,7 @@ exports.get_top_level_official_groups = (req, res) => {
 
 exports.get_top_level_non_official_groups = (req, res) => {
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
+
   const session = driver.session();
   session
   .run(`
@@ -271,7 +105,11 @@ exports.get_top_level_non_official_groups = (req, res) => {
     // NOT SURE WHY DISTINCT NEEDED
     RETURN DISTINCT(group)
     `, {})
-  .then(result => { res.send(result.records) })
+  .then(result => {
+    res.send(result.records)
+    console.log(`Top level non official groups queried (V1 LEGACY)`)
+
+   })
   .catch(error => {
     console.log(error)
     res.status(400).send(`Error accessing DB: ${error}`)
@@ -282,6 +120,8 @@ exports.get_top_level_non_official_groups = (req, res) => {
 exports.get_groups_directly_belonging_to_group = (req, res) => {
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
 
+
+
   const group_id = req.query.id
     ?? req.query.group_id
     ?? req.params.group_id
@@ -291,12 +131,8 @@ exports.get_groups_directly_belonging_to_group = (req, res) => {
   const session = driver.session();
   session
   .run(`
-    // Match the parent node
-    MATCH (parent_group:Group)
-    WHERE id(parent_group)=toInteger($group_id)
-
-    // Match children that only have a direct connection to parent
-    WITH parent_group
+    ${group_query}
+    WITH group as parent_group
     MATCH (parent_group)<-[:BELONGS_TO]-(group:Group)
     WHERE NOT (group)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(parent_group)
 
@@ -305,7 +141,7 @@ exports.get_groups_directly_belonging_to_group = (req, res) => {
     `,
     { group_id })
   .then(result => {
-    console.log(`Direct subgroups of group ${group_id} queried`)
+    console.log(`Direct subgroups of group ${group_id} queried (V1 LEGACY)`)
     res.send(result.records)
    })
   .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
@@ -315,21 +151,22 @@ exports.get_groups_directly_belonging_to_group = (req, res) => {
 exports.get_parent_groups_of_group = (req, res) => {
   // Route to retrieve groups inside a group
 
+
   const subgroup_id = req.params.group_id
     ?? req.query.id
     ?? req.query.group_id
 
   if(!subgroup_id) return res.status(400).send('Group ID not defined')
 
-
   const session = driver.session()
   session
   .run(`
-    MATCH (child:Group)-[:BELONGS_TO]->(group:Group)
-    WHERE id(child)=toInteger($subgroup_id)
+    ${group_query}
+    WITH group as child
+    MATCH (child)-[:BELONGS_TO]->(group:Group)
     RETURN group
     `,
-    { subgroup_id, })
+    { group_id: subgroup_id })
   .then(result => {
     console.log(`Parent groups of group ${subgroup_id} queried`)
     res.send(result.records)
@@ -340,75 +177,6 @@ exports.get_parent_groups_of_group = (req, res) => {
   })
   .finally( () => { session.close() })
 }
-
-exports.patch_group = (req, res) => {
-
-  const group_id = req.body.id
-    ?? req.body.group_id
-    ?? req.params.group_id
-
-  if(!group_id) return res.status(400).send('Group ID not defined')
-
-
-  let customizable_fields = [
-    'avatar_src',
-    'name',
-    'restricted',
-  ]
-
-  // Allow master admin to make groups officials
-  if(res.locals.user.properties.isAdmin){
-    customizable_fields.push('official')
-  }
-
-  // prevent user from modifying disallowed properties
-  for (let [key, value] of Object.entries(req.body)) {
-    if(!customizable_fields.includes(key)) {
-      delete req.body[key]
-      // TODO: forbid changes
-    }
-  }
-
-  const session = driver.session()
-  session
-  .run(`
-    // Find the current user
-    MATCH (current_user:User)
-    WHERE id(current_user) = toInteger($current_user_id)
-
-    // Find group
-    WITH current_user
-    MATCH (group:Group)
-
-    // Allow only group admin or super admin to delete a group
-    WHERE id(group)=toInteger($group_id)
-      AND (
-        (group)-[:ADMINISTRATED_BY]->(current_user)
-        OR current_user.isAdmin
-      )
-
-    // Patch properties
-    // += implies update of existing properties
-    SET group += $properties
-
-    RETURN group
-    `, {
-    current_user_id: get_current_user_id(res),
-    group_id,
-    properties: req.body,
-  })
-  .then(result => {
-    console.log(`User ${get_current_user_id(res)} patched group ${group_id}`)
-    res.send(result.records)
-  })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
-  .finally(() => session.close())
-
-}
-
 
 exports.get_groups_of_group = (req, res) => {
   // Route to retrieve groups inside a group
@@ -421,13 +189,14 @@ exports.get_groups_of_group = (req, res) => {
   const session = driver.session();
   session
   .run(`
-    MATCH (group:Group)-[:BELONGS_TO]->(parent:Group)
-    WHERE id(parent)=toInteger($group_id)
+    ${group_query}
+    WITH group as parent
+    MATCH (group:Group)-[:BELONGS_TO]->(parent)
     RETURN group
     `,
     { group_id })
   .then(result => {
-    console.log(`Subgroups of group ${group_id} queried`)
+    console.log(`Subgroups of group ${group_id} queried (V1 LEGACY)`)
     res.send(result.records)
    })
   .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
@@ -435,125 +204,29 @@ exports.get_groups_of_group = (req, res) => {
 }
 
 exports.add_group_to_group = (req, res) => {
-  // Route to make a group join a group
-  // Can only be done if user is admin of both groups
-
-  const parent_group_id = req.body.parent_group_id
-    ?? req.params.group_id
-    ?? req.body.group_id
-
-  const child_group_id = req.body.child_group_id
-    ?? req.body.subgroup_id
-    ?? req.params.subgroup_id
-
-  const session = driver.session()
-  session
-  .run(`
-    // Find the current user
-    MATCH (current_user:User)
-    WHERE id(current_user) = toInteger($current_user_id)
-
-    // Find group
-    WITH current_user
-    MATCH (child_group:Group)
-
-    // Allow only group admin or super admin to delete a group
-    WHERE id(child_group)=toInteger($child_group_id)
-      AND ( (child_group)-[:ADMINISTRATED_BY]->(current_user)
-        OR current_user.isAdmin )
-
-    // Find the parent group
-    WITH child_group, current_user
-    MATCH (parent_group:Group)
-    WHERE id(parent_group)=toInteger($parent_group_id)
-      AND ( (parent_group)-[:ADMINISTRATED_BY]->(current_user)
-        OR current_user.isAdmin )
-
-      // Prevent cyclic graphs (NOT WORKING)
-      AND NOT (parent_group)-[:BELONGS_TO]->(child_group)
-      AND NOT (parent_group)-[:BELONGS_TO *1..]->(:Group)-[:BELONGS_TO]->(child_group)
-
-      // Prevent self group
-      AND NOT id(parent_group)=id(child_group)
-
-    // MERGE relationship
-    MERGE (child_group)-[:BELONGS_TO]->(parent_group)
-
-    // Return
-    RETURN child_group
-    `,
-    {
-      current_user_id: get_current_user_id(res),
-      parent_group_id,
-      child_group_id,
-    })
-  .then(result => {
-    if(result.records.length < 1) return res.status(400).send(`Error adding group to group`)
-    console.log(`User ${get_current_user_id(res)} added group ${child_group_id} to group ${parent_group_id}`)
-    res.send(result.records)
-  })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
-  .finally( () => { session.close() })
+  res.status(410).send('deprecated')
 }
 
 exports.remove_group_from_group = (req, res) => {
-  // Route to make a user join a group
+  res.status(410).send('deprecated')
+}
 
-  // TODO: Should the user be admin of child group?
+exports.create_group = (req, res) => {
+  res.status(410).send('Deprecated')
+}
 
-  const parent_group_id = req.body.parent_group_id
-    ?? req.params.group_id
-    ?? req.body.group_id
+exports.delete_group = (req, res) => {
+  res.status(410).send('Deprecated')
+}
 
-  const child_group_id = req.body.child_group_id
-    ?? req.body.subgroup_id
-    ?? req.params.subgroup_id
+exports.join_group = (req, res) => {
+  res.status(410).send('Deprecated')
+}
 
-  const session = driver.session();
-  session
-  .run(`
-    // Find the current user
-    MATCH (current_user:User)
-    WHERE id(current_user) = toInteger($current_user_id)
+exports.leave_group = (req, res) => {
+  res.status(410).send('Deprecated')
+}
 
-    // Find the child group group
-    WITH current_user
-    MATCH (child_group:Group)
-
-    // Allow only group admin or super admin to remove a group
-    WHERE id(child_group)=toInteger($child_group_id)
-      AND ( (child_group)-[:ADMINISTRATED_BY]->(current_user)
-        OR current_user.isAdmin )
-
-    // Find the parent group
-    WITH child_group, current_user
-    MATCH (child_group)-[r:BELONGS_TO]->(parent_group:Group)
-    WHERE id(parent_group) = toInteger($parent_group_id)
-      AND ( (parent_group)-[:ADMINISTRATED_BY]->(current_user)
-        OR current_user.isAdmin )
-
-    // delete relationship
-    DELETE r
-
-    // Return
-    RETURN child_group, parent_group
-    `,
-    {
-      current_user_id: get_current_user_id(res),
-      parent_group_id,
-      child_group_id,
-    })
-  .then(result => {
-    if(result.records.length < 1) return res.status(400).send(`Error removing group from group`)
-    console.log(`User ${get_current_user_id(res)} removed group ${child_group_id} from group ${parent_group_id}`)
-    res.send(result.records)
-  })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
-  .finally( () => { session.close() })
+exports.patch_group = (req, res) => {
+  res.status(410).send('deprecated')
 }
