@@ -33,15 +33,12 @@ const init = async () => {
   RETURN COUNT(g) as count
   `
 
-  const index_query = `CREATE INDEX ON :Group(_id)`
-
   const session = drivers.v2.session()
 
   try {
     const {records} = await session.run(id_setting_query)
     const count = records[0].get('count')
     console.log(`[Neo4J] ID of ${count} groups have been set`)
-    await session.run(index_query)
     connected = true
   }
   catch (e) {
