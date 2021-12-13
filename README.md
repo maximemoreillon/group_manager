@@ -1,7 +1,7 @@
 # Group manager
 
-[![pipeline status](https://gitlab.com/moreillon_k8s/group-manager/group_manager_neo4j/badges/master/pipeline.svg)](https://gitlab.com/moreillon_k8s/group-manager/group_manager_neo4j/-/commits/master)
-[![coverage report](https://gitlab.com/moreillon_k8s/group-manager/group_manager_neo4j/badges/master/coverage.svg)](https://gitlab.com/moreillon_k8s/group-manager/group_manager_neo4j/-/commits/master)
+[![pipeline status](https://gitlab.com/moreillon_k8s/group-manager/group_manager_neo4j/badges/master/pipeline.svg)](https://gitlab.com/moreillon_k8s/group-manager/group_manager_neo4j)
+[![coverage report](https://gitlab.com/moreillon_k8s/group-manager/group_manager_neo4j/badges/master/coverage.svg)](https://gitlab.com/moreillon_k8s/group-manager/group_manager_neo4j)
 
 A NodeJS application to manage groups of users.
 The user and group information is stored in a Neo4J database.
