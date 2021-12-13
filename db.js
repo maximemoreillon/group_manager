@@ -58,5 +58,5 @@ const init = async () => {
 
 exports.url = NEO4J_URL
 exports.drivers = drivers
-exports.get_connected = () => connected
+exports.connected = () => connected
 exports.init = init
