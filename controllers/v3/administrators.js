@@ -22,7 +22,7 @@ exports.get_administrators_of_group = (req, res) => {
   ${group_query}
   WITH group
   OPTIONAL MATCH (admin:User)<-[:ADMINISTRATED_BY]-(group:Group)
-  RETURN collect(admin) as administrators
+  RETURN collect(properties(admin)) as administrators
   `
 
 
@@ -30,7 +30,7 @@ exports.get_administrators_of_group = (req, res) => {
   .then(({records}) => {
     if(!records.length) throw {code: 404, message: `Group ${group_id} not found`}
     const admins = records[0].get('administrators')
-    admins.forEach( admin => { delete admin.properties.password_hashed })
+    admins.forEach( admin => { delete admin.password_hashed })
     res.send(admins)
     console.log(`Administrators of group ${group_id} queried`)
    })
@@ -69,7 +69,7 @@ exports.make_user_administrator_of_group = (req, res) => {
     MERGE (group)-[:ADMINISTRATED_BY]->(user)
 
     // Return
-    RETURN user, group
+    RETURN properties(group) as group
     `
 
   const params = {
@@ -82,7 +82,7 @@ exports.make_user_administrator_of_group = (req, res) => {
   .then(({records}) => {
     if(!records.length) return res.status(400).send(`Error adding user to administrators`)
     console.log(`User ${user_id} added to administrators of group ${group_id}`)
-    res.send(records[0].get('user'))
+    res.send(records[0].get('group'))
   })
   .catch(error => {
     console.log(error)
@@ -121,7 +121,7 @@ exports.remove_user_from_administrators = (req, res) => {
     DELETE r
 
     // Return
-    RETURN user, group
+    RETURN properties(group) as group
     `
 
   const params = {
@@ -134,7 +134,7 @@ exports.remove_user_from_administrators = (req, res) => {
   .then(({records}) => {
     if(!records.length) return res.status(400).send(`Error removing from administrators`)
     console.log(`User ${user_id} removed from administrators of group ${group_id}`)
-    res.send(records[0].get('user'))
+    res.send(records[0].get('group'))
   })
   .catch(error => {
     console.error(error)
@@ -154,13 +154,14 @@ exports.get_groups_of_administrator = (req, res) => {
   .run(`
     MATCH (user:User)<-[:ADMINISTRATED_BY]-(group:Group)
     ${user_id_filter}
-    RETURN collect(group) as groups
+    RETURN collect(properties(group)) as groups
     `,
     { user_id, })
   .then( ({records}) => {
     if(!records.length) throw {code: 404, message: `User ${user_id} not found`}
-    const groups = records[0].get('groups')
     console.log(`Groups of administrator ${user_id} queried`)
+
+    const groups = records[0].get('groups')
     res.send(groups)
   })
   .catch(error => {

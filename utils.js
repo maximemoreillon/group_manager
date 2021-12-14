@@ -1,9 +1,9 @@
 exports.get_current_user_id = (res) => {
   const current_user = res.locals.user
-  const _id = current_user._id
+  const _id = current_user._id // futureproofing
     || current_user.properties._id
-    || current_user.identity.low
-    || current_user.identity
+    || current_user.identity.low // remove this when done
+    || current_user.identity // remove this when done
 
   return _id
 }
