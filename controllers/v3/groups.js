@@ -388,6 +388,9 @@ exports.add_group_to_group = (req, res) => {
   const {group_id: parent_group_id} = req.params
   const {group_id: child_group_id} = req.body
 
+  if(!child_group_id) return res.status(400).send('Child Group ID not defined')
+
+
   const user_id = get_current_user_id(res)
 
   const session = driver.session()
