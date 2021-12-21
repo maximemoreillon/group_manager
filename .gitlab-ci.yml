@@ -13,10 +13,11 @@ variables:
   K8S_INGRESS_DOMAIN: api.groups.maximemoreillon.com
 
 
-
 # Needed for Docker in docker build
+image: moreillon/ci-dind
 services:
   - name: docker:19.03.12-dind
+
 
 build:
   stage: build
@@ -85,7 +86,7 @@ test:
 deploy:
   stage: deploy
   tags:
-    - moreillon
+    - dind
   script:
     - envsubst < kubernetes/deployment.yml | kubectl apply -f -
   environment:

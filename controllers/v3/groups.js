@@ -59,6 +59,9 @@ exports.get_groups = async (req, res) => {
 
   // WARNING: Querying top level official groups means groups whith no parent THAT ARE OFFICIAL
 
+  // Is batching really all that important?
+  // Probably yes
+
   const {
     batch_size,
     start_index = 0,
