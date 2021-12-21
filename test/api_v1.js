@@ -41,13 +41,13 @@ describe("/v1", () => {
   describe("POST /v2/groups", () => {
     it("Should allow the creation of groups", async () => {
 
-      let res = await request(app)
+      let {body, status} = await request(app)
         .post("/v2/groups")
         .send({name: 'tdd_v1'})
         .set('Authorization', `Bearer ${jwt}`)
 
-      if(res.body.properties) group_id = res.body.properties._id
-      expect(res.status).to.equal(200)
+      if(body.properties) group_id = body.properties._id
+      expect(status).to.equal(200)
     })
 
   })
@@ -130,4 +130,13 @@ describe("/v1", () => {
     })
   })
 
+  describe("DELETE /v2/groups/:group_id", () => {
+    it("Should allow the deletion of a group", async () => {
+      const {status, body} = await request(app)
+        .delete(`/v2/groups/${group_id}`)
+        .set('Authorization', `Bearer ${jwt}`)
+
+      expect(status).to.equal(200)
+    })
+  })
 })

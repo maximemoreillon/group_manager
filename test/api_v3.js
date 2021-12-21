@@ -43,7 +43,7 @@ describe("/v3/", () => {
 
       let res = await request(app)
         .post("/v3/groups")
-        .send({name: 'tdd'})
+        .send({name: 'tdd_v3'})
         .set('Authorization', `Bearer ${jwt}`)
 
       if(res.body) group_id = res.body._id

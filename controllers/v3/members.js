@@ -234,7 +234,7 @@ exports.users_with_no_group = (req, res) => {
   } = req.query
 
   const query = `
-    MATCH (user:User)
+    OPTIONAL MATCH (user:User)
     WHERE NOT (user)-[:BELONGS_TO]->(:Group)
     WITH user as item
     ${return_batch}

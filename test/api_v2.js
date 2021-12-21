@@ -43,14 +43,14 @@ describe("/v2/", () => {
 
       let res = await request(app)
         .post("/v2/groups")
-        .send({name: 'tdd'})
+        .send({name: 'tdd_v2'})
         .set('Authorization', `Bearer ${jwt}`)
 
       if(res.body.properties) group_id = res.body.properties._id
 
       res = await request(app)
         .post("/v2/groups")
-        .send({name: 'tdd_sub'})
+        .send({name: 'tdd_v2_ub'})
         .set('Authorization', `Bearer ${jwt}`)
 
       if(res.body.properties) subgroup_id = res.body.properties._id
