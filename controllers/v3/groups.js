@@ -1,4 +1,5 @@
 const {drivers: {v2: driver}} = require('../../db.js')
+
 const {
   get_current_user_id,
   error_handling,
@@ -6,8 +7,13 @@ const {
   group_query,
   group_id_filter,
   current_user_query,
+  return_batch,
+  format_batched_response
 } = require('../../utils.js')
 
+const {
+  default_batch_size
+} = require('../../config.js')
 
 
 exports.create_group = (req, res) => {
@@ -53,7 +59,7 @@ exports.create_group = (req, res) => {
   .finally( () => { session.close() })
 }
 
-exports.get_groups = async (req, res) => {
+exports.get_groups = (req, res) => {
 
   // Queries: official vs non official, top level vs normal, type
 
@@ -62,28 +68,32 @@ exports.get_groups = async (req, res) => {
   // Is batching really all that important?
   // Probably yes
 
+  // Shallow: only groups that are not part of another group
+
   const {
-    batch_size,
+    batch_size = default_batch_size,
     start_index = 0,
+    shallow = false,
+    official = false,
+    nonofficial = false
   } = req.query
 
-  const top_level_query = req.query.top == null ? '' : 'WITH group WHERE NOT (group)-[:BELONGS_TO]->(:Group)'
-  const official_query = req.query.official == null ? '' : 'WITH group WHERE group.official'
-  const non_official_query = req.query.nonofficial == null ? '' : 'WITH group WHERE (NOT EXISTS(group.official) OR NOT group.official)'
-
-  const batching = batch_size ? `WITH group_count, groups[toInteger($start_index)..toInteger($start_index)+toInteger($batch_size)] AS groups` : ''
+  const shallow_query = 'AND NOT (group)-[:BELONGS_TO]->(:Group)'
+  const official_query = 'AND group.official'
+  const non_official_query = 'AND (NOT EXISTS(group.official) OR NOT group.official)'
 
   const query = `
-    MATCH (group:Group)
-    ${top_level_query}
-    ${official_query}
-    ${non_official_query}
-
-    WITH COLLECT(properties(group)) as groups, COUNT(group) as group_count
-    ${batching}
-
-    RETURN groups, group_count
+    // OPTIONAL MATCH so as to allow for batching even when no match
+    // WHERE used as dummy condition for chaining the next filters
+    OPTIONAL MATCH (group:Group)
+    WHERE EXISTS(group._id)
+    ${shallow ? shallow_query : ''}
+    ${official ? official_query : ''}
+    ${nonofficial ? non_official_query : ''}
+    WITH group as item
+    ${return_batch}
     `
+
 
   const params = { batch_size, start_index }
 
@@ -91,23 +101,12 @@ exports.get_groups = async (req, res) => {
   session.run(query,params)
   .then( ({records}) => {
 
-    const record = records[0]
-
-    const response = {
-      batch_size,
-      start_index,
-      group_count: record.get('group_count'),
-      groups: record.get('groups'),
-    }
-
+    const response = format_batched_response(records)
 
     res.send(response)
     console.log(`Groups queried`)
   })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
+  .catch(error => { error_handling(error, res) })
   .finally( () => { session.close() })
 }
 
@@ -118,10 +117,7 @@ exports.get_group = (req, res) => {
   const {group_id} = req.params
 
 
-  const query = `
-    ${group_query}
-    RETURN properties(group) as group
-    `
+  const query = `${group_query} RETURN properties(group) as group`
 
   const params = { group_id }
 
@@ -317,35 +313,45 @@ exports.leave_group = (req, res) => {
   .finally( () => { session.close() })
 }
 
-// FROM HERE< APPAARETNLY SUBGROUPS
+// From here, parent groups and subgroups
 exports.get_parent_groups_of_group = (req, res) => {
-  // Route to retrieve groups inside a group
 
   const {group_id} = req.params
-
   if(!group_id) return res.status(400).send('Group ID not defined')
 
-  const direct_only_query = `
-    WHERE NOT (group)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(parent)
-    `
+  const {
+    direct,
+    batch_size = default_batch_size,
+    start_index = 0,
+  } = req.query
+
+
   const session = driver.session()
+
+  const direct_only_query = `WHERE NOT (group)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(parent)`
 
   const query = `
     ${group_query}
     WITH group
     OPTIONAL MATCH (group)-[:BELONGS_TO]->(parent:Group)
-    ${req.query.direct ? direct_only_query : ''}
-    RETURN collect(properties(parent)) as parents
+    ${direct ? direct_only_query : ''}
+
+    WITH parent as item
+    ${return_batch}
     `
 
-  session.run(query,{ group_id })
+  const params = { group_id, batch_size, start_index }
+
+
+  session.run(query, params)
   .then( ({records}) => {
 
     if(!records.length) throw {code: 404, message: `Subgroup group ${group_id} not found`}
-    const groups = records[0].get('parents')
-    res.send(groups)
     console.log(`Parent groups of group ${group_id} queried`)
 
+    const response = format_batched_response(records)
+
+    res.send(response)
   })
   .catch(error => { error_handling(error, res) })
   .finally( () => { session.close() })
@@ -358,10 +364,14 @@ exports.get_groups_of_group = (req, res) => {
 
   const {group_id} = req.params
 
+  const {
+    direct,
+    batch_size = default_batch_size,
+    start_index = 0,
+  } = req.query
 
-  const direct_only_query = `
-    WHERE NOT (subgroup)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(group)
-    `
+
+  const direct_only_query = `WHERE NOT (subgroup)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(group)`
 
   const session = driver.session()
 
@@ -369,18 +379,22 @@ exports.get_groups_of_group = (req, res) => {
     ${group_query}
     WITH group
     OPTIONAL MATCH (subgroup:Group)-[:BELONGS_TO]->(group:Group)
-    ${req.query.direct === 'true' ? direct_only_query : ''}
-    RETURN collect(properties(subgroup)) as subgroups
+    ${direct ? direct_only_query : ''}
+
+    WITH subgroup as item
+    ${return_batch}
     `
 
-  const params = { group_id }
+  const params = { group_id, batch_size, start_index }
 
   session.run(query,params)
   .then( ({records}) => {
     if(!records.length) throw {code: 404, message: `Parent group ${group_id} not found`}
-    const groups = records[0].get('subgroups')
-    res.send(groups)
+
     console.log(`Subgroups of group ${group_id} queried`)
+    const response = format_batched_response(records)
+
+    res.send(response)
   })
   .catch(error => { error_handling(error, res) })
   .finally( () => { session.close() })
@@ -433,11 +447,7 @@ exports.add_group_to_group = (req, res) => {
     RETURN properties(child_group) as child_group
     `
 
-  const params = {
-    user_id,
-    parent_group_id,
-    child_group_id,
-  }
+  const params = { user_id, parent_group_id, child_group_id }
 
   session.run(query, params)
   .then( ({records}) => {

@@ -13,8 +13,6 @@ router.route('/groups')
   .get(group_controller.get_groups)
 
 // slightly exceptional routes
-router.route('/groups/members').get(member_controller.get_members_of_groups)
-router.route('/groups/users').get(member_controller.get_members_of_groups)
 router.route('/groups/none/members').get(member_controller.users_with_no_group)
 router.route('/groups/none/users').get(member_controller.users_with_no_group)
 

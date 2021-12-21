@@ -44,8 +44,9 @@ exports.create_group = (req, res) => {
 
     if(!records.length) throw {code: 500, message: `Error while creating group ${name}`}
     const group = records[0].get('group')
+    console.log(`User ${get_current_user_id(res)} created group ${group._id}`)
+
     res.send(group)
-    console.log(`User ${get_current_user_id(res)} created group ${group.properties._id}`)
   })
   .catch(error => {
     error_handling(error,res)
@@ -57,16 +58,17 @@ exports.get_groups = async (req, res) => {
 
   // Queries: official vs non official, top level vs normal, type
 
-  // WARNING: Querying top level official groups means groups whith no parent THAT ARE OFFICIAL
+  // NOTE: Querying top level official groups means groups whith no parent THAT ARE OFFICIAL
 
   const {
-    batch_size,
+    batch_size = 100,
     start_index = 0,
   } = req.query
 
   const top_level_query = req.query.top == null ? '' : 'WITH group WHERE NOT (group)-[:BELONGS_TO]->(:Group)'
   const official_query = req.query.official == null ? '' : 'WITH group WHERE group.official'
   const non_official_query = req.query.nonofficial == null ? '' : 'WITH group WHERE (NOT EXISTS(group.official) OR NOT group.official)'
+
 
   const batching = batch_size ? `WITH group_count, groups[toInteger($start_index)..toInteger($start_index)+toInteger($batch_size)] AS groups` : ''
 

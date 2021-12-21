@@ -1,4 +1,5 @@
 const {drivers: {v2: driver}} = require('../../db.js')
+
 const {
   error_handling,
   get_current_user_id,
@@ -7,13 +8,18 @@ const {
   group_id_filter,
   user_id_filter,
   current_user_query,
+  return_batch,
+  format_batched_response
 } = require('../../utils.js')
 
+const {
+  default_batch_size
+} = require('../../config.js')
 
 exports.get_user = (req, res) => {
   // Route to retrieve a user's info
   // This should not be a feature of group manager
-  // Used in front-end
+  // but Used in front-end
 
   let {member_id: user_id} = req.params
   if(user_id === 'self') user_id = get_current_user_id(res)
@@ -22,10 +28,7 @@ exports.get_user = (req, res) => {
 
   const session = driver.session()
 
-  const query = `
-    ${user_query}
-    RETURN properties(user) as user
-    `
+  const query = `${user_query} RETURN properties(user) as user`
 
   session.run(query, { user_id })
   .then( ({records}) => {
@@ -48,28 +51,35 @@ exports.get_user = (req, res) => {
 exports.get_members_of_group = (req, res) => {
   // Route to retrieve a user's groups
 
-  const group_id = req.params.group_id || req.query.group_id
+  const {group_id} = req.params
   if(!group_id) return res.status(400).send('Group ID not defined')
 
-  // Todo: allow user to pass what key tey want to query
-  // IDEA: Could be done with GraphQL
+  const {
+    batch_size = default_batch_size,
+    start_index = 0,
+  } = req.query
+
 
   const session = driver.session()
 
   const query = `
     ${group_query}
     WITH group
-    OPTIONAL MATCH (user:User)-[:BELONGS_TO]->(group)
-    RETURN collect(properties(user)) as users
-    `
 
-  session.run(query,  { group_id })
+    // Optional match so groups with no users can still be queried
+    OPTIONAL MATCH (user:User)-[:BELONGS_TO]->(group)
+
+    WITH user as item
+    ${return_batch}
+    `
+  const params = { group_id, batch_size, start_index }
+
+  session.run(query, params)
   .then(({records}) => {
     if(!records.length) throw {code: 404, message: `Member query: group ${group_id} not found`}
-    const users = records[0].get('users')
-    users.forEach( user => { delete user.password_hashed })
-    res.send(users)
     console.log(`Users of group ${group_id} queried`)
+    const response = format_batched_response(records)
+    res.send(response)
    })
   .catch(error => { error_handling(error,res) })
   .finally( () => { session.close() })
@@ -183,21 +193,31 @@ exports.get_groups_of_user = (req, res) => {
   let {member_id: user_id} = req.params
   if(user_id === 'self') user_id = get_current_user_id(res)
 
+  const {
+    batch_size = default_batch_size,
+    start_index = 0,
+  } = req.query
+
   const session = driver.session()
 
   const query = `
     ${user_query}
     WITH user
-    MATCH (user)-[:BELONGS_TO]->(group:Group)
-    RETURN collect(properties(group)) as groups
+    // OPTIONAL because still want to perform query even if no groups
+    OPTIONAL MATCH (user)-[:BELONGS_TO]->(group:Group)
+    WITH group as item
+    ${return_batch}
     `
 
-  session.run(query,{ user_id })
+  const params = { user_id, batch_size, start_index }
+
+
+  session.run(query, params)
   .then(({records}) => {
     if(!records.length) throw {code: 404, message: `User ${user_id} not found`}
     console.log(`Groups of user ${user_id} queried`)
-    const groups = records[0].get('groups')
-    res.send(groups)
+    const response = format_batched_response(records)
+    res.send(response)
    })
   .catch(error => { error_handling(error, res) })
   .finally( () => { session.close() })
@@ -206,105 +226,31 @@ exports.get_groups_of_user = (req, res) => {
 exports.users_with_no_group = (req, res) => {
   // Route to retrieve users without a group
 
-  const session = driver.session();
-  session
-  .run(`
+  const session = driver.session()
+
+  const {
+    batch_size = default_batch_size,
+    start_index = 0,
+  } = req.query
+
+  const query = `
     MATCH (user:User)
     WHERE NOT (user)-[:BELONGS_TO]->(:Group)
-    RETURN collect(properties(user)) as users
-    `, {})
+    WITH user as item
+    ${return_batch}
+    `
+
+  const params = { batch_size, start_index }
+
+  session.run(query, params)
   .then(({records}) => {
 
     if(!records.length) throw {code: 404, message: `Error getting users with no group`}
-    const users = records[0].get('users')
-    users.forEach( user => { delete user.password_hashed })
-
-    res.send(users)
     console.log(`Queried users with no group`)
+
+    const response = format_batched_response(records)
+    res.send(response)
   })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
-  .finally( () => { session.close() })
-}
-
-exports.get_members_of_groups = (req, res) => {
-  // Retrieve a multiple groups' members
-  // Still in beta
-
-  const group_ids = req.query.group_ids
-    || req.query.ids
-
-  const query = `
-  UNWIND $group_ids AS group_id
-
-  // CANNOT USE QUERY TEMPLATE BECAUSE NOT $group_id
-  MATCH (group:Group)
-  WHERE group._id = group_id
-
-  WITH group
-  MATCH (member:User)-[:BELONGS_TO]->(group)
-  RETURN group, COLLECT(properties(member)) AS members
-  `
-
-  const params = { group_ids }
-
-  const session = driver.session()
-  session.run(query, params)
-  .then(({records}) => {
-
-    const output = records.map(record => {
-      const group = record.get('group')
-      group.members = record.get('members')
-      return group
-    })
-
-    res.send(output)
-
-    console.log(`Members of groups ${group_ids.join(', ')} queried`)
-   })
-  .catch(error => { error_handling(error,res) })
-  .finally( () => { session.close() })
-
-}
-
-exports.get_groups_of_users = (req, res) => {
-  // Retrieve a multiple users' groups
-  // Still in beta
-
-  const user_ids = req.query.user_ids
-    || req.query.member_ids
-    || req.query.ids
-
-  const query = `
-  UNWIND $user_ids AS user_id
-  MATCH (user:User)
-  // CANNOT USE QUERY TEMPLATE BECAUSE NOT $group_id
-  WHERE user._id = user_id
-
-  WITH user
-  MATCH (user)-[:BELONGS_TO]->(group:Group)
-  RETURN user, COLLECT(properties(group)) AS groups
-  `
-
-  const params = { user_ids }
-
-  const session = driver.session()
-  session.run(query, params)
-  .then(({records}) => {
-
-    const output = records.map(record => {
-      const user = record.get('user')
-      user.groups = record.get('groups')
-      return user
-    })
-
-    res.send(output)
-   })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
+  .catch(error => { error_handling(error, res) })
   .finally( () => { session.close() })
 }

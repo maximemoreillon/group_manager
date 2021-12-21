@@ -1,4 +1,5 @@
 const {drivers: {v2: driver}} = require('../../db.js')
+
 const {
   get_current_user_id,
   group_id_filter,
@@ -7,8 +8,13 @@ const {
   user_query,
   user_id_filter,
   group_query,
+  return_batch,
+  format_batched_response,
 } = require('../../utils.js')
 
+const {
+  default_batch_size
+} = require('../../config.js')
 
 exports.get_administrators_of_group = (req, res) => {
   // Route to retrieve a user's groups
@@ -16,25 +22,32 @@ exports.get_administrators_of_group = (req, res) => {
   const {group_id} = req.params
   if(!group_id) return res.status(400).send('Group ID not defined')
 
+  const {
+    batch_size = default_batch_size,
+    start_index = 0,
+  } = req.query
+
   const session = driver.session()
 
   const query = `
-  ${group_query}
-  WITH group
-  OPTIONAL MATCH (admin:User)<-[:ADMINISTRATED_BY]-(group:Group)
-  RETURN collect(properties(admin)) as administrators
-  `
+    ${group_query}
+    WITH group
+    OPTIONAL MATCH (admin:User)<-[:ADMINISTRATED_BY]-(group:Group)
+    WITH admin as item
+    ${return_batch}
+    `
+
+  const params = { group_id, batch_size, start_index }
 
 
-  session.run(query,{ group_id })
+  session.run(query,params)
   .then(({records}) => {
     if(!records.length) throw {code: 404, message: `Group ${group_id} not found`}
-    const admins = records[0].get('administrators')
-    admins.forEach( admin => { delete admin.password_hashed })
-    res.send(admins)
     console.log(`Administrators of group ${group_id} queried`)
+    const response = format_batched_response(records)
+    res.send(response)
    })
-  .catch(error => { error_handling(error) })
+  .catch(error => { error_handling(error, res) })
   .finally( () => { session.close() })
 }
 
@@ -84,10 +97,7 @@ exports.make_user_administrator_of_group = (req, res) => {
     console.log(`User ${user_id} added to administrators of group ${group_id}`)
     res.send(records[0].get('group'))
   })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
+  .catch(error => { error_handling(error, res) })
   .finally( () => { session.close() })
 }
 
@@ -136,10 +146,7 @@ exports.remove_user_from_administrators = (req, res) => {
     console.log(`User ${user_id} removed from administrators of group ${group_id}`)
     res.send(records[0].get('group'))
   })
-  .catch(error => {
-    console.error(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
+  .catch(error => { error_handling(error, res) })
   .finally( () => { session.close() })
 }
 
@@ -149,24 +156,30 @@ exports.get_groups_of_administrator = (req, res) => {
   let {administrator_id: user_id} = req.params
   if(user_id === 'self') user_id = get_current_user_id(res)
 
+  const {
+    batch_size = default_batch_size,
+    start_index = 0,
+  } = req.query
+
+  const query = `
+    ${user_query}
+    WITH user
+    OPTIONAL MATCH (user)<-[:ADMINISTRATED_BY]-(group:Group)
+    WITH group as item
+    ${return_batch}
+    `
+
+  const params = { user_id, batch_size, start_index }
+
   const session = driver.session();
   session
-  .run(`
-    MATCH (user:User)<-[:ADMINISTRATED_BY]-(group:Group)
-    ${user_id_filter}
-    RETURN collect(properties(group)) as groups
-    `,
-    { user_id, })
+  .run(query,params)
   .then( ({records}) => {
     if(!records.length) throw {code: 404, message: `User ${user_id} not found`}
     console.log(`Groups of administrator ${user_id} queried`)
-
-    const groups = records[0].get('groups')
-    res.send(groups)
+    const response = format_batched_response(records)
+    res.send(response)
   })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
+  .catch(error => { error_handling(error, res) })
   .finally( () => { session.close() })
 }
