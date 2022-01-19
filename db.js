@@ -38,7 +38,7 @@ const init = async () => {
   try {
     const {records} = await session.run(id_setting_query)
     const count = records[0].get('count')
-    console.log(`[Neo4J] ID of ${count} groups have been set`)
+    console.log(`[Neo4J] Formatted new ID for ${count} groups`)
     connected = true
   }
   catch (e) {

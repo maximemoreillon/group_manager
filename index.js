@@ -48,11 +48,11 @@ app.get('/', (req, res) => {
 })
 
 // From here on, all routes are protected
-app.use(auth(auth_options))
-app.use('/', router_v1)
-app.use('/v1', router_v1) //alias
-app.use('/v2', router_v2)
-app.use('/v3', router_v3)
+
+app.use('/', auth(auth_options), router_v1)
+app.use('/v1', auth(auth_options), router_v1) //alias
+app.use('/v2', auth(auth_options), router_v2)
+app.use('/v3', auth(auth_options), router_v3)
 
 
 
