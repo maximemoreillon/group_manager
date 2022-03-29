@@ -152,7 +152,8 @@ exports.patch_group = (req, res) => {
   ]
 
   // Allow master admin to make groups officials
-  if(res.locals.user.properties.isAdmin){
+  const current_user = res.locals.user
+  if(current_user.isAdmin || current_user?.properties.isAdmin){
     customizable_fields.push('official')
   }
 
