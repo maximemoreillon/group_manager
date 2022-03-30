@@ -1,9 +1,8 @@
 const {drivers: {v2: driver}} = require('../../db.js')
+const createHttpError = require('http-errors')
 
 const {
   get_current_user_id,
-  group_id_filter,
-  error_handling,
   current_user_query,
   user_query,
   user_id_filter,
@@ -16,11 +15,11 @@ const {
   default_batch_size
 } = require('../../config.js')
 
-exports.get_administrators_of_group = (req, res) => {
+exports.get_administrators_of_group = (req, res, next) => {
   // Route to retrieve a user's groups
 
   const {group_id} = req.params
-  if(!group_id) return res.status(400).send('Group ID not defined')
+  if(!group_id) throw createHttpError(400, 'Group ID not defined')
 
   const {
     batch_size = default_batch_size,
@@ -42,20 +41,20 @@ exports.get_administrators_of_group = (req, res) => {
 
   session.run(query,params)
   .then(({records}) => {
-    if(!records.length) throw {code: 404, message: `Group ${group_id} not found`}
+    if(!records.length) throw createHttpError(400, `Group ${group_id} not found`)
     console.log(`Administrators of group ${group_id} queried`)
     const response = format_batched_response(records)
     res.send(response)
    })
-  .catch(error => { error_handling(error, res) })
-  .finally( () => { session.close() })
+   .catch(next)
+   .finally( () => { session.close() })
 }
 
-exports.make_user_administrator_of_group = (req, res) => {
+exports.make_user_administrator_of_group = (req, res, next) => {
   // Route to leave a group
 
   const {group_id} = req.params
-  if(!group_id) return res.status(400).send('Group ID not defined')
+  if(!group_id) throw createHttpError(400, 'Group ID not defined')
 
   const user_id = req.body.member_id
     ?? req.body.user_id
@@ -93,22 +92,22 @@ exports.make_user_administrator_of_group = (req, res) => {
 
   session.run(query, params)
   .then(({records}) => {
-    if(!records.length) return res.status(400).send(`Error adding user to administrators`)
+    if(!records.length) throw createHttpError(400, `Error adding user to administrators`)
     console.log(`User ${user_id} added to administrators of group ${group_id}`)
     res.send(records[0].get('group'))
   })
-  .catch(error => { error_handling(error, res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
-exports.remove_user_from_administrators = (req, res) => {
+exports.remove_user_from_administrators = (req, res, next) => {
   // Route to remove a user from the administrators of a group
 
   const {group_id} = req.params
-  if(!group_id) return res.status(400).send('Missing group_id')
+  if(!group_id) throw createHttpError(400, 'Group ID not defined')
 
   const {administrator_id: user_id} = req.params
-  if(!user_id) return res.status(400).send('Missing administrator_id')
+  if(!user_id) throw createHttpError(400, 'Administrator ID not defined')
 
   const session = driver.session()
 
@@ -142,16 +141,16 @@ exports.remove_user_from_administrators = (req, res) => {
 
   session.run(query, params)
   .then(({records}) => {
-    if(!records.length) return res.status(400).send(`Error removing from administrators`)
+    if(!records.length) throw createHttpError(400, `Error removing from administrators`)
     console.log(`User ${user_id} removed from administrators of group ${group_id}`)
     res.send(records[0].get('group'))
   })
-  .catch(error => { error_handling(error, res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
 
-exports.get_groups_of_administrator = (req, res) => {
+exports.get_groups_of_administrator = (req, res, next) => {
   // Route to retrieve a user's groups
   let {administrator_id: user_id} = req.params
   if(user_id === 'self') user_id = get_current_user_id(res)
@@ -175,11 +174,11 @@ exports.get_groups_of_administrator = (req, res) => {
   session
   .run(query,params)
   .then( ({records}) => {
-    if(!records.length) throw {code: 404, message: `User ${user_id} not found`}
+    if(!records.length) throw createHttpError(400, `User ${user_id} not found`)
     console.log(`Groups of administrator ${user_id} queried`)
     const response = format_batched_response(records)
     res.send(response)
   })
-  .catch(error => { error_handling(error, res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
