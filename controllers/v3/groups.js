@@ -1,12 +1,9 @@
 const {drivers: {v2: driver}} = require('../../db.js')
-
+const createHttpError = require('http-errors')
 const {
   get_current_user_id,
-  error_handling,
   user_query,
   group_query,
-  group_id_filter,
-  current_user_query,
   return_batch,
   format_batched_response
 } = require('../../utils.js')
@@ -16,13 +13,13 @@ const {
 } = require('../../config.js')
 
 
-exports.create_group = (req, res) => {
+exports.create_group = (req, res, next) => {
   // Create a group
   // TODO: validation with joi
 
   const user_id = get_current_user_id(res)
   const {name} = req.body
-  if(!name) return res.status(400).send(`Missing 'name'`)
+  if(!name) throw createHttpError(400, `Missing group name`) 
 
   const session = driver.session()
 
@@ -48,18 +45,16 @@ exports.create_group = (req, res) => {
   session.run(query, { user_id, name })
   .then(({records}) => {
 
-    if(!records.length) throw {code: 500, message: `Error while creating group ${name}`}
+    if(!records.length) throw createHttpError(500, `Error while creating group ${name}`)
     const group = records[0].get('group')
     res.send(group)
     console.log(`User ${get_current_user_id(res)} created group ${group._id}`)
   })
-  .catch(error => {
-    error_handling(error,res)
-  })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
-exports.get_groups = (req, res) => {
+exports.get_groups = (req, res, next) => {
 
   // Queries: official vs non official, top level vs normal, type
 
@@ -99,45 +94,44 @@ exports.get_groups = (req, res) => {
 
   const session = driver.session()
   session.run(query,params)
-  .then( ({records}) => {
+    .then( ({records}) => {
 
-    const response = format_batched_response(records)
+      const response = format_batched_response(records)
 
-    res.send(response)
-    console.log(`Groups queried`)
-  })
-  .catch(error => { error_handling(error, res) })
-  .finally( () => { session.close() })
+      console.log(`Groups queried`)
+      res.send(response)
+    })
+    .catch(next)
+    .finally( () => { session.close() })
 }
 
 
 
-exports.get_group = (req, res) => {
+exports.get_group = (req, res, next) => {
 
   const {group_id} = req.params
-
+  if(!group_id) throw createHttpError(400, 'Group ID not defined')
 
   const query = `${group_query} RETURN properties(group) as group`
-
   const params = { group_id }
 
   const session = driver.session()
   session.run(query, params)
-  .then(({records}) => {
-    if(!records.length) throw {code: 404, message: `Group ${group_id} not found`}
-    res.send(records[0].get('group'))
-    console.log(`Group ${group_id} queried`)
-  })
-  .catch(error => { error_handling(error, res) })
-  .finally( () => { session.close() })
+    .then(({records}) => {
+      if(!records.length) throw createHttpError(404, `Group ${group_id} not found`)
+      res.send(records[0].get('group'))
+      console.log(`Group ${group_id} queried`)
+    })
+    .catch(next)
+    .finally( () => { session.close() })
 }
 
 
-exports.patch_group = (req, res) => {
+exports.patch_group = (req, res, next) => {
 
   const {group_id} = req.params
 
-  if(!group_id) return res.status(400).send('Group ID not defined')
+  if(!group_id) throw createHttpError(400, 'Group ID not defined')
   const user_id = get_current_user_id(res)
 
   const properties = req.body
@@ -162,6 +156,7 @@ exports.patch_group = (req, res) => {
     if(!customizable_fields.includes(key)) {
       delete req.body[key]
       // TODO: forbid changes
+      throw createHttpError(403, `Not allowed to modify property ${key}`)
     }
   }
 
@@ -190,22 +185,20 @@ exports.patch_group = (req, res) => {
 
   session.run(query,params)
   .then( ({records}) => {
-    if(!records[0]) throw {code: 404, message: `Error patching group ${group_id}`}
+    if(!records.length) throw createHttpError(400, `Error patching group ${group_id}`)
     console.log(`User ${user_id} patched group ${group_id}`)
     const group = records[0].get('group')
     res.send(group)
   })
-  .catch(error => { error_handling(error, res) })
+  .catch(next)
   .finally(() => session.close())
 
 }
 
-exports.delete_group = (req, res) => {
-  // Route to delete a group
+exports.delete_group = (req, res, next) => {
 
   const {group_id} = req.params
-
-  if(!group_id) return res.status(400).send('Group ID not defined')
+  if(!group_id) throw createHttpError(400, 'Group ID not defined')
 
   const user_id = get_current_user_id(res)
 
@@ -226,23 +219,23 @@ exports.delete_group = (req, res) => {
     RETURN $group_id as group_id
     `
 
-  const session = driver.session();
+  const session = driver.session()
   session.run(query, { user_id, group_id })
   .then( ({records}) => {
-    if(!records.length) throw {code: 404, message: `Group ${group_id} not found`}
-    res.send({group_id})
+    if(!records.length) throw createHttpError(404, `Group ${group_id} not found`)
     console.log(`User ${user_id} deleted group ${group_id}`)
+    res.send({group_id})
   })
-  .catch(error => { error_handling(error, res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
-exports.join_group = (req, res) => {
+exports.join_group = (req, res, next) => {
   // TODO: Could be combined with make user member of group
   // Route to join a group (only works if group is not private)
 
   const {group_id} = req.params
-  if(!group_id) return res.status(400).send('Group ID not defined')
+  if(!group_id) throw createHttpError(400, 'Group ID not defined')
 
   const user_id = get_current_user_id(res)
 
@@ -267,21 +260,21 @@ exports.join_group = (req, res) => {
   session.run(query, params)
   .then( ({records}) => {
 
-    if(!records.length) throw {code: 400, message: `Error during user ${user_id} joining of group ${group_id}`}
+    if(!records.length) throw createHttpError(400, `Error during user ${user_id} joining of group ${group_id}`)
     console.log(`User ${user_id} joined group ${group_id}`)
 
     res.send({group_id})
   })
-  .catch(error => { error_handling(error, res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
 
-exports.leave_group = (req, res) => {
+exports.leave_group = (req, res, next) => {
   // Route to leave a group
 
   const {group_id} = req.params
-  if(!group_id) return res.status(400).send('Group ID not defined')
+  if(!group_id) throw createHttpError(400, 'Group ID not defined')
 
   const user_id = get_current_user_id(res)
 
@@ -304,20 +297,20 @@ exports.leave_group = (req, res) => {
   session.run(query,params)
   .then( ({records}) => {
 
-    if(!records.length) throw {code: 400, message: `Error during user ${user_id} leaving of group ${group_id}`}
+    if(!records.length) throw createHttpError(400, `Error while leacing group ${group_id}`)
     console.log(`User ${user_id} left group ${group_id}`)
 
     res.send({group_id})
   })
-  .catch(error => { error_handling(error, res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
 // From here, parent groups and subgroups
-exports.get_parent_groups_of_group = (req, res) => {
+exports.get_parent_groups_of_group = (req, res, next) => {
 
   const {group_id} = req.params
-  if(!group_id) return res.status(400).send('Group ID not defined')
+  if(!group_id) throw createHttpError(400, 'Group ID not defined')
 
   const {
     direct,
@@ -346,20 +339,20 @@ exports.get_parent_groups_of_group = (req, res) => {
   session.run(query, params)
   .then( ({records}) => {
 
-    if(!records.length) throw {code: 404, message: `Subgroup group ${group_id} not found`}
+    if(!records.length) throw createHttpError(400, `Subgroup group ${group_id} not found`)
     console.log(`Parent groups of group ${group_id} queried`)
 
     const response = format_batched_response(records)
 
     res.send(response)
   })
-  .catch(error => { error_handling(error, res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
 
 
-exports.get_groups_of_group = (req, res) => {
+exports.get_groups_of_group = (req, res, next) => {
   // Route to retrieve groups inside a group
 
   const {group_id} = req.params
@@ -389,20 +382,20 @@ exports.get_groups_of_group = (req, res) => {
 
   session.run(query,params)
   .then( ({records}) => {
-    if(!records.length) throw {code: 404, message: `Parent group ${group_id} not found`}
+    if(!records.length) throw createHttpError(400, `Parent group ${group_id} not found`)
 
     console.log(`Subgroups of group ${group_id} queried`)
     const response = format_batched_response(records)
 
     res.send(response)
   })
-  .catch(error => { error_handling(error, res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
 
 
-exports.add_group_to_group = (req, res) => {
+exports.add_group_to_group = (req, res, next) => {
   // Route to make a group join a group
   // Can only be done if user is admin of both groups
 
@@ -451,16 +444,16 @@ exports.add_group_to_group = (req, res) => {
 
   session.run(query, params)
   .then( ({records}) => {
-    if(!records.length) throw { code: 400, message: `Failed to add group ${child_group_id} in ${parent_group_id}`}
+    if(!records.length) throw createHttpError(400, `Failed to add group ${child_group_id} in ${parent_group_id}`)
     console.log(`User ${user_id} added group ${child_group_id} to group ${parent_group_id}`)
     const child_group = records[0].get('child_group')
     res.send(child_group)
   })
-  .catch(error => { error_handling(error, res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
-exports.remove_group_from_group = (req, res) => {
+exports.remove_group_from_group = (req, res, next) => {
   // Route to make a user join a group
 
   // TODO: Should the user be admin of child group?
@@ -504,11 +497,11 @@ exports.remove_group_from_group = (req, res) => {
 
   session.run(query,params)
   .then( ({records}) => {
-    if(!records.length) throw { code: 400, message: `Failed to remove group ${child_group_id} from group ${parent_group_id}`}
+    if(!records.length) throw createHttpError(400, `Failed to remove group ${child_group_id} from group ${parent_group_id}`) 
     console.log(`User ${user_id} removed group ${child_group_id} from group ${parent_group_id}`)
     const subgroup = records[0].get('child_group')
     res.send(subgroup)
   })
-  .catch(error => {   error_handling(error, res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
