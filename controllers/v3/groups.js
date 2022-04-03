@@ -78,7 +78,8 @@ exports.get_groups = (req, res, next) => {
   const query = `
     // OPTIONAL MATCH so as to allow for batching even when no match
     OPTIONAL MATCH (group:Group)
-    // WHY THE _id CHECK?
+
+    // using dummy WHERE here so as to use AND in other queryies
     WHERE EXISTS(group._id)
     ${shallow ? shallow_query : ''}
     ${official ? official_query : ''}
@@ -376,13 +377,15 @@ exports.get_groups_of_group = (req, res, next) => {
   if(!group_id || group_id === 'undefined') throw createHttpError(400, 'Group ID not defined')
 
   const {
-    shallow = false,
     batch_size = default_batch_size,
     start_index = 0,
+    shallow,
+    official,
+    nonofficial,
   } = req.query
 
 
-  const shallow_query = `WHERE NOT (subgroup)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(group)`
+  const shallow_query = `AND NOT (subgroup)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(group)`
 
   const session = driver.session()
 
@@ -390,8 +393,12 @@ exports.get_groups_of_group = (req, res, next) => {
     ${group_query}
     WITH group
     OPTIONAL MATCH (subgroup:Group)-[:BELONGS_TO]->(group:Group)
-    ${shallow  ? shallow_query : ''}
-
+    // using dummy WHERE here so as to use AND in other queryies
+    WHERE EXISTS(group._id)
+    ${shallow ? shallow_query : ''}
+    ${official ? official_query : ''}
+    ${nonofficial ? non_official_query : ''}
+    
     WITH subgroup as item
     ${return_batch}
     `

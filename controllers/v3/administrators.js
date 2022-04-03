@@ -159,16 +159,23 @@ exports.get_groups_of_administrator = (req, res, next) => {
     batch_size = default_batch_size,
     start_index = 0,
     shallow,
+    official,
+    nonofficial,
   } = req.query
 
-  const shallow_query = 'WHERE NOT (group)-[:BELONGS_TO]->(:Group)'
-
+  const shallow_query = 'AND NOT (group)-[:BELONGS_TO]->(:Group)'
+  const official_query = 'AND group.official'
+  const non_official_query = 'AND (NOT EXISTS(group.official) OR NOT group.official)'
   const query = `
     ${user_query}
     WITH user
     OPTIONAL MATCH (user)<-[:ADMINISTRATED_BY]-(group:Group)
 
+    // using dummy WHERE here so as to use AND in other queryies
+    WHERE EXISTS(group._id)
     ${shallow ? shallow_query : ''}
+    ${official ? official_query : ''}
+    ${nonofficial ? non_official_query : ''}
 
     WITH group as item
     ${return_batch}

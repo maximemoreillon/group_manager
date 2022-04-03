@@ -213,12 +213,16 @@ exports.get_groups_of_user = (req, res, next) => {
     batch_size = default_batch_size,
     start_index = 0,
     shallow,
+    official,
+    nonofficial,
   } = req.query
+
 
   const session = driver.session()
 
-  const shallow_query = 'WHERE NOT (group)-[:BELONGS_TO]->(:Group)'
-
+  const shallow_query = 'AND NOT (group)-[:BELONGS_TO]->(:Group)'
+  const official_query = 'AND group.official'
+  const non_official_query = 'AND (NOT EXISTS(group.official) OR NOT group.official)'
 
   const query = `
     ${user_query}
@@ -226,7 +230,11 @@ exports.get_groups_of_user = (req, res, next) => {
     // OPTIONAL because still want to perform query even if no groups
     OPTIONAL MATCH (user)-[:BELONGS_TO]->(group:Group)
 
+    // using dummy WHERE here so as to use AND in other queryies
+    WHERE EXISTS(group._id)
     ${shallow ? shallow_query : ''}
+    ${official ? official_query : ''}
+    ${nonofficial ? non_official_query : ''}
 
     WITH group as item
     ${return_batch}
