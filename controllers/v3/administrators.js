@@ -19,7 +19,7 @@ exports.get_administrators_of_group = (req, res, next) => {
   // Route to retrieve a user's groups
 
   const {group_id} = req.params
-  if(!group_id) throw createHttpError(400, 'Group ID not defined')
+  if(!group_id || group_id === 'undefined') throw createHttpError(400, 'Group ID not defined')
 
   const {
     batch_size = default_batch_size,
@@ -54,7 +54,7 @@ exports.make_user_administrator_of_group = (req, res, next) => {
   // Route to leave a group
 
   const {group_id} = req.params
-  if(!group_id) throw createHttpError(400, 'Group ID not defined')
+  if(!group_id || group_id === 'undefined') throw createHttpError(400, 'Group ID not defined')
 
   const user_id = req.body.member_id
     ?? req.body.user_id
@@ -104,10 +104,10 @@ exports.remove_user_from_administrators = (req, res, next) => {
   // Route to remove a user from the administrators of a group
 
   const {group_id} = req.params
-  if(!group_id) throw createHttpError(400, 'Group ID not defined')
-
   const {administrator_id: user_id} = req.params
-  if(!user_id) throw createHttpError(400, 'Administrator ID not defined')
+
+  if(!group_id || group_id === 'undefined') throw createHttpError(400, 'Group ID not defined')
+  if(!user_id || user_id === 'undefined') throw createHttpError(400, 'Administrator ID not defined')
 
   const session = driver.session()
 
@@ -167,7 +167,7 @@ exports.get_groups_of_administrator = (req, res, next) => {
     ${user_query}
     WITH user
     OPTIONAL MATCH (user)<-[:ADMINISTRATED_BY]-(group:Group)
-    
+
     ${shallow === 'true' ? shallow_query : ''}
 
     WITH group as item

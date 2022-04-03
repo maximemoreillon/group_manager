@@ -157,7 +157,7 @@ exports.remove_user_from_group = (req, res, next) => {
 
   const {group_id, member_id: user_id} = req.params
 
-  if(!group_id) throw createHttpError(400, 'Group ID not defined')
+  if(!group_id || group_id === 'undefined') throw createHttpError(400, 'Group ID not defined')
   if(!user_id) throw createHttpError(400, 'User ID not defined')
 
   const current_user_id = get_current_user_id(res)

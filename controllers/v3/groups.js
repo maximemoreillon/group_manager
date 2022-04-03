@@ -108,7 +108,7 @@ exports.get_groups = (req, res, next) => {
 exports.get_group = (req, res, next) => {
 
   const {group_id} = req.params
-  if(!group_id) throw createHttpError(400, 'Group ID not defined')
+  if(!group_id || group_id === 'undefined') throw createHttpError(400, 'Group ID not defined')
 
   const query = `${group_query} RETURN properties(group) as group`
   const params = { group_id }
@@ -128,8 +128,8 @@ exports.get_group = (req, res, next) => {
 exports.patch_group = (req, res, next) => {
 
   const { group_id } = req.params
+  if(!group_id || group_id === 'undefined') throw createHttpError(400, 'Group ID not defined')
 
-  if(!group_id) throw createHttpError(400, 'Group ID not defined')
   const user_id = get_current_user_id(res)
 
   const properties = req.body
@@ -182,21 +182,21 @@ exports.patch_group = (req, res, next) => {
   }
 
   session.run(query,params)
-  .then( ({records}) => {
-    if(!records.length) throw createHttpError(400, `Error patching group ${group_id}`)
-    console.log(`User ${user_id} patched group ${group_id}`)
-    const group = records[0].get('group')
-    res.send(group)
-  })
-  .catch(next)
-  .finally(() => session.close())
+    .then( ({records}) => {
+      if(!records.length) throw createHttpError(400, `Error patching group ${group_id}`)
+      console.log(`User ${user_id} patched group ${group_id}`)
+      const group = records[0].get('group')
+      res.send(group)
+    })
+    .catch(next)
+    .finally(() => session.close())
 
 }
 
 exports.delete_group = (req, res, next) => {
 
   const {group_id} = req.params
-  if(!group_id) throw createHttpError(400, 'Group ID not defined')
+  if(!group_id || group_id === 'undefined') throw createHttpError(400, 'Group ID not defined')
 
   const user_id = get_current_user_id(res)
 
@@ -233,7 +233,7 @@ exports.join_group = (req, res, next) => {
   // Route to join a group (only works if group is not private)
 
   const {group_id} = req.params
-  if(!group_id) throw createHttpError(400, 'Group ID not defined')
+  if(!group_id || group_id === 'undefined') throw createHttpError(400, 'Group ID not defined')
 
   const user_id = get_current_user_id(res)
 
@@ -272,7 +272,7 @@ exports.leave_group = (req, res, next) => {
   // Route to leave a group
 
   const {group_id} = req.params
-  if(!group_id) throw createHttpError(400, 'Group ID not defined')
+  if(!group_id || group_id === 'undefined') throw createHttpError(400, 'Group ID not defined')
 
   const user_id = get_current_user_id(res)
 
@@ -310,7 +310,7 @@ exports.leave_group = (req, res, next) => {
 exports.get_parent_groups_of_group = (req, res, next) => {
 
   const {group_id} = req.params
-  if(!group_id) throw createHttpError(400, 'Group ID not defined')
+  if(!group_id || group_id === 'undefined') throw createHttpError(400, 'Group ID not defined')
 
   const {
     shallow,
@@ -360,6 +360,7 @@ exports.get_groups_of_group = (req, res, next) => {
   // NOT: Could be combined with GET /groups
 
   const { group_id } = req.params
+  if(!group_id || group_id === 'undefined') throw createHttpError(400, 'Group ID not defined')
 
   const {
     shallow = false,
@@ -406,7 +407,8 @@ exports.add_group_to_group = (req, res, next) => {
   const {group_id: parent_group_id} = req.params
   const {group_id: child_group_id} = req.body
 
-  if(!child_group_id) return res.status(400).send('Child Group ID not defined')
+  if(!parent_group_id || parent_group_id === 'undefined') throw createHttpError(400, 'Parent group ID not defined')
+  if(!child_group_id || child_group_id === 'undefined') throw createHttpError(400, 'Child group ID not defined')
 
 
   const user_id = get_current_user_id(res)
@@ -464,6 +466,11 @@ exports.remove_group_from_group = (req, res, next) => {
 
   const {group_id: parent_group_id} = req.params
   const {subgroup_id: child_group_id} = req.params
+
+  if(!parent_group_id || parent_group_id === 'undefined') throw createHttpError(400, 'Parent group ID not defined')
+  if(!child_group_id || child_group_id === 'undefined') throw createHttpError(400, 'Child group ID not defined')
+
+
   const user_id = get_current_user_id(res)
 
   const session = driver.session()
