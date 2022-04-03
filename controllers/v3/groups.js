@@ -67,8 +67,8 @@ exports.get_groups = (req, res, next) => {
     batch_size = default_batch_size,
     start_index = 0,
     shallow,
-    official = false,
-    nonofficial = false
+    official,
+    nonofficial,
   } = req.query
 
   const shallow_query = 'AND NOT (group)-[:BELONGS_TO]->(:Group)'
@@ -339,7 +339,7 @@ exports.get_parent_groups_of_group = (req, res, next) => {
     ${group_query}
     WITH group
     OPTIONAL MATCH (group)-[:BELONGS_TO]->(parent:Group)
-    ${shallow === 'true' ? shallow_query : ''}
+    ${shallow ? shallow_query : ''}
 
     WITH parent as item
     ${return_batch}
@@ -390,7 +390,7 @@ exports.get_groups_of_group = (req, res, next) => {
     ${group_query}
     WITH group
     OPTIONAL MATCH (subgroup:Group)-[:BELONGS_TO]->(group:Group)
-    ${shallow === 'true'  ? shallow_query : ''}
+    ${shallow  ? shallow_query : ''}
 
     WITH subgroup as item
     ${return_batch}

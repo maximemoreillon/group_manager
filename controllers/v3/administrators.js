@@ -168,7 +168,7 @@ exports.get_groups_of_administrator = (req, res, next) => {
     WITH user
     OPTIONAL MATCH (user)<-[:ADMINISTRATED_BY]-(group:Group)
 
-    ${shallow === 'true' ? shallow_query : ''}
+    ${shallow ? shallow_query : ''}
 
     WITH group as item
     ${return_batch}
