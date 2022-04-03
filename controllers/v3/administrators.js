@@ -54,46 +54,62 @@ exports.make_user_administrator_of_group = (req, res, next) => {
   // Route to leave a group
 
   const {group_id} = req.params
-  if(!group_id || group_id === 'undefined') throw createHttpError(400, 'Group ID not defined')
+  const {user_id, user_ids} = req.body
 
-  const user_id = req.body.member_id
-    ?? req.body.user_id
-    ?? req.body.administrator_id
-    ?? req.params.administrator_id
+  if(!group_id || group_id === 'undefined') throw createHttpError(400, 'Group ID not defined')
+  if(!user_id && !user_ids) throw createHttpError(400, 'User ID(s) not defined')
 
   const current_user_id = get_current_user_id(res)
 
   const session = driver.session()
 
-  const query = `
-    ${current_user_query}
-    WITH current_user
+  const single_user_add_query = `
+    WITH group
+    ${user_query}
+    MERGE (user)<-[:ADMINISTRATED_BY]-(group)
+    `
 
+  const multiple_user_add_query = `
+    WITH group
+    UNWIND
+      CASE
+        WHEN $user_ids = []
+          THEN [null]
+        ELSE $user_ids
+      END AS user_id
+
+    OPTIONAL MATCH (user:User)
+    WHERE user._id = user_id
+    WITH group, collect(user) as users
+    FOREACH(user IN users | MERGE (user)<-[:ADMINISTRATED_BY]-(group))
+    `
+
+  const query = `
+    // Find current user
+    ${current_user_query}
+
+    // Find group
+    WITH current_user
     ${group_query}
     // Allow only group admin or super admin to delete a group
     AND ( (group)-[:ADMINISTRATED_BY]->(current_user) OR current_user.isAdmin )
 
-    // Find the user
-    WITH group
-    ${user_query}
+    // Create relationship for single user
+    ${user_id ? single_user_add_query : ''}
 
-    // Merge relationship
-    MERGE (group)-[:ADMINISTRATED_BY]->(user)
+    // OR multiple users at once
+    ${user_ids ? multiple_user_add_query : ''}
 
     // Return
     RETURN properties(group) as group
     `
 
-  const params = {
-    current_user_id,
-    user_id,
-    group_id,
-  }
+  const params = { current_user_id, user_id, user_ids, group_id}
 
   session.run(query, params)
   .then(({records}) => {
     if(!records.length) throw createHttpError(400, `Error adding user to administrators`)
-    console.log(`User ${user_id} added to administrators of group ${group_id}`)
+    console.log(`User ${user_id} added administrators to group ${group_id}`)
     res.send(records[0].get('group'))
   })
   .catch(next)

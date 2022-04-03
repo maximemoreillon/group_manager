@@ -123,8 +123,7 @@ exports.add_member_to_group = (req, res, next) => {
     WITH current_user
     ${group_query}
     // Allow only group admin or super admin to delete a group
-    AND ( (group)-[:ADMINISTRATED_BY]->(current_user)
-      OR current_user.isAdmin )
+    AND ( (group)-[:ADMINISTRATED_BY]->(current_user) OR current_user.isAdmin )
 
     // Create relationship for single user
     ${user_id ? single_user_add_query : ''}
