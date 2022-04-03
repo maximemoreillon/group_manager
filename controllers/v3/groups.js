@@ -370,9 +370,6 @@ exports.get_parent_groups_of_group = (req, res, next) => {
 exports.get_groups_of_group = (req, res, next) => {
   // Route to retrieve groups inside a group
 
-  // TODO: Shallow
-  // NOT: Could be combined with GET /groups
-
   const { group_id } = req.params
   if(!group_id || group_id === 'undefined') throw createHttpError(400, 'Group ID not defined')
 
@@ -380,6 +377,7 @@ exports.get_groups_of_group = (req, res, next) => {
     batch_size = default_batch_size,
     start_index = 0,
     shallow,
+    direct, // alias for shallow
     official,
     nonofficial,
   } = req.query
@@ -395,10 +393,10 @@ exports.get_groups_of_group = (req, res, next) => {
     OPTIONAL MATCH (subgroup:Group)-[:BELONGS_TO]->(group:Group)
     // using dummy WHERE here so as to use AND in other queryies
     WHERE EXISTS(group._id)
-    ${shallow ? shallow_query : ''}
+    ${(shallow || direct) ? shallow_query : ''}
     ${official ? official_query : ''}
     ${nonofficial ? non_official_query : ''}
-    
+
     WITH subgroup as item
     ${return_batch}
     `
