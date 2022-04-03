@@ -4,9 +4,11 @@
 [![coverage report](https://gitlab.com/moreillon_k8s/group-manager/group_manager_neo4j/badges/master/coverage.svg)](https://gitlab.com/moreillon_k8s/group-manager/group_manager_neo4j)
 
 A NodeJS application to manage groups of users.
-The user and group information is stored in a Neo4J database.
+The user and group records are stored in a Neo4J database.
 
-## API endpoints
+More information: https://articles.maximemoreillon.com/articles/398
+
+## API
 ### Groups
 | Endpoint | Method | query/body | Description |
 | --- | --- | --- | --- |
@@ -17,7 +19,6 @@ The user and group information is stored in a Neo4J database.
 | /v3/groups/{group_id} | DELETE | - | Deletes a group |
 | /v3/groups/{group_id}/join | POST | - | Join a group |
 | /v3/groups/{group_id}/leave | POST | - | leave a group |
-
 
 ### Subgroups
 | Endpoint | Method | query/body | Description |
@@ -37,7 +38,6 @@ The user and group information is stored in a Neo4J database.
 | /v3/groups/{group_id}/members/{user_id} | DELETE | - | Removes a user from the group |
 | /v3/members/{member_id}/groups | GET | - | Gets the groups of a member, here, use 'self' as member_id of one's own groups |
 
-
 ### Administrators
 | Endpoint | Method | query/body | Description |
 | --- | --- | --- | --- |
@@ -45,3 +45,7 @@ The user and group information is stored in a Neo4J database.
 | /v3/groups/{group_id}/administrators/{administrator_id} | POST | - | Adds an administrator to the group |
 | /v3/groups/{group_id}/administrators/{administrator_id} | DELETE | - | Removes an administrator from the group |
 | /v3/administrators/{administrators_id}/groups | GET | - | Gets the groups administrated by a user, here, use 'self' as member_id of one's own groups |
+
+## Pagination
+
+To limit the size of responses, groups, members and administrators are provided in a paginated manner. The page size and index of the first item on the page can be defined using the query parameters 'batch_size' and 'start_index' respectively.

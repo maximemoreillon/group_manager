@@ -19,7 +19,7 @@ exports.create_group = (req, res, next) => {
 
   const user_id = get_current_user_id(res)
   const {name} = req.body
-  if(!name) throw createHttpError(400, `Missing group name`) 
+  if(!name) throw createHttpError(400, `Missing group name`)
 
   const session = driver.session()
 
@@ -59,16 +59,14 @@ exports.get_groups = (req, res, next) => {
   // Queries: official vs non official, top level vs normal, type
 
   // WARNING: Querying top level official groups means groups whith no parent THAT ARE OFFICIAL
-
-  // Is batching really all that important?
-  // Probably yes
+  // WARNING: Some query parameters might be string instead of boolean
 
   // Shallow: only groups that are not part of another group
 
   const {
     batch_size = default_batch_size,
     start_index = 0,
-    shallow = false,
+    shallow,
     official = false,
     nonofficial = false
   } = req.query
@@ -79,10 +77,10 @@ exports.get_groups = (req, res, next) => {
 
   const query = `
     // OPTIONAL MATCH so as to allow for batching even when no match
-    // WHERE used as dummy condition for chaining the next filters
     OPTIONAL MATCH (group:Group)
+    // WHY THE _id CHECK?
     WHERE EXISTS(group._id)
-    ${shallow ? shallow_query : ''}
+    ${shallow === 'true' ? shallow_query : ''}
     ${official ? official_query : ''}
     ${nonofficial ? non_official_query : ''}
     WITH group as item
@@ -129,13 +127,14 @@ exports.get_group = (req, res, next) => {
 
 exports.patch_group = (req, res, next) => {
 
-  const {group_id} = req.params
+  const { group_id } = req.params
 
   if(!group_id) throw createHttpError(400, 'Group ID not defined')
   const user_id = get_current_user_id(res)
 
   const properties = req.body
 
+  // TODO: Have this list in an external file
   let customizable_fields = [
     'avatar_src',
     'name',
@@ -147,9 +146,8 @@ exports.patch_group = (req, res, next) => {
     || current_user.properties.isAdmin
 
   // Allow master admin to make groups officials
-  if(current_user_is_admin){
-    customizable_fields.push('official')
-  }
+  // TODO: improve concatenation
+  if(current_user_is_admin) customizable_fields.push('official')
 
   // prevent user from modifying disallowed properties
   for (let [key, value] of Object.entries(properties)) {
@@ -307,31 +305,34 @@ exports.leave_group = (req, res, next) => {
 }
 
 // From here, parent groups and subgroups
+
+
 exports.get_parent_groups_of_group = (req, res, next) => {
 
   const {group_id} = req.params
   if(!group_id) throw createHttpError(400, 'Group ID not defined')
 
   const {
-    direct,
+    shallow,
     batch_size = default_batch_size,
     start_index = 0,
   } = req.query
 
-
   const session = driver.session()
 
-  const direct_only_query = `WHERE NOT (group)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(parent)`
+  const shallow_query = `WHERE NOT (group)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(parent)`
 
   const query = `
     ${group_query}
     WITH group
     OPTIONAL MATCH (group)-[:BELONGS_TO]->(parent:Group)
-    ${direct ? direct_only_query : ''}
+    ${shallow === 'true' ? shallow_query : ''}
 
     WITH parent as item
     ${return_batch}
     `
+
+
 
   const params = { group_id, batch_size, start_index }
 
@@ -355,16 +356,19 @@ exports.get_parent_groups_of_group = (req, res, next) => {
 exports.get_groups_of_group = (req, res, next) => {
   // Route to retrieve groups inside a group
 
-  const {group_id} = req.params
+  // TODO: Shallow
+  // NOT: Could be combined with GET /groups
+
+  const { group_id } = req.params
 
   const {
-    direct,
+    shallow = false,
     batch_size = default_batch_size,
     start_index = 0,
   } = req.query
 
 
-  const direct_only_query = `WHERE NOT (subgroup)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(group)`
+  const shallow_query = `WHERE NOT (subgroup)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(group)`
 
   const session = driver.session()
 
@@ -372,7 +376,7 @@ exports.get_groups_of_group = (req, res, next) => {
     ${group_query}
     WITH group
     OPTIONAL MATCH (subgroup:Group)-[:BELONGS_TO]->(group:Group)
-    ${direct ? direct_only_query : ''}
+    ${shallow === 'true'  ? shallow_query : ''}
 
     WITH subgroup as item
     ${return_batch}
@@ -497,7 +501,7 @@ exports.remove_group_from_group = (req, res, next) => {
 
   session.run(query,params)
   .then( ({records}) => {
-    if(!records.length) throw createHttpError(400, `Failed to remove group ${child_group_id} from group ${parent_group_id}`) 
+    if(!records.length) throw createHttpError(400, `Failed to remove group ${child_group_id} from group ${parent_group_id}`)
     console.log(`User ${user_id} removed group ${child_group_id} from group ${parent_group_id}`)
     const subgroup = records[0].get('child_group')
     res.send(subgroup)

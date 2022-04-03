@@ -30,7 +30,7 @@ exports.get_user = (req, res, next) => {
   session.run(query, { user_id })
   .then( ({records}) => {
 
-    if(!records.length) throw createHttpError(404, `User ${user_id} not found`) 
+    if(!records.length) throw createHttpError(404, `User ${user_id} not found`)
 
     const user = records[0].get('user')
     delete user.password_hashed
@@ -70,7 +70,7 @@ exports.get_members_of_group = (req, res, next) => {
 
   session.run(query, params)
   .then(({records}) => {
-    if(!records.length) throw createHttpError(404, `Member query: group ${group_id} not found`) 
+    if(!records.length) throw createHttpError(404, `Member query: group ${group_id} not found`)
     console.log(`Users of group ${group_id} queried`)
     const response = format_batched_response(records)
     res.send(response)
@@ -120,7 +120,7 @@ exports.add_member_to_group = (req, res, next) => {
 
   session.run(query, params)
   .then( ({records}) => {
-    if(!records.length) throw createHttpError(400, `Error adding using ${user_id} to group ${group_id}`) 
+    if(!records.length) throw createHttpError(400, `Error adding using ${user_id} to group ${group_id}`)
 
     console.log(`User ${current_user_id} added user ${user_id} to group ${group_id}`)
 
@@ -183,6 +183,8 @@ exports.remove_user_from_group = (req, res, next) => {
 
 exports.get_groups_of_user = (req, res, next) => {
   // Route to retrieve a user's groups
+
+  // TODO: Shallow
 
   let {member_id: user_id} = req.params
   if(user_id === 'self') user_id = get_current_user_id(res)
