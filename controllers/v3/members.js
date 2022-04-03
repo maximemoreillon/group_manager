@@ -46,7 +46,7 @@ exports.get_members_of_group = (req, res, next) => {
   // Route to retrieve a user's groups
 
   const {group_id} = req.params
-  if(!group_id || group_id === 'undefined') throw createHttpError(400, 'Group ID not defined')
+  if(!group_id) throw createHttpError(400, 'Group ID not defined')
 
   const {
     batch_size = default_batch_size,
@@ -82,38 +82,17 @@ exports.get_members_of_group = (req, res, next) => {
 
 
 exports.add_member_to_group = (req, res, next) => {
-  // Add a user to a group
+  // Route to make a user join a group
 
   const {group_id} = req.params
-  const {user_id, user_ids} = req.body
+  const {user_id} = req.body
 
-  if(!group_id || group_id === 'undefined') throw createHttpError(400, 'Group ID not defined')
-  if(!user_id && !user_ids) throw createHttpError(400, 'User ID(s) not defined')
+  if(!group_id) throw createHttpError(400, 'Group ID not defined')
+  if(!user_id) throw createHttpError(400, 'User ID not defined')
 
   const current_user_id = get_current_user_id(res)
 
   const session = driver.session()
-
-  const single_user_add_query = `
-    WITH group
-    ${user_query}
-    MERGE (user)-[:BELONGS_TO]->(group)
-    `
-
-  const multiple_user_add_query = `
-    WITH group
-    UNWIND
-      CASE
-        WHEN $user_ids = []
-          THEN [null]
-        ELSE $user_ids
-      END AS user_id
-
-    OPTIONAL MATCH (user:User)
-    WHERE user._id = user_id
-    WITH group, collect(user) as users
-    FOREACH(user IN users | MERGE (user)-[:BELONGS_TO]->(group))
-    `
 
   const query = `
     // Find the current user
@@ -123,26 +102,27 @@ exports.add_member_to_group = (req, res, next) => {
     WITH current_user
     ${group_query}
     // Allow only group admin or super admin to delete a group
-    AND ( (group)-[:ADMINISTRATED_BY]->(current_user)
-      OR current_user.isAdmin )
+      AND ( (group)-[:ADMINISTRATED_BY]->(current_user)
+        OR current_user.isAdmin )
 
-    // Create relationship for single user
-    ${user_id ? single_user_add_query : ''}
+    // Find the user
+    WITH group
+    ${user_query}
 
-    // OR multiple users at once
-    ${user_ids ? multiple_user_add_query : ''}
+    // MERGE relationship
+    MERGE (user)-[:BELONGS_TO]->(group)
 
     // Return
     RETURN properties(group) as group
     `
 
-  const params = { current_user_id, user_id, user_ids, group_id }
+  const params = { current_user_id, user_id, group_id }
 
   session.run(query, params)
   .then( ({records}) => {
-    if(!records.length) throw createHttpError(400, `Error adding adding user(s) ${user_id || user_ids.join(', ')} to group ${group_id}`)
+    if(!records.length) throw createHttpError(400, `Error adding using ${user_id} to group ${group_id}`)
 
-    console.log(`User ${current_user_id} added user(s) ${user_id || user_ids.join(', ')} to group ${group_id}`)
+    console.log(`User ${current_user_id} added user ${user_id} to group ${group_id}`)
 
     const group = records[0].get('group')
     res.send(group)
@@ -156,7 +136,7 @@ exports.remove_user_from_group = (req, res, next) => {
 
   const {group_id, member_id: user_id} = req.params
 
-  if(!group_id || group_id === 'undefined') throw createHttpError(400, 'Group ID not defined')
+  if(!group_id) throw createHttpError(400, 'Group ID not defined')
   if(!user_id) throw createHttpError(400, 'User ID not defined')
 
   const current_user_id = get_current_user_id(res)
@@ -213,15 +193,21 @@ exports.get_groups_of_user = (req, res, next) => {
   const {
     batch_size = default_batch_size,
     start_index = 0,
+    shallow,
   } = req.query
 
   const session = driver.session()
+
+  const shallow_query = 'WHERE NOT (group)-[:BELONGS_TO]->(:Group)'
+
 
   const query = `
     ${user_query}
     WITH user
     // OPTIONAL because still want to perform query even if no groups
     OPTIONAL MATCH (user)-[:BELONGS_TO]->(group:Group)
+    ${shallow === 'true' ? shallow_query : ''}
+
     WITH group as item
     ${return_batch}
     `
