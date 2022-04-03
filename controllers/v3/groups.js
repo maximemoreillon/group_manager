@@ -80,7 +80,7 @@ exports.get_groups = (req, res, next) => {
     OPTIONAL MATCH (group:Group)
     // WHY THE _id CHECK?
     WHERE EXISTS(group._id)
-    ${shallow === 'true' ? shallow_query : ''}
+    ${shallow ? shallow_query : ''}
     ${official ? official_query : ''}
     ${nonofficial ? non_official_query : ''}
     WITH group as item
@@ -230,7 +230,7 @@ exports.delete_group = (req, res, next) => {
     `
 
   const session = driver.session()
-  
+
   session.run(query, { user_id, group_id })
     .then( ({records}) => {
       if(!records.length) throw createHttpError(404, `Group ${group_id} not found`)
