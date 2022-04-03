@@ -220,7 +220,7 @@ exports.get_groups_of_user = (req, res, next) => {
 
   const session = driver.session()
 
-  const shallow_query = 'AND NOT (group)-[:BELONGS_TO]->(:Group)'
+  const shallow_query = 'AND NOT (group)-[:BELONGS_TO]->(:Group)<-[:BELONGS_TO]-(user)'
   const official_query = 'AND group.official'
   const non_official_query = 'AND (NOT EXISTS(group.official) OR NOT group.official)'
 

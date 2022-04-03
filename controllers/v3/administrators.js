@@ -163,7 +163,7 @@ exports.get_groups_of_administrator = (req, res, next) => {
     nonofficial,
   } = req.query
 
-  const shallow_query = 'AND NOT (group)-[:BELONGS_TO]->(:Group)'
+  const shallow_query = 'AND NOT (group)-[:BELONGS_TO]->(:Group)<-[:ADMINISTRATED_BY]-(user)'
   const official_query = 'AND group.official'
   const non_official_query = 'AND (NOT EXISTS(group.official) OR NOT group.official)'
   const query = `
