@@ -200,6 +200,16 @@ exports.delete_group = (req, res, next) => {
 
   const user_id = get_current_user_id(res)
 
+  const {
+    deep
+  } = req.query
+
+  const deep_delete_query = `
+    WITH group
+    OPTIONAL MATCH (subgroup:Group)-[:BELONGS_TO]->(group)
+    DETACH DELETE subgroup
+  `
+
   const query = `
     // Find the current user
     ${user_query}
@@ -211,6 +221,8 @@ exports.delete_group = (req, res, next) => {
     // Only allow group admin or super admin
     AND ( (group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
 
+    ${deep === 'true' ? deep_delete_query : ''}
+
     // Delete the group
     DETACH DELETE group
 
@@ -218,14 +230,15 @@ exports.delete_group = (req, res, next) => {
     `
 
   const session = driver.session()
+  
   session.run(query, { user_id, group_id })
-  .then( ({records}) => {
-    if(!records.length) throw createHttpError(404, `Group ${group_id} not found`)
-    console.log(`User ${user_id} deleted group ${group_id}`)
-    res.send({group_id})
-  })
-  .catch(next)
-  .finally( () => { session.close() })
+    .then( ({records}) => {
+      if(!records.length) throw createHttpError(404, `Group ${group_id} not found`)
+      console.log(`User ${user_id} deleted group ${group_id}`)
+      res.send({group_id})
+    })
+    .catch(next)
+    .finally( () => { session.close() })
 }
 
 exports.join_group = (req, res, next) => {
