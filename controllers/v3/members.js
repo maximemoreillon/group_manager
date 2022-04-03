@@ -206,6 +206,7 @@ exports.get_groups_of_user = (req, res, next) => {
     WITH user
     // OPTIONAL because still want to perform query even if no groups
     OPTIONAL MATCH (user)-[:BELONGS_TO]->(group:Group)
+    
     ${shallow === 'true' ? shallow_query : ''}
 
     WITH group as item

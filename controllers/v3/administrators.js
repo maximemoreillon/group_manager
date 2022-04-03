@@ -158,12 +158,17 @@ exports.get_groups_of_administrator = (req, res, next) => {
   const {
     batch_size = default_batch_size,
     start_index = 0,
+    shallow,
   } = req.query
+
+  const shallow_query = 'WHERE NOT (group)-[:BELONGS_TO]->(:Group)'
 
   const query = `
     ${user_query}
     WITH user
     OPTIONAL MATCH (user)<-[:ADMINISTRATED_BY]-(group:Group)
+    ${shallow === 'true' ? shallow_query : ''}
+
     WITH group as item
     ${return_batch}
     `
