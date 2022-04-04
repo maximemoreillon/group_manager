@@ -6,7 +6,7 @@ const {
   group_query,
   user_id_filter,
   current_user_query,
-  return_batch,
+  batch_items,
   format_batched_response
 } = require('../../utils.js')
 
@@ -53,7 +53,6 @@ exports.get_members_of_group = (req, res, next) => {
     start_index = 0,
   } = req.query
 
-
   const session = driver.session()
 
   const query = `
@@ -64,8 +63,9 @@ exports.get_members_of_group = (req, res, next) => {
     OPTIONAL MATCH (user:User)-[:BELONGS_TO]->(group)
 
     WITH user as item
-    ${return_batch}
+    ${batch_items(batch_size)}
     `
+
   const params = { group_id, batch_size, start_index }
 
   session.run(query, params)
@@ -236,7 +236,7 @@ exports.get_groups_of_user = (req, res, next) => {
     ${nonofficial ? non_official_query : ''}
 
     WITH group as item
-    ${return_batch}
+    ${batch_items(batch_size)}
     `
 
   const params = { user_id, batch_size, start_index }
@@ -267,7 +267,7 @@ exports.users_with_no_group = (req, res, next) => {
     OPTIONAL MATCH (user:User)
     WHERE NOT (user)-[:BELONGS_TO]->(:Group)
     WITH user as item
-    ${return_batch}
+    ${batch_items(batch_size)}
     `
 
   const params = { batch_size, start_index }

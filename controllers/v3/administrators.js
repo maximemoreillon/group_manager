@@ -7,7 +7,7 @@ const {
   user_query,
   user_id_filter,
   group_query,
-  return_batch,
+  batch_items,
   format_batched_response,
 } = require('../../utils.js')
 
@@ -33,7 +33,7 @@ exports.get_administrators_of_group = (req, res, next) => {
     WITH group
     OPTIONAL MATCH (admin:User)<-[:ADMINISTRATED_BY]-(group:Group)
     WITH admin as item
-    ${return_batch}
+    ${batch_items(batch_size)}
     `
 
   const params = { group_id, batch_size, start_index }
@@ -194,7 +194,7 @@ exports.get_groups_of_administrator = (req, res, next) => {
     ${nonofficial ? non_official_query : ''}
 
     WITH group as item
-    ${return_batch}
+    ${batch_items(batch_size)}
     `
 
   const params = { user_id, batch_size, start_index }

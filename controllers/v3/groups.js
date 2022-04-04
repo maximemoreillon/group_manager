@@ -4,7 +4,7 @@ const {
   get_current_user_id,
   user_query,
   group_query,
-  return_batch,
+  batch_items,
   format_batched_response
 } = require('../../utils.js')
 
@@ -85,7 +85,7 @@ exports.get_groups = (req, res, next) => {
     ${official ? official_query : ''}
     ${nonofficial ? non_official_query : ''}
     WITH group as item
-    ${return_batch}
+    ${batch_items(batch_size)}
     `
 
 
@@ -343,7 +343,7 @@ exports.get_parent_groups_of_group = (req, res, next) => {
     ${shallow ? shallow_query : ''}
 
     WITH parent as item
-    ${return_batch}
+    ${batch_items(batch_size)}
     `
 
 
@@ -398,7 +398,7 @@ exports.get_groups_of_group = (req, res, next) => {
     ${nonofficial ? non_official_query : ''}
 
     WITH subgroup as item
-    ${return_batch}
+    ${batch_items(batch_size)}
     `
 
   const params = { group_id, batch_size, start_index }

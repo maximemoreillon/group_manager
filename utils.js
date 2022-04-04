@@ -44,32 +44,35 @@ MATCH (group:Group)
 ${exports.group_id_filter}
 `
 
-
+// is this still used?
 exports.group_batching = `
 // Aggregation
 WITH
   COLLECT(properties(group)) as groups,
   COUNT(group) as group_count,
   toInteger($start_index) as start_index,
-  (start_index+toInteger($batch_size)) as end_index
+  (start_index + toInteger($batch_size)) as end_index
 
 // Batching
 WITH group_count, groups[start_index..end_index] AS groups
 `
 
-exports.return_batch = `
+
+
+exports.batch_items = (batch_size) => `
 // Aggregation
 WITH
   COLLECT(properties(item)) as items,
   COUNT(item) as count,
   toInteger($start_index) as start_index,
   toInteger($batch_size) as batch_size,
-  (toInteger($start_index)+toInteger($batch_size)) as end_index
+  (toInteger($start_index) + toInteger($batch_size)) as end_index
 
 // Batching
+// Note: if end_index is -1, returns all except last
 RETURN
   count,
-  items[start_index..end_index] AS batch,
+  ${batch_size >= 0 ? 'items[start_index..end_index] AS batch' : 'items AS batch'},
   start_index,
   batch_size
 `
