@@ -3,10 +3,19 @@
 [![pipeline status](https://gitlab.com/moreillon_k8s/group-manager/group_manager_neo4j/badges/master/pipeline.svg)](https://gitlab.com/moreillon_k8s/group-manager/group_manager_neo4j)
 [![coverage report](https://gitlab.com/moreillon_k8s/group-manager/group_manager_neo4j/badges/master/coverage.svg)](https://gitlab.com/moreillon_k8s/group-manager/group_manager_neo4j)
 
-A NodeJS application to manage groups of users.
-The user and group records are stored in a Neo4J database.
+As a graph database Neo4J is a great choice to manage highly relational data. On the other side, a great number of applications feature at least some form of user management system. With Neo4J, those users can be store as nodes and connected to other items via relationships. A typical example would be a blog, where both articles and users are individual nodes while authorships are represented by a relationship.
 
-More information: https://articles.maximemoreillon.com/articles/398
+When dealing with a large number of users, it can become convenient to arrange those in groups. Here, groups too can be represented as nodes and the membership of a user by a relationship. However, building group management logic from scratch for every application would be tedious.
+
+![Example graph](docs/6149cfd89a075fff8259b929.png)
+
+This microservice, named Group manager, proposes a solution to this problem by offering just the generic logic to handle groups and their relationships, making it easy to integrate in a microservice architecture, alongside other services managing Neo4J records.
+
+The application is built using Node.js and the Express framework.
+
+An example of application relying on Group manager is [申請マネージャ](https://github.com/jtekt/web-based-approval-system), A web based approval system for application forms and other documents
+
+For more information, please visit the project page [here](https://articles.maximemoreillon.com/articles/398)
 
 ## API
 ### Groups
