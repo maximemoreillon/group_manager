@@ -23,28 +23,43 @@ const drivers = {
 }
 
 let connected = false
-const init = async () => {
-  console.log('[Neo4J] Initializing DB')
+let initialized = false
 
+const set_ids = async () => {
   const id_setting_query = `
-  MATCH (g:Group)
-  WHERE NOT EXISTS(g._id)
-  SET g._id = toString(id(g))
-  RETURN COUNT(g) as count
-  `
+    MATCH (g:Group)
+    WHERE NOT EXISTS(g._id)
+    SET g._id = toString(id(g))
+    RETURN COUNT(g) as count
+    `
+  
+  const session = drivers.v2.session()
+
+  try {
+    const { records } = await session.run(id_setting_query)
+    const count = records[0].get('count')
+    console.log(`[Neo4J] Formatted new ID for ${count} groups`)
+  }
+  catch (e) {
+    throw e
+  }
+  finally {
+    session.close()
+  }
+
+}
+
+const create_constraints = async () => {
 
   const session = drivers.v2.session()
 
   try {
-    const {records} = await session.run(id_setting_query)
-    const count = records[0].get('count')
-    console.log(`[Neo4J] Formatted new ID for ${count} groups`)
-    connected = true
+    await session.run(`CREATE CONSTRAINT ON (g:Group) ASSERT g._id IS UNIQUE`)
+    console.log(`[Neo4J] Created constraints`)
   }
-  catch (e) {
-    console.log(e)
-    console.log(`[Neo4J] init failed, retrying in 10s`)
-    setTimeout(init,10000)
+  catch (error) {
+    console.error(`Creating contraints failed`)
+    throw error
   }
   finally {
     session.close()
@@ -53,7 +68,27 @@ const init = async () => {
 }
 
 
+const init = async () => {
+  console.log('[Neo4J] Initializing DB')
+
+  try {
+    await set_ids()
+    connected = true
+    await create_constraints()
+    initialized = true
+
+  } 
+  catch (error) {
+    console.log(error)
+    console.log(`[Neo4J] init failed, retrying in 10s...`)
+    setTimeout(init, 10000)
+  }
+}
+
+
 exports.url = NEO4J_URL
 exports.drivers = drivers
 exports.connected = () => connected
+exports.initialized = () => initialized
+
 exports.init = init

@@ -1,5 +1,6 @@
-const {drivers: {v2: driver}} = require('../../db.js')
 const createHttpError = require('http-errors')
+const {drivers: {v2: driver}} = require('../../db.js')
+const { default_batch_size } = require('../../config.js')
 const {
   get_current_user_id,
   user_query,
@@ -10,9 +11,6 @@ const {
   format_batched_response
 } = require('../../utils.js')
 
-const {
-  default_batch_size
-} = require('../../config.js')
 
 exports.get_user = (req, res, next) => {
   // Route to retrieve a user's info
