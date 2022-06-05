@@ -24,7 +24,7 @@ build:
   tags:
     - dind
   only:
-    - tags
+    - master
   before_script:
     # Docker hub login
     - echo "${DOCKER_HUB_PASSWORD}" | docker login --username ${DOCKER_HUB_USERNAME} --password-stdin
@@ -39,7 +39,7 @@ test:
   only:
     - tags
   tags:
-    - dind
+    - master
   before_script:
     - echo "${DOCKER_HUB_PASSWORD}" | docker login --username ${DOCKER_HUB_USERNAME} --password-stdin
        # Creating network for TDD
@@ -93,7 +93,7 @@ deploy:
   only:
     - tags
   tags:
-    - dind
+    - master
   script:
     - envsubst < kubernetes/deployment.yml | kubectl apply -f -
   environment:
