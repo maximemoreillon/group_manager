@@ -35,6 +35,7 @@ build:
 
 test:
   stage: test
+  coverage: '/All files[^|]*\|[^|]*\s+([\d\.]+)/'
   only:
     - master
   tags:

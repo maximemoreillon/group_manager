@@ -58,3 +58,6 @@ For more information, please visit the project page [here](https://articles.maxi
 ## Pagination
 
 To limit the size of responses, groups, members and administrators are provided in a paginated manner. The page size and index of the first item on the page can be defined using the query parameters 'batch_size' and 'start_index' respectively.
+
+## Docker image
+[![dockeri.co](https://dockeri.co/image/moreillon/group-manager)](https://hub.docker.com/r/moreillon/group-manager)
