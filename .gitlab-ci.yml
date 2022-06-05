@@ -24,7 +24,7 @@ build:
   tags:
     - dind
   only:
-    - master
+    - tags
   before_script:
     # Docker hub login
     - echo "${DOCKER_HUB_PASSWORD}" | docker login --username ${DOCKER_HUB_USERNAME} --password-stdin
@@ -37,7 +37,7 @@ test:
   stage: test
   coverage: '/All files[^|]*\|[^|]*\s+([\d\.]+)/'
   only:
-    - master
+    - tags
   tags:
     - dind
   before_script:
@@ -90,6 +90,8 @@ test:
 
 deploy:
   stage: deploy
+  only:
+    - tags
   tags:
     - dind
   script:
