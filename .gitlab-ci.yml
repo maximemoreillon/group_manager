@@ -95,7 +95,7 @@ deploy:
   tags:
     - master
   script:
-    - envsubst < kubernetes/deployment.yml | kubectl apply -f -
+    - envsubst < kubernetes_manifest.yml | kubectl apply -f -
   environment:
     name: production
     kubernetes:

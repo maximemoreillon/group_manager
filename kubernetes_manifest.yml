@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${APPLICATION_NAME}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ${APPLICATION_NAME}
+  template:
+    metadata:
+      labels:
+        app: ${APPLICATION_NAME}
+    spec:
+      containers:
+      - name: ${APPLICATION_NAME}
+        image: ${CONTAINER_IMAGE_TAGGED}
+        ports:
+        - containerPort: 80
+        envFrom:
+        - secretRef:
+           name: environment-variables
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${APPLICATION_NAME}
+spec:
+  type: ClusterIP
+  selector:
+    app: ${APPLICATION_NAME}
+  ports:
+  - port: 80
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: ${APPLICATION_NAME}
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod" 
+spec:
+  tls:
+  - hosts:
+    - ${CERTIFICATE_DOMAIN}
+    secretName: ${APPLICATION_NAME}
+  rules:
+  - host: ${CERTIFICATE_DOMAIN}
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: ${APPLICATION_NAME}
+          servicePort: 80
