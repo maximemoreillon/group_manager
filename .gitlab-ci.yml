@@ -66,9 +66,7 @@ test:
       --env NEO4J_URL=bolt://tdd-db
       --env JWT_SECRET=keyboardcat
       moreillon/user-manager
-
   script:
-    # Run test
     - >
       docker run
       --rm
