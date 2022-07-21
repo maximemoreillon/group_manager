@@ -1,6 +1,6 @@
 const {drivers: {v2: driver}} = require('../../db.js')
+const createHttpError = require('http-errors')
 const {
-  error_handling,
   get_current_user_id,
   user_query,
   group_query,
@@ -10,7 +10,7 @@ const {
 } = require('../../utils.js')
 
 
-exports.get_user = (req, res) => {
+exports.get_user = (req, res, next) => {
   // Route to retrieve a user's info
   // This should not be a feature of group manager
   // Used in front-end
@@ -23,7 +23,7 @@ exports.get_user = (req, res) => {
 
   if(user_id === 'self') user_id = get_current_user_id(res)
 
-  if(!user_id) return res.status(400).send('User ID not defined')
+  if (!user_id) throw createHttpError(400, 'User ID not defined')
 
   const session = driver.session()
   session
@@ -34,10 +34,7 @@ exports.get_user = (req, res) => {
     { user_id })
   .then( ({records}) => {
 
-    if(!records.length) {
-      console.log(`[neo4J] User ${user_id} not found`)
-      return res.status(404).send(`User ${user_id} not found`)
-    }
+    if (!records.length) throw createHttpError(404, 'User not found')
 
     const user = records[0].get('user')
     delete user.properties.password_hashed
@@ -45,15 +42,15 @@ exports.get_user = (req, res) => {
     res.send(user)
     console.log(`User ${user_id} queried`)
    })
-  .catch(error => { error_handling(error,res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
-exports.get_members_of_group = (req, res) => {
+exports.get_members_of_group = (req, res, next) => {
   // Route to retrieve a user's groups
 
   const group_id = req.params.group_id || req.query.group_id
-  if(!group_id) return res.status(400).send('Group ID not defined')
+  if (!group_id) throw createHttpError(400, 'Group ID not defined')
 
   // Todo: allow user to pass what key tey want to query
   // IDEA: Could be done with GraphQL
@@ -69,26 +66,26 @@ exports.get_members_of_group = (req, res) => {
 
   session.run(query,  { group_id })
   .then(({records}) => {
-    if(!records.length) throw {code: 404, message: `Member query: group ${group_id} not found`}
+    if (!records.length) throw createHttpError(404, 'Group not found')
     const users = records[0].get('users')
     users.forEach( user => { delete user.properties.password_hashed })
     res.send(users)
     console.log(`Users of group ${group_id} queried`)
    })
-  .catch(error => { error_handling(error,res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
 
 
-exports.add_member_to_group = (req, res) => {
+exports.add_member_to_group = (req, res, next) => {
   // Route to make a user join a group
 
   const {group_id} = req.params
   const {user_id} = req.body
 
-  if(!group_id) return res.status(400).send('Group ID not defined')
-  if(!user_id) return res.status(400).send('User ID not defined')
+  if (!group_id) throw createHttpError(400, 'User ID not defined')
+  if(!user_id) throw createHttpError(400, 'User ID not defined')
 
   const current_user_id = get_current_user_id(res)
 
@@ -121,23 +118,23 @@ exports.add_member_to_group = (req, res) => {
   session.run(query, params)
   .then( ({records}) => {
 
-    if(!records.length) throw {code: 404, message: `Error adding using ${user_id} from group ${group_id}`}
+    if (!records.length) throw createHttpError(400, `Error adding using ${user_id} from group ${group_id}`) 
     console.log(`User ${current_user_id} added user ${user_id} to group ${group_id}`)
 
     const user = records[0].get('user')
     res.send(user)
   })
-  .catch(error => { error_handling(error,res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
-exports.remove_user_from_group = (req, res) => {
+exports.remove_user_from_group = (req, res, next) => {
   // Route to make a user leave a group
 
   const {group_id, member_id: user_id} = req.params
 
-  if(!group_id) return res.status(400).send('Group ID not defined')
-  if(!user_id) return res.status(400).send('User ID not defined')
+  if (!group_id) throw createHttpError(400, 'Group ID not defined')
+  if (!user_id) throw createHttpError(400, 'User ID not defined')
 
   const current_user_id = get_current_user_id(res)
 
@@ -170,18 +167,18 @@ exports.remove_user_from_group = (req, res) => {
   .run(query,params)
   .then( ({records}) => {
 
-    if(!records.length) throw {code: 404, message: `Error removing using ${user_id} from group ${group_id}`}
+    if (!records.length) throw createHttpError(400, `Error removing using ${user_id} from group ${group_id}`)
     console.log(`User ${current_user_id}  removed user ${user_id} from group ${group_id}`)
 
     const user = records[0].get('user')
     res.send(user)
   })
-  .catch(error => { error_handling(error, res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
 
-exports.get_groups_of_user = (req, res) => {
+exports.get_groups_of_user = (req, res, next) => {
   // Route to retrieve a user's groups
 
   let {member_id: user_id} = req.params
@@ -198,16 +195,16 @@ exports.get_groups_of_user = (req, res) => {
 
   session.run(query,{ user_id })
   .then(({records}) => {
-    if(!records.length) throw {code: 404, message: `User ${user_id} not found`}
+    if (!records.length) throw createHttpError(404, `User ${user_id} not found`) 
     console.log(`Groups of user ${user_id} queried`)
     const groups = records[0].get('groups')
     res.send(groups)
    })
-  .catch(error => { error_handling(error, res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
-exports.users_with_no_group = (req, res) => {
+exports.users_with_no_group = (req, res, next) => {
   // Route to retrieve users without a group
 
   const session = driver.session();
@@ -224,14 +221,11 @@ exports.users_with_no_group = (req, res) => {
     res.send(users)
     console.log(`Queried users with no group`)
   })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
-exports.get_members_of_groups = (req, res) => {
+exports.get_members_of_groups = (req, res, next) => {
   // Retrieve a multiple groups' members
   // Still in beta
 
@@ -266,12 +260,12 @@ exports.get_members_of_groups = (req, res) => {
 
     console.log(`Members of groups ${group_ids.join(', ')} queried`)
    })
-  .catch(error => { error_handling(error,res) })
+  .catch(next)
   .finally( () => { session.close() })
 
 }
 
-exports.get_groups_of_users = (req, res) => {
+exports.get_groups_of_users = (req, res, next) => {
   // Retrieve a multiple users' groups
   // Still in beta
 
@@ -304,9 +298,6 @@ exports.get_groups_of_users = (req, res) => {
 
     res.send(output)
    })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
+  .catch(next)
   .finally( () => { session.close() })
 }

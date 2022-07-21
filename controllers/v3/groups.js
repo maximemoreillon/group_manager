@@ -307,7 +307,7 @@ exports.leave_group = (req, res, next) => {
   session.run(query,params)
   .then( ({records}) => {
 
-    if(!records.length) throw createHttpError(400, `Error while leacing group ${group_id}`)
+    if(!records.length) throw createHttpError(400, `Error while leaving group ${group_id}`)
     console.log(`User ${user_id} left group ${group_id}`)
 
     res.send({group_id})
