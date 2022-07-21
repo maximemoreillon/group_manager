@@ -98,12 +98,12 @@ describe("/v2/", () => {
       expect(status).to.equal(200)
     })
 
-    it("Should respond 404 to inexistent group", async () => {
+    it("Should not fetch an inexistent group", async () => {
       const {status, body} = await request(app)
         .get(`/v2/groups/111111`)
         .set('Authorization', `Bearer ${jwt}`)
 
-      expect(status).to.equal(404)
+      expect(status).to.not.equal(200)
     })
 
   })
@@ -282,12 +282,12 @@ describe("/v2/", () => {
       expect(status).to.equal(200)
     })
 
-    it("Should respond 404 to the deletion of an inexistent group", async () => {
+    it("Should not accept to the deletion of an inexistent group", async () => {
       const {status, body} = await request(app)
         .delete(`/v2/groups/111111`)
         .set('Authorization', `Bearer ${jwt}`)
 
-      expect(status).to.equal(404)
+      expect(status).to.not.equal(200)
     })
 
   })
