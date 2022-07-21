@@ -33,7 +33,7 @@ exports.get_administrators_of_group = (req, res, next) => {
     res.send(admins)
     console.log(`Administrators of group ${group_id} queried`)
    })
-  .catch(error)
+  .catch(next)
   .finally( () => { session.close() })
 }
 
