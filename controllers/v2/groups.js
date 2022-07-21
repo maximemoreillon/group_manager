@@ -1,7 +1,6 @@
 const {drivers: {v2: driver}} = require('../../db.js')
 const {
   get_current_user_id,
-  error_handling,
   user_query,
   group_query,
   group_id_filter,
@@ -10,7 +9,7 @@ const {
 
 
 
-exports.create_group = (req, res) => {
+exports.create_group = (req, res, next) => {
   // Create a group
   // TODO: validation with joi
 
@@ -48,13 +47,12 @@ exports.create_group = (req, res) => {
 
     res.send(group)
   })
-  .catch(error => {
-    error_handling(error,res)
-  })
+    .catch(next)
+
   .finally( () => { session.close() })
 }
 
-exports.get_groups = async (req, res) => {
+exports.get_groups = async (req, res, next) => {
 
   // Queries: official vs non official, top level vs normal, type
 
@@ -103,16 +101,13 @@ exports.get_groups = async (req, res) => {
     res.send(response)
     console.log(`Groups queried`)
   })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
 
 
-exports.get_group = (req, res) => {
+exports.get_group = (req, res, next) => {
 
   const {group_id} = req.params
 
@@ -131,12 +126,12 @@ exports.get_group = (req, res) => {
     res.send(records[0].get('group'))
     console.log(`Group ${group_id} queried`)
   })
-  .catch(error => { error_handling(error, res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
 
-exports.patch_group = (req, res) => {
+exports.patch_group = (req, res, next) => {
 
   const {group_id} = req.params
 
@@ -195,12 +190,12 @@ exports.patch_group = (req, res) => {
     const group = records[0].get('group')
     res.send(group)
   })
-  .catch(error => { error_handling(error, res) })
+  .catch(next)
   .finally(() => session.close())
 
 }
 
-exports.delete_group = (req, res) => {
+exports.delete_group = (req, res, next) => {
   // Route to delete a group
 
   const {group_id} = req.params
@@ -233,11 +228,11 @@ exports.delete_group = (req, res) => {
     res.send({group_id})
     console.log(`User ${user_id} deleted group ${group_id}`)
   })
-  .catch(error => { error_handling(error, res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
-exports.join_group = (req, res) => {
+exports.join_group = (req, res, next) => {
   // TODO: Could be combined with make user member of group
   // Route to join a group (only works if group is not private)
 
@@ -272,12 +267,12 @@ exports.join_group = (req, res) => {
 
     res.send({group_id})
   })
-  .catch(error => { error_handling(error, res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
 
-exports.leave_group = (req, res) => {
+exports.leave_group = (req, res, next) => {
   // Route to leave a group
 
   const {group_id} = req.params
@@ -309,13 +304,13 @@ exports.leave_group = (req, res) => {
 
     res.send({group_id})
   })
-  .catch(error => { error_handling(error, res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
 
 
-exports.get_parent_groups_of_group = (req, res) => {
+exports.get_parent_groups_of_group = (req, res, next) => {
   // Route to retrieve groups inside a group
 
   const {group_id} = req.params
@@ -344,13 +339,13 @@ exports.get_parent_groups_of_group = (req, res) => {
     console.log(`Parent groups of group ${group_id} queried`)
 
   })
-  .catch(error => { error_handling(error, res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
 
 
-exports.get_groups_of_group = (req, res) => {
+exports.get_groups_of_group = (req, res, next) => {
   // Route to retrieve groups inside a group
 
   const {group_id} = req.params
@@ -379,13 +374,13 @@ exports.get_groups_of_group = (req, res) => {
     res.send(groups)
     console.log(`Subgroups of group ${group_id} queried`)
   })
-  .catch(error => { error_handling(error, res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
 
 
-exports.add_group_to_group = (req, res) => {
+exports.add_group_to_group = (req, res, next) => {
   // Route to make a group join a group
   // Can only be done if user is admin of both groups
 
@@ -440,11 +435,11 @@ exports.add_group_to_group = (req, res) => {
     const child_group = records[0].get('child_group')
     res.send(child_group)
   })
-  .catch(error => { error_handling(error, res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
-exports.remove_group_from_group = (req, res) => {
+exports.remove_group_from_group = (req, res, next) => {
   // Route to make a user join a group
 
   // TODO: Should the user be admin of child group?
@@ -493,12 +488,12 @@ exports.remove_group_from_group = (req, res) => {
     const subgroup = records[0].get('child_group')
     res.send(subgroup)
   })
-  .catch(error => {   error_handling(error, res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
 
-exports.get_groups_directly_belonging_to_group = (req, res) => {
+exports.get_groups_directly_belonging_to_group = (req, res, next) => {
 
   // THIS IS LEGACY
 
@@ -524,19 +519,19 @@ exports.get_groups_directly_belonging_to_group = (req, res) => {
   const params = { group_id }
 
   session.run(query,params)
-   .then( ({records}) => {
+  .then( ({records}) => {
      if(!records.length) throw {code: 404, message: `Parent group ${group_id} not found`}
      const groups = records[0].get('groups')
      res.send(groups)
      console.log(`Direct subgroups of group ${group_id} queried (LEGACY)`)
     })
-  .catch(error => { error_handling(error, res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
 
 
-exports.get_top_level_groups = (req, res) => {
+exports.get_top_level_groups = (req, res, next) => {
 
   // This is legacy
 
@@ -559,11 +554,11 @@ exports.get_top_level_groups = (req, res) => {
     res.send(groups)
     console.log(`Top level groups queried (LEGACY)`)
    })
-  .catch(error => { error_handling(errr, res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
-exports.get_top_level_official_groups = (req, res) => {
+exports.get_top_level_official_groups = (req, res, next) => {
 
   // This is legacy
 
@@ -585,11 +580,11 @@ exports.get_top_level_official_groups = (req, res) => {
     res.send(groups)
     console.log(`Top level official groups queried (LEGACY)`)
    })
-  .catch(error => { error_handling(errr, res) })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
-exports.get_top_level_non_official_groups = (req, res) => {
+exports.get_top_level_non_official_groups = (req, res, next) => {
 
   // This is legacy
 
@@ -611,6 +606,6 @@ exports.get_top_level_non_official_groups = (req, res) => {
     res.send(groups)
     console.log(`Top level nonofficial groups queried (LEGACY)`)
    })
-  .catch(error => { error_handling(errr, res) })
+  .catch(next)
   .finally( () => { session.close() })
 }

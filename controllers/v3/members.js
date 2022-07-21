@@ -282,3 +282,48 @@ exports.users_with_no_group = (req, res, next) => {
   .catch(next)
   .finally( () => { session.close() })
 }
+
+
+exports.get_groups_of_users = (req, res, next) => {
+
+  // This is still in development
+
+  const session = driver.session()
+
+  const {
+    batch_size = default_batch_size,
+    start_index = 0,
+  } = req.query
+
+  const user_ids = req.query.user_ids
+    || req.query.member_ids
+    || req.query.ids
+
+  const query = `
+    UNWIND $user_ids AS user_id
+    MATCH (user:User {_id: user_id})-[:BELONGS_TO]->(group:Group)
+
+    // Currently no batching
+    RETURN properties(user) as user, collect(properties(group)) as groups
+    WITH {user: properties(user), groups: collect(properties(group))} as items
+    ${batch_items(batch_size)}
+    `
+  
+  const params = { user_ids, batch_size, start_index }
+
+  session.run(query, params)
+    .then(({ records }) => {
+      
+
+      if (!records.length) throw createHttpError(404, `No users found`)
+      console.log(`Queried users with no group`)
+
+      const response = format_batched_response(records)
+      res.send(response)
+
+    })
+    .catch(next)
+    .finally(() => { session.close() })
+
+
+}
