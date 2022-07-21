@@ -304,7 +304,7 @@ exports.get_groups_of_users = (req, res, next) => {
     MATCH (user:User {_id: user_id})-[:BELONGS_TO]->(group:Group)
 
     // Currently no batching
-    WITH {user: properties(user), groups: collect(properties(group))} as items
+    WITH {user: properties(user), groups: collect(properties(group))} as item
     ${batch_items(batch_size)}
     `
   
