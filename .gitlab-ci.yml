@@ -38,8 +38,6 @@ test:
   coverage: '/All files[^|]*\|[^|]*\s+([\d\.]+)/'
   only:
     - tags
-  tags:
-    - master
   before_script:
     - echo "${DOCKER_HUB_PASSWORD}" | docker login --username ${DOCKER_HUB_USERNAME} --password-stdin
        # Creating network for TDD
@@ -90,8 +88,6 @@ deploy:
   stage: deploy
   only:
     - tags
-  tags:
-    - master
   script:
     - envsubst < kubernetes_manifest.yml | kubectl apply -f -
   environment:
