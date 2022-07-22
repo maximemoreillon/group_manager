@@ -45,6 +45,7 @@ For more information, please visit the project page [here](https://articles.maxi
 | /v3/groups/{group_id}/members | GET | - | Returns the users belonging to the group with the given ID |
 | /v3/groups/{group_id}/members/{user_id} | POST | - | Adds a user to the group |
 | /v3/groups/{group_id}/members/{user_id} | DELETE | - | Removes a user from the group |
+| /v3/members/groups | GET | user_ids | Gets the groups of multiple users identrified by their ID |
 | /v3/members/{member_id}/groups | GET | - | Gets the groups of a member, here, use 'self' as member_id of one's own groups |
 
 ### Administrators
