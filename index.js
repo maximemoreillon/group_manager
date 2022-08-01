@@ -12,7 +12,6 @@ const auth = require('@moreillon/express_identification_middleware')
 const {
   url: neo4j_url,
   connected: neo4j_connected,
-  initialized: neo4j_initialized,
   init: db_init,
 } = require('./db.js')
 
@@ -42,7 +41,6 @@ app.get('/', (req, res) => {
     neo4j: {
       url: neo4j_url,
       connected: neo4j_connected(),
-      initialized: neo4j_initialized()
     },
     identification_url,
     commit,

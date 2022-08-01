@@ -23,7 +23,6 @@ const drivers = {
 }
 
 let connected = false
-let initialized = false
 
 const get_connection_status = async () => {
   const session = drivers.v2.session()
@@ -109,6 +108,5 @@ const init = async () => {
 exports.url = NEO4J_URL
 exports.drivers = drivers
 exports.connected = () => connected
-exports.initialized = () => initialized
 
 exports.init = init
