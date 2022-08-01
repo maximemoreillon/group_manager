@@ -25,6 +25,23 @@ const drivers = {
 let connected = false
 let initialized = false
 
+const get_connection_status = async () => {
+  const session = drivers.v2.session()
+  try {
+    console.log(`[Neo4J] Testing connection...`)
+    await session.run('RETURN 1')
+    console.log(`[Neo4J] Connection successful`)
+    return true
+  }
+  catch (e) {
+    console.log(`[Neo4J] Connection failed`)
+    return false
+  }
+  finally {
+    session.close()
+  }
+}
+
 const set_ids = async () => {
   const id_setting_query = `
     MATCH (g:Group)
@@ -69,20 +86,23 @@ const create_constraints = async () => {
 
 
 const init = async () => {
-  console.log('[Neo4J] Initializing DB')
 
-  try {
-    await set_ids()
+  if (await get_connection_status()) {
     connected = true
-    await create_constraints()
-    initialized = true
 
-  } 
-  catch (error) {
-    console.log(error)
-    console.log(`[Neo4J] init failed, retrying in 10s...`)
+    try {
+      console.log('[Neo4J] Initializing DB')
+      await set_ids()
+      await create_constraints()
+    }
+    catch (error) {
+      console.log(error)      
+    }
+  } else {
     setTimeout(init, 10000)
   }
+
+
 }
 
 
