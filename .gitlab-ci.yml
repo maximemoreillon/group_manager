@@ -88,13 +88,12 @@ test:
 
 deploy:
   stage: deploy
-  only:
-    - master
   tags:
     - dind
+  only:
+    - master
+  before_script:
+    - kubectl config use-context moreillon_ci/moreillon_k8s/kubernetes-agent:cloud
   script:
-    - envsubst < kubernetes_manifest.yml | kubectl apply -f -
-  environment:
-    name: production
-    kubernetes:
-      namespace: ${KUBERNETES_NAMESPACE}
+    - envsubst < kubernetes_manifest.yml | kubectl apply -n ${KUBERNETES_NAMESPACE} -f -
+
