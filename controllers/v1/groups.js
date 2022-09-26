@@ -1,8 +1,5 @@
 const {drivers: {v1: driver}} = require('../../db.js')
-const {
-  get_current_user_id,
-  group_query,
-} = require('../../utils.js')
+const { group_query } = require('../../utils.js')
 
 exports.get_group = (req, res) => {
 
@@ -22,7 +19,6 @@ exports.get_group = (req, res) => {
     // NOTE: Not too sure about sendig only one record
     // How about sending all records and let the front end deal with it?
     if(records.length < 1) return res.status(404).send('Not found')
-    console.log(`Group ${group_id} (LEGACY)`)
     res.send(records[0].get('group'))
   })
   .catch(error => {
@@ -52,7 +48,6 @@ exports.get_top_level_groups = (req, res) => {
     `, {})
   .then(result => {
     res.send(result.records)
-    console.log(`Top level groups queried (V1 LEGACY)`)
   })
   .catch(error => {
     console.log(error)
@@ -80,7 +75,6 @@ exports.get_top_level_official_groups = (req, res) => {
     `, {})
   .then(result => {
     res.send(result.records)
-    console.log(`Top level official groups queried (V1 LEGACY)`)
    })
   .catch(error => {
     console.log(error)
@@ -107,8 +101,6 @@ exports.get_top_level_non_official_groups = (req, res) => {
     `, {})
   .then(result => {
     res.send(result.records)
-    console.log(`Top level non official groups queried (V1 LEGACY)`)
-
    })
   .catch(error => {
     console.log(error)
@@ -141,7 +133,6 @@ exports.get_groups_directly_belonging_to_group = (req, res) => {
     `,
     { group_id })
   .then(result => {
-    console.log(`Direct subgroups of group ${group_id} queried (V1 LEGACY)`)
     res.send(result.records)
    })
   .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
@@ -168,7 +159,6 @@ exports.get_parent_groups_of_group = (req, res) => {
     `,
     { group_id: subgroup_id })
   .then(result => {
-    console.log(`Parent groups of group ${subgroup_id} queried`)
     res.send(result.records)
   })
   .catch(error => {
@@ -196,7 +186,6 @@ exports.get_groups_of_group = (req, res) => {
     `,
     { group_id })
   .then(result => {
-    console.log(`Subgroups of group ${group_id} queried (V1 LEGACY)`)
     res.send(result.records)
    })
   .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })

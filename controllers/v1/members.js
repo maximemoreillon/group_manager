@@ -83,7 +83,6 @@ exports.get_groups_of_user = (req, res) => {
     `,
     { user_id: member_id })
   .then(result => {
-    console.log(`Groups of user ${member_id} queried`)
     res.send(result.records)
    })
   .catch(error => {

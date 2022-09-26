@@ -31,7 +31,6 @@ exports.get_administrators_of_group = (req, res, next) => {
     const admins = records[0].get('administrators')
     admins.forEach( admin => { delete admin.properties.password_hashed })
     res.send(admins)
-    console.log(`Administrators of group ${group_id} queried`)
    })
   .catch(next)
   .finally( () => { session.close() })

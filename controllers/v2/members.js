@@ -40,7 +40,6 @@ exports.get_user = (req, res, next) => {
     delete user.properties.password_hashed
 
     res.send(user)
-    console.log(`User ${user_id} queried`)
    })
   .catch(next)
   .finally( () => { session.close() })
@@ -70,7 +69,6 @@ exports.get_members_of_group = (req, res, next) => {
     const users = records[0].get('users')
     users.forEach( user => { delete user.properties.password_hashed })
     res.send(users)
-    console.log(`Users of group ${group_id} queried`)
    })
   .catch(next)
   .finally( () => { session.close() })

@@ -98,7 +98,6 @@ exports.get_groups = async (req, res, next) => {
 
 
     res.send(response)
-    console.log(`Groups queried`)
   })
   .catch(next)
   .finally( () => { session.close() })
@@ -123,7 +122,6 @@ exports.get_group = (req, res, next) => {
   .then(({records}) => {
     if (!records.length) throw createHttpError(404, `Group ${group_id} not found`)
     res.send(records[0].get('group'))
-    console.log(`Group ${group_id} queried`)
   })
   .catch(next)
   .finally( () => { session.close() })

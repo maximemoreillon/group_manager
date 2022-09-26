@@ -42,7 +42,6 @@ exports.get_administrators_of_group = (req, res, next) => {
   session.run(query,params)
   .then(({records}) => {
     if(!records.length) throw createHttpError(400, `Group ${group_id} not found`)
-    console.log(`Administrators of group ${group_id} queried`)
     const response = format_batched_response(records)
     res.send(response)
    })

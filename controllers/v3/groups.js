@@ -92,10 +92,7 @@ exports.get_groups = (req, res, next) => {
   const session = driver.session()
   session.run(query,params)
     .then( ({records}) => {
-
       const response = format_batched_response(records)
-
-      console.log(`Groups queried`)
       res.send(response)
     })
     .catch(next)
@@ -117,7 +114,6 @@ exports.get_group = (req, res, next) => {
     .then(({records}) => {
       if(!records.length) throw createHttpError(404, `Group ${group_id} not found`)
       res.send(records[0].get('group'))
-      console.log(`Group ${group_id} queried`)
     })
     .catch(next)
     .finally( () => { session.close() })
@@ -351,12 +347,8 @@ exports.get_parent_groups_of_group = (req, res, next) => {
 
   session.run(query, params)
   .then( ({records}) => {
-
     if(!records.length) throw createHttpError(400, `Subgroup group ${group_id} not found`)
-    console.log(`Parent groups of group ${group_id} queried`)
-
     const response = format_batched_response(records)
-
     res.send(response)
   })
   .catch(next)
@@ -404,10 +396,7 @@ exports.get_groups_of_group = (req, res, next) => {
   session.run(query,params)
   .then( ({records}) => {
     if(!records.length) throw createHttpError(400, `Parent group ${group_id} not found`)
-
-    console.log(`Subgroups of group ${group_id} queried`)
     const response = format_batched_response(records)
-
     res.send(response)
   })
   .catch(next)
