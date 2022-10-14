@@ -1,6 +1,5 @@
 const express = require('express')
 const cors = require('cors')
-const axios = require('axios')
 const dotenv = require('dotenv')
 const apiMetrics = require('prometheus-api-metrics')
 const router_v1 = require('./routes/v1/index.js')

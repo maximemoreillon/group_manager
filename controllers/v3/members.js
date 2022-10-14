@@ -71,8 +71,8 @@ exports.get_members_of_group = (req, res, next) => {
     if(!records.length) throw createHttpError(404, `Member query: group ${group_id} not found`)
     const response = format_batched_response(records)
     res.send(response)
-   })
-   .catch(next)
+  })
+  .catch(next)
   .finally( () => { session.close() })
 }
 
@@ -151,7 +151,10 @@ exports.add_member_to_group = (req, res, next) => {
 exports.remove_user_from_group = (req, res, next) => {
   // Route to make a user leave a group
 
-  const {group_id, member_id: user_id} = req.params
+  const {
+    group_id, 
+    member_id: user_id
+  } = req.params
 
   if(!group_id || group_id === 'undefined') throw createHttpError(400, 'Group ID not defined')
   if(!user_id) throw createHttpError(400, 'User ID not defined')

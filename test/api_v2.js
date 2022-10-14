@@ -8,7 +8,6 @@ const {
   IDENTIFICATION_URL,
   TEST_USER_USERNAME,
   TEST_USER_PASSWORD,
-  USER_CREATION_URL
 } = process.env
 
 const login = async () => {
