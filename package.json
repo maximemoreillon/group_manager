@@ -4,6 +4,7 @@
   "description": "",
   "main": "group_manager.js",
   "scripts": {
+    "dev": "nodemon",
     "test": "mocha --timeout 10000 --exit",
     "coverage": "nyc mocha --timeout 15000 --exit"
   },

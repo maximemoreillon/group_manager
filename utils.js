@@ -9,16 +9,6 @@ exports.get_current_user_id = (res) => {
   return _id
 }
 
-// TODO: remove this in favor of the express error handler
-exports.error_handling = (error, res) => {
-  console.log(error)
-
-  let status_code = error.code || 500
-  if (isNaN(status_code)) status_code = 500
-  const message = error.message || error
-  res.status(status_code).send(message)
-}
-
 exports.user_id_filter = `
 WHERE user._id = $user_id
 `

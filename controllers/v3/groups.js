@@ -55,7 +55,7 @@ exports.create_group = (req, res, next) => {
     })
 }
 
-exports.get_groups = (req, res, next) => {
+exports.read_groups = (req, res, next) => {
   // Queries: official vs non official, top level vs normal, type
 
   // WARNING: Querying top level official groups means groups whith no parent THAT ARE OFFICIAL
@@ -63,15 +63,36 @@ exports.get_groups = (req, res, next) => {
 
   // Shallow: only groups that are not part of another group
 
+  const { parent_id, subgroup_id } = req.params
+
   const {
     batch_size = default_batch_size,
     start_index = 0,
-    shallow,
+    shallow, // Only query top level groups
+    direct,
     official,
     nonofficial,
   } = req.query
 
+  const as_parent_query = `<-[:BELONGS_TO]-(subgroup:Group {_id: $subgroup_id})`
+  const as_subgroup_query = `-[:BELONGS_TO]->(parent:Group {_id: $parent_id})`
+
+  // TODO: There must be a simpler way to do this
+  const direct_query = `
+    ${
+      parent_id
+        ? "AND NOT (group)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(parent)"
+        : ""
+    }
+    ${
+      subgroup_id
+        ? "AND NOT (subgroup)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(group)"
+        : ""
+    }
+  `
+
   const shallow_query = "AND NOT (group)-[:BELONGS_TO]->(:Group)"
+
   const official_query = "AND group.official"
   const non_official_query =
     "AND (NOT EXISTS(group.official) OR NOT group.official)"
@@ -79,9 +100,12 @@ exports.get_groups = (req, res, next) => {
   const query = `
     // OPTIONAL MATCH so as to allow for batching even when no match
     OPTIONAL MATCH (group:Group)
+    ${parent_id ? as_subgroup_query : ""}
+    ${subgroup_id ? as_parent_query : ""}
 
     // using dummy WHERE here so as to use AND in other queryies
     WHERE EXISTS(group._id)
+    ${direct ? direct_query : ""}
     ${shallow ? shallow_query : ""}
     ${official ? official_query : ""}
     ${nonofficial ? non_official_query : ""}
@@ -89,7 +113,7 @@ exports.get_groups = (req, res, next) => {
     ${batch_items(batch_size)}
     `
 
-  const params = { batch_size, start_index }
+  const params = { batch_size, start_index, parent_id, subgroup_id }
 
   const session = driver.session()
   session
@@ -104,7 +128,7 @@ exports.get_groups = (req, res, next) => {
     })
 }
 
-exports.get_group = (req, res, next) => {
+exports.read_group = (req, res, next) => {
   const { group_id } = req.params
   if (!group_id || group_id === "undefined")
     throw createHttpError(400, "Group ID not defined")
@@ -126,7 +150,7 @@ exports.get_group = (req, res, next) => {
     })
 }
 
-exports.patch_group = (req, res, next) => {
+exports.update_group = (req, res, next) => {
   const { group_id } = req.params
   if (!group_id || group_id === "undefined")
     throw createHttpError(400, "Group ID not defined")
@@ -324,109 +348,15 @@ exports.leave_group = (req, res, next) => {
     })
 }
 
-// From here, parent groups and subgroups
-
-exports.get_parent_groups_of_group = (req, res, next) => {
-  const { group_id } = req.params
-  if (!group_id || group_id === "undefined")
-    throw createHttpError(400, "Group ID not defined")
-
-  const {
-    shallow,
-    batch_size = default_batch_size,
-    start_index = 0,
-  } = req.query
-
-  const session = driver.session()
-
-  const shallow_query = `WHERE NOT (group)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(parent)`
-
-  const query = `
-    ${group_query}
-    WITH group
-    OPTIONAL MATCH (group)-[:BELONGS_TO]->(parent:Group)
-    ${shallow ? shallow_query : ""}
-
-    WITH parent as item
-    ${batch_items(batch_size)}
-    `
-
-  const params = { group_id, batch_size, start_index }
-
-  session
-    .run(query, params)
-    .then(({ records }) => {
-      if (!records.length)
-        throw createHttpError(400, `Subgroup group ${group_id} not found`)
-      const response = format_batched_response(records)
-      res.send(response)
-    })
-    .catch(next)
-    .finally(() => {
-      session.close()
-    })
-}
-
-exports.get_groups_of_group = (req, res, next) => {
-  // Route to retrieve groups inside a group
-
-  const { group_id } = req.params
-  if (!group_id || group_id === "undefined")
-    throw createHttpError(400, "Group ID not defined")
-
-  const {
-    batch_size = default_batch_size,
-    start_index = 0,
-    shallow,
-    direct, // alias for shallow
-    official,
-    nonofficial,
-  } = req.query
-
-  const shallow_query = `AND NOT (subgroup)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(group)`
-
-  const session = driver.session()
-
-  const query = `
-    ${group_query}
-    WITH group
-    OPTIONAL MATCH (subgroup:Group)-[:BELONGS_TO]->(group:Group)
-    // using dummy WHERE here so as to use AND in other queryies
-    WHERE EXISTS(group._id)
-    ${shallow || direct ? shallow_query : ""}
-    ${official ? official_query : ""}
-    ${nonofficial ? non_official_query : ""}
-
-    WITH subgroup as item
-    ${batch_items(batch_size)}
-    `
-
-  const params = { group_id, batch_size, start_index }
-
-  session
-    .run(query, params)
-    .then(({ records }) => {
-      if (!records.length)
-        throw createHttpError(400, `Parent group ${group_id} not found`)
-      const response = format_batched_response(records)
-      res.send(response)
-    })
-    .catch(next)
-    .finally(() => {
-      session.close()
-    })
-}
-
 exports.add_group_to_group = (req, res, next) => {
   // Route to make a group join a group
   // Can only be done if user is admin of both groups
 
-  const { group_id: parent_group_id } = req.params
-  const { group_id: child_group_id } = req.body
+  const { parent_id, subgroup_id } = req.params
 
-  if (!parent_group_id || parent_group_id === "undefined")
+  if (!parent_id || parent_id === "undefined")
     throw createHttpError(400, "Parent group ID not defined")
-  if (!child_group_id || child_group_id === "undefined")
+  if (!subgroup_id || subgroup_id === "undefined")
     throw createHttpError(400, "Child group ID not defined")
 
   const user_id = get_current_user_id(res)
@@ -441,13 +371,13 @@ exports.add_group_to_group = (req, res, next) => {
     MATCH (child_group:Group)
 
     // Allow only group admin or super admin to delete a group
-    WHERE child_group._id = $child_group_id
+    WHERE child_group._id = $subgroup_id
       AND ( (child_group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
 
     // Find the parent group
     WITH child_group, user
     MATCH (parent_group:Group)
-    WHERE parent_group._id = $parent_group_id
+    WHERE parent_group._id = $parent_id
       AND ( (parent_group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
 
       // Prevent cyclic graphs (NOT WORKING)
@@ -464,7 +394,7 @@ exports.add_group_to_group = (req, res, next) => {
     RETURN properties(child_group) as child_group
     `
 
-  const params = { user_id, parent_group_id, child_group_id }
+  const params = { user_id, parent_id, subgroup_id }
 
   session
     .run(query, params)
@@ -472,10 +402,10 @@ exports.add_group_to_group = (req, res, next) => {
       if (!records.length)
         throw createHttpError(
           400,
-          `Failed to add group ${child_group_id} in ${parent_group_id}`
+          `Failed to add group ${subgroup_id} in ${parent_id}`
         )
       console.log(
-        `User ${user_id} added group ${child_group_id} to group ${parent_group_id}`
+        `User ${user_id} added group ${subgroup_id} to group ${parent_id}`
       )
       const child_group = records[0].get("child_group")
       res.send(child_group)
@@ -491,12 +421,11 @@ exports.remove_group_from_group = (req, res, next) => {
 
   // TODO: Should the user be admin of child group?
 
-  const { group_id: parent_group_id } = req.params
-  const { subgroup_id: child_group_id } = req.params
+  const { parent_id, subgroup_id } = req.params
 
-  if (!parent_group_id || parent_group_id === "undefined")
+  if (!parent_id || parent_id === "undefined")
     throw createHttpError(400, "Parent group ID not defined")
-  if (!child_group_id || child_group_id === "undefined")
+  if (!subgroup_id || subgroup_id === "undefined")
     throw createHttpError(400, "Child group ID not defined")
 
   const user_id = get_current_user_id(res)
@@ -511,13 +440,13 @@ exports.remove_group_from_group = (req, res, next) => {
     MATCH (child_group:Group)
 
     // Allow only group admin or super admin to remove a group
-    WHERE child_group._id = $child_group_id
+    WHERE child_group._id = $subgroup_id
       AND ( (child_group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
 
     // Find the parent group
     WITH child_group, user
     MATCH (child_group)-[r:BELONGS_TO]->(parent_group:Group)
-    WHERE parent_group._id = $parent_group_id
+    WHERE parent_group._id = $parent_id
       AND ( (parent_group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
 
     // delete relationship
@@ -529,8 +458,8 @@ exports.remove_group_from_group = (req, res, next) => {
 
   const params = {
     user_id,
-    parent_group_id,
-    child_group_id,
+    parent_id,
+    subgroup_id,
   }
 
   session
@@ -539,10 +468,10 @@ exports.remove_group_from_group = (req, res, next) => {
       if (!records.length)
         throw createHttpError(
           400,
-          `Failed to remove group ${child_group_id} from group ${parent_group_id}`
+          `Failed to remove group ${subgroup_id} from group ${parent_id}`
         )
       console.log(
-        `User ${user_id} removed group ${child_group_id} from group ${parent_group_id}`
+        `User ${user_id} removed group ${subgroup_id} from group ${parent_id}`
       )
       const subgroup = records[0].get("child_group")
       res.send(subgroup)
