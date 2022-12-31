@@ -352,7 +352,8 @@ exports.add_group_to_group = (req, res, next) => {
   // Route to make a group join a group
   // Can only be done if user is admin of both groups
 
-  const { parent_id, subgroup_id } = req.params
+  const { parent_id } = req.params
+  const subgroup_id = req.params.subgroup_id || req.body.group_id
 
   if (!parent_id || parent_id === "undefined")
     throw createHttpError(400, "Parent group ID not defined")
