@@ -1,24 +1,23 @@
 exports.get_current_user_id = (res) => {
   const current_user = res.locals.user
-  const _id = current_user._id // futureproofing
-    || current_user.properties._id
-    || current_user.identity.low // remove this when done
-    || current_user.identity // remove this when done
+  const _id =
+    current_user._id || // futureproofing
+    current_user.properties._id ||
+    current_user.identity.low || // remove this when done
+    current_user.identity // remove this when done
 
   return _id
 }
 
-
+// TODO: remove this in favor of the express error handler
 exports.error_handling = (error, res) => {
-
   console.log(error)
 
   let status_code = error.code || 500
-  if(isNaN(status_code)) status_code = 500
+  if (isNaN(status_code)) status_code = 500
   const message = error.message || error
   res.status(status_code).send(message)
 }
-
 
 exports.user_id_filter = `
 WHERE user._id = $user_id
@@ -32,7 +31,6 @@ exports.current_user_query = `
 MATCH (current_user:User)
 WHERE current_user._id = $current_user_id
 `
-
 
 exports.group_id_filter = `
 WHERE group._id = $group_id
@@ -57,8 +55,6 @@ WITH
 WITH group_count, groups[start_index..end_index] AS groups
 `
 
-
-
 exports.batch_items = (batch_size) => `
 // Aggregation
 WITH
@@ -72,27 +68,27 @@ WITH
 // Note: if end_index is -1, returns all except last
 RETURN
   count,
-  ${batch_size >= 0 ? 'items[start_index..end_index] AS batch' : 'items AS batch'},
+  ${
+    batch_size >= 0
+      ? "items[start_index..end_index] AS batch"
+      : "items AS batch"
+  },
   start_index,
   batch_size
 `
 
-
-
 exports.format_batched_response = (records) => {
-
   const record = records[0]
 
-  const items = record.get('batch')
-  items.forEach(item => {
-    if(item.password_hashed) delete item.password_hashed
+  const items = record.get("batch")
+  items.forEach((item) => {
+    if (item.password_hashed) delete item.password_hashed
   })
 
-
   return {
-    batch_size: record.get('batch_size'),
-    start_index: record.get('start_index'),
-    count: record.get('count'),
+    batch_size: record.get("batch_size"),
+    start_index: record.get("start_index"),
+    count: record.get("count"),
     items,
   }
 }
