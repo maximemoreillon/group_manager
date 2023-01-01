@@ -9,8 +9,6 @@ const {
   read_group,
   update_group,
   delete_group,
-  join_group,
-  leave_group,
   add_group_to_group,
   remove_group_from_group,
 } = require("../../controllers/v3/groups.js")
@@ -29,9 +27,6 @@ router
   .get(read_group)
   .patch(update_group)
   .delete(delete_group)
-
-router.route("/groups/:group_id/join").post(join_group) // try to combine with add user to group
-router.route("/groups/:group_id/leave").post(leave_group) // try to combine with add user to group
 
 // Subgroups
 router
