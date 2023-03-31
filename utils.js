@@ -1,3 +1,5 @@
+const createHttpError = require("http-errors")
+
 exports.get_current_user_id = (res) => {
   const current_user = res.locals.user
   const _id =
@@ -69,6 +71,8 @@ RETURN
 
 exports.format_batched_response = (records) => {
   const record = records[0]
+
+  if (!record) throw createHttpError(404, "Query did not yield any match")
 
   const items = record.get("batch")
   items.forEach((item) => {

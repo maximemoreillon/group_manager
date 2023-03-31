@@ -66,7 +66,7 @@ describe("/v3/", () => {
     it("Should allow the query of top level groups", async () => {
       const { status, body } = await request(app)
         .get("/v3/groups")
-        .query({ top: 1 })
+        .query({ shallow: 1 })
         .set("Authorization", `Bearer ${jwt}`)
 
       expect(status).to.equal(200)
@@ -75,7 +75,7 @@ describe("/v3/", () => {
     it("Should allow the query of top level official groups", async () => {
       const { status, body } = await request(app)
         .get("/v3/groups")
-        .query({ top: 1, official: 1 })
+        .query({ shallow: 1, official: 1 })
         .set("Authorization", `Bearer ${jwt}`)
 
       expect(status).to.equal(200)
