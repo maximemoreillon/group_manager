@@ -5,10 +5,6 @@ const {
 const { default_batch_size } = require("../../config.js")
 const {
   get_current_user_id,
-  user_query,
-  group_query,
-  user_id_filter,
-  current_user_query,
   batch_items,
   format_batched_response,
 } = require("../../utils.js")
@@ -39,7 +35,7 @@ exports.add_member_to_group = (req, res, next) => {
   const single_user_add_query = `
     
     WITH group
-    ${user_query}
+    MATCH (user:User {_id: $user_id})
     MERGE (user)-[:BELONGS_TO]->(group)
     `
 
@@ -59,14 +55,12 @@ exports.add_member_to_group = (req, res, next) => {
     `
 
   const query = `
-    // Find the current user
-    ${current_user_query}
+    MATCH (current_user:User {_id: $current_user_id} )
 
-    // Find group
     WITH current_user
-    ${group_query}
+    MATCH (group:Group {_id: $group_id})
     // Allow only group admin or super admin to manage group
-    AND ( 
+    WHERE ( 
       (group)-[:ADMINISTRATED_BY]->(current_user) OR current_user.isAdmin
       // Allowing oneself to join if group is not restricted
       ${user_id ? join_possible_check : ""}
@@ -121,7 +115,10 @@ exports.get_user = (req, res, next) => {
 
   const session = driver.session()
 
-  const query = `${user_query} RETURN properties(user) as user`
+  const query = `
+    MATCH (user:User {_id: $user_id}) 
+    RETURN properties(user) as user
+    `
 
   session
     .run(query, { user_id })
@@ -153,7 +150,7 @@ exports.get_members_of_group = (req, res, next) => {
   const session = driver.session()
 
   const query = `
-    ${group_query}
+    MATCH (group:Group {_id: $group_id})
     WITH group
 
     // Optional match so groups with no users can still be queried
@@ -194,28 +191,22 @@ exports.remove_user_from_group = (req, res, next) => {
   const session = driver.session()
 
   const query = `
-    // Find the current user
-    ${current_user_query}
+    MATCH (current_user:User {_id: $current_user_id} )
 
-    // Find group
     WITH current_user
-    ${group_query}
-    AND ( 
+    MATCH (group:Group {_id: $group_id})
+    WHERE ( 
       (group)-[:ADMINISTRATED_BY]->(current_user) 
       OR current_user.isAdmin
       // Allow oneself to leave group
       OR $user_id = $current_user_id 
     )
-
-    // Find the user
+    
     WITH group
-    MATCH (user:User)-[r:BELONGS_TO]->(group)
-    ${user_id_filter}
+    MATCH (user:User {_id: $user_id})-[r:BELONGS_TO]->(group)
 
-    // delete relationship
     DELETE r
 
-    // Return
     RETURN properties(group) as group
     `
 
@@ -266,7 +257,7 @@ exports.get_groups_of_user = (req, res, next) => {
     "AND (NOT EXISTS(group.official) OR NOT group.official)"
 
   const query = `
-    ${user_query}
+    MATCH (user:User {_id: $user_id})
     WITH user
     // OPTIONAL because still want to perform query even if no groups
     OPTIONAL MATCH (user)-[:BELONGS_TO]->(group:Group)

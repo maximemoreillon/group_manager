@@ -5,8 +5,6 @@ const {
 const { default_batch_size } = require("../../config.js")
 const {
   get_current_user_id,
-  user_query,
-  group_query,
   batch_items,
   format_batched_response,
 } = require("../../utils.js")
@@ -29,7 +27,7 @@ exports.create_group = (req, res, next) => {
 
     // Create relationships
     WITH group
-    ${user_query}
+    MATCH (user:User {_id: $user_id})
     CREATE (group)-[:ADMINISTRATED_BY]->(user)
     CREATE (group)-[creation:CREATED_BY]->(user)
     CREATE (group)<-[:BELONGS_TO]-(user)
@@ -141,7 +139,7 @@ exports.read_group = (req, res, next) => {
   if (!group_id || group_id === "undefined")
     throw createHttpError(400, "Group ID not defined")
 
-  const query = `${group_query} RETURN properties(group) as group`
+  const query = `MATCH (group:Group {_id: $group_id}) RETURN properties(group) as group`
   const params = { group_id }
 
   const session = driver.session()
@@ -191,12 +189,12 @@ exports.update_group = (req, res, next) => {
   const session = driver.session()
 
   const query = `
-    ${user_query}
+    MATCH (user:User {_id: $user_id})
 
     WITH user
-    ${group_query}
+    MATCH (group:Group {_id: $group_id})
     // Only allow group admin or super admin
-    AND ( (group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
+    WHERE ( (group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
 
     // Patch properties
     // += implies update of existing properties
@@ -240,15 +238,12 @@ exports.delete_group = (req, res, next) => {
   `
 
   const query = `
-    // Find the current user
-    ${user_query}
-
-    // Find group
+    MATCH (user:User {_id: $user_id})
     WITH user
-    ${group_query}
+    MATCH (group:Group {_id: $group_id})
 
     // Only allow group admin or super admin
-    AND ( (group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
+    WHERE ( (group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
 
     ${deep === "true" ? deep_delete_query : ""}
 
@@ -291,7 +286,7 @@ exports.add_group_to_group = (req, res, next) => {
   const session = driver.session()
 
   const query = `
-    ${user_query}
+    MATCH (user:User {_id: $user_id})
 
     // Find child group
     WITH user
@@ -360,7 +355,7 @@ exports.remove_group_from_group = (req, res, next) => {
   const session = driver.session()
 
   const query = `
-    ${user_query}
+    MATCH (user:User {_id: $user_id})
 
     // Find the child group group
     WITH user

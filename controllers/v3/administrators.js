@@ -1,35 +1,29 @@
-const {drivers: {v2: driver}} = require('../../db.js')
-const createHttpError = require('http-errors')
+const {
+  drivers: { v2: driver },
+} = require("../../db.js")
+const createHttpError = require("http-errors")
 
 const {
   get_current_user_id,
-  current_user_query,
-  user_query,
-  user_id_filter,
-  group_query,
   batch_items,
   format_batched_response,
-} = require('../../utils.js')
+} = require("../../utils.js")
 
-const {
-  default_batch_size
-} = require('../../config.js')
+const { default_batch_size } = require("../../config.js")
 
 exports.get_administrators_of_group = (req, res, next) => {
   // Route to retrieve a user's groups
 
-  const {group_id} = req.params
-  if(!group_id || group_id === 'undefined') throw createHttpError(400, 'Group ID not defined')
+  const { group_id } = req.params
+  if (!group_id || group_id === "undefined")
+    throw createHttpError(400, "Group ID not defined")
 
-  const {
-    batch_size = default_batch_size,
-    start_index = 0,
-  } = req.query
+  const { batch_size = default_batch_size, start_index = 0 } = req.query
 
   const session = driver.session()
 
   const query = `
-    ${group_query}
+    MATCH (group:Group {_id: $group_id})
     WITH group
     OPTIONAL MATCH (admin:User)<-[:ADMINISTRATED_BY]-(group:Group)
     WITH admin as item
@@ -38,25 +32,30 @@ exports.get_administrators_of_group = (req, res, next) => {
 
   const params = { group_id, batch_size, start_index }
 
-
-  session.run(query,params)
-  .then(({records}) => {
-    if(!records.length) throw createHttpError(400, `Group ${group_id} not found`)
-    const response = format_batched_response(records)
-    res.send(response)
-   })
-   .catch(next)
-   .finally( () => { session.close() })
+  session
+    .run(query, params)
+    .then(({ records }) => {
+      if (!records.length)
+        throw createHttpError(400, `Group ${group_id} not found`)
+      const response = format_batched_response(records)
+      res.send(response)
+    })
+    .catch(next)
+    .finally(() => {
+      session.close()
+    })
 }
 
 exports.make_user_administrator_of_group = (req, res, next) => {
   // Route to leave a group
 
-  const {group_id} = req.params
-  const {user_id, user_ids} = req.body
+  const { group_id } = req.params
+  const { user_id, user_ids } = req.body
 
-  if(!group_id || group_id === 'undefined') throw createHttpError(400, 'Group ID not defined')
-  if(!user_id && !user_ids) throw createHttpError(400, 'User ID(s) not defined')
+  if (!group_id || group_id === "undefined")
+    throw createHttpError(400, "Group ID not defined")
+  if (!user_id && !user_ids)
+    throw createHttpError(400, "User ID(s) not defined")
 
   const current_user_id = get_current_user_id(res)
 
@@ -64,7 +63,7 @@ exports.make_user_administrator_of_group = (req, res, next) => {
 
   const single_user_add_query = `
     WITH group
-    ${user_query}
+    MATCH (user:User {_id: $user_id})
     MERGE (user)<-[:ADMINISTRATED_BY]-(group)
     `
 
@@ -84,64 +83,64 @@ exports.make_user_administrator_of_group = (req, res, next) => {
     `
 
   const query = `
-    // Find current user
-    ${current_user_query}
+    MATCH (current_user:User {_id: $current_user_id} )
 
-    // Find group
     WITH current_user
-    ${group_query}
+    MATCH (group:Group {_id: $group_id})
     // Allow only group admin or super admin to delete a group
-    AND ( (group)-[:ADMINISTRATED_BY]->(current_user) OR current_user.isAdmin )
+    WHERE ( (group)-[:ADMINISTRATED_BY]->(current_user) OR current_user.isAdmin )
 
     // Create relationship for single user
-    ${user_id ? single_user_add_query : ''}
+    ${user_id ? single_user_add_query : ""}
 
     // OR multiple users at once
-    ${user_ids ? multiple_user_add_query : ''}
+    ${user_ids ? multiple_user_add_query : ""}
 
     // Return
     RETURN properties(group) as group
     `
 
-  const params = { current_user_id, user_id, user_ids, group_id}
+  const params = { current_user_id, user_id, user_ids, group_id }
 
-  session.run(query, params)
-  .then(({records}) => {
-    if(!records.length) throw createHttpError(400, `Error adding user to administrators`)
-    console.log(`User ${user_id} added administrators to group ${group_id}`)
-    res.send(records[0].get('group'))
-  })
-  .catch(next)
-  .finally( () => { session.close() })
+  session
+    .run(query, params)
+    .then(({ records }) => {
+      if (!records.length)
+        throw createHttpError(400, `Error adding user to administrators`)
+      console.log(`User ${user_id} added administrators to group ${group_id}`)
+      res.send(records[0].get("group"))
+    })
+    .catch(next)
+    .finally(() => {
+      session.close()
+    })
 }
 
 exports.remove_user_from_administrators = (req, res, next) => {
   // Route to remove a user from the administrators of a group
 
-  const {group_id} = req.params
-  const {administrator_id: user_id} = req.params
+  const { group_id } = req.params
+  const { administrator_id: user_id } = req.params
 
-  if(!group_id || group_id === 'undefined') throw createHttpError(400, 'Group ID not defined')
-  if(!user_id || user_id === 'undefined') throw createHttpError(400, 'Administrator ID not defined')
+  if (!group_id || group_id === "undefined")
+    throw createHttpError(400, "Group ID not defined")
+  if (!user_id || user_id === "undefined")
+    throw createHttpError(400, "Administrator ID not defined")
 
   const session = driver.session()
 
   const current_user_id = get_current_user_id(res)
 
   const query = `
-    ${current_user_query}
+    MATCH (current_user:User {_id: $current_user_id} )
 
-    // Find group
     WITH current_user
-    ${group_query}
-    AND ( (group)-[:ADMINISTRATED_BY]->(current_user) OR current_user.isAdmin )
+    MATCH (group:Group {_id: $group_id})
+    WHERE ( (group)-[:ADMINISTRATED_BY]->(current_user) OR current_user.isAdmin )
 
-    // Find the user
     WITH group
-    MATCH (group)-[r:ADMINISTRATED_BY]->(user:User)
-    ${user_id_filter}
+    MATCH (group)-[r:ADMINISTRATED_BY]->(user:User {_id: $user_id})
 
-    // Delete relationship
     DELETE r
 
     // Return
@@ -154,21 +153,26 @@ exports.remove_user_from_administrators = (req, res, next) => {
     group_id,
   }
 
-  session.run(query, params)
-  .then(({records}) => {
-    if(!records.length) throw createHttpError(400, `Error removing from administrators`)
-    console.log(`User ${user_id} removed from administrators of group ${group_id}`)
-    res.send(records[0].get('group'))
-  })
-  .catch(next)
-  .finally( () => { session.close() })
+  session
+    .run(query, params)
+    .then(({ records }) => {
+      if (!records.length)
+        throw createHttpError(400, `Error removing from administrators`)
+      console.log(
+        `User ${user_id} removed from administrators of group ${group_id}`
+      )
+      res.send(records[0].get("group"))
+    })
+    .catch(next)
+    .finally(() => {
+      session.close()
+    })
 }
-
 
 exports.get_groups_of_administrator = (req, res, next) => {
   // Route to retrieve a user's groups
-  let {administrator_id: user_id} = req.params
-  if(user_id === 'self') user_id = get_current_user_id(res)
+  let { administrator_id: user_id } = req.params
+  if (user_id === "self") user_id = get_current_user_id(res)
 
   const {
     batch_size = default_batch_size,
@@ -178,19 +182,21 @@ exports.get_groups_of_administrator = (req, res, next) => {
     nonofficial,
   } = req.query
 
-  const shallow_query = 'AND NOT (group)-[:BELONGS_TO]->(:Group)<-[:ADMINISTRATED_BY]-(user)'
-  const official_query = 'AND group.official'
-  const non_official_query = 'AND (NOT EXISTS(group.official) OR NOT group.official)'
+  const shallow_query =
+    "AND NOT (group)-[:BELONGS_TO]->(:Group)<-[:ADMINISTRATED_BY]-(user)"
+  const official_query = "AND group.official"
+  const non_official_query =
+    "AND (NOT EXISTS(group.official) OR NOT group.official)"
   const query = `
-    ${user_query}
+    MATCH (user:User {_id: $user_id})
     WITH user
     OPTIONAL MATCH (user)<-[:ADMINISTRATED_BY]-(group:Group)
 
     // using dummy WHERE here so as to use AND in other queryies
     WHERE EXISTS(group._id)
-    ${shallow ? shallow_query : ''}
-    ${official ? official_query : ''}
-    ${nonofficial ? non_official_query : ''}
+    ${shallow ? shallow_query : ""}
+    ${official ? official_query : ""}
+    ${nonofficial ? non_official_query : ""}
 
     WITH group as item
     ${batch_items(batch_size)}
@@ -198,15 +204,18 @@ exports.get_groups_of_administrator = (req, res, next) => {
 
   const params = { user_id, batch_size, start_index }
 
-  const session = driver.session();
+  const session = driver.session()
   session
-  .run(query,params)
-  .then( ({records}) => {
-    if(!records.length) throw createHttpError(400, `User ${user_id} not found`)
-    console.log(`Groups of administrator ${user_id} queried`)
-    const response = format_batched_response(records)
-    res.send(response)
-  })
-  .catch(next)
-  .finally( () => { session.close() })
+    .run(query, params)
+    .then(({ records }) => {
+      if (!records.length)
+        throw createHttpError(400, `User ${user_id} not found`)
+      console.log(`Groups of administrator ${user_id} queried`)
+      const response = format_batched_response(records)
+      res.send(response)
+    })
+    .catch(next)
+    .finally(() => {
+      session.close()
+    })
 }

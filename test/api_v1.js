@@ -49,7 +49,7 @@ describe("/v1", () => {
     }
   })
 
-  describe("POST /v1/groups", () => {
+  describe("POST /v2/groups", () => {
     it("Should allow the creation of groups", async () => {
       let { body, status } = await request(app)
         .post("/v2/groups")

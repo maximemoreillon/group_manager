@@ -2,11 +2,7 @@ const {
   drivers: { v2: driver },
 } = require("../../db.js")
 const createHttpError = require("http-errors")
-const {
-  get_current_user_id,
-  user_query,
-  group_query,
-} = require("../../utils.js")
+const { get_current_user_id } = require("../../utils.js")
 
 exports.create_group = (req, res, next) => {
   // Create a group
@@ -26,7 +22,7 @@ exports.create_group = (req, res, next) => {
 
     // Create relationships
     WITH group
-    ${user_query}
+    MATCH (user:User {_id: $user_id})
     CREATE (group)-[:ADMINISTRATED_BY]->(user)
     CREATE (group)-[creation:CREATED_BY]->(user)
     CREATE (group)<-[:BELONGS_TO]-(user)
@@ -116,16 +112,15 @@ exports.get_groups = async (req, res, next) => {
 exports.get_group = (req, res, next) => {
   const { group_id } = req.params
 
+  const session = driver.session()
+
   const query = `
-    ${group_query}
+    MATCH (group:Group {_id: $group_id})
     RETURN group
     `
 
-  const params = { group_id }
-
-  const session = driver.session()
   session
-    .run(query, params)
+    .run(query, { group_id })
     .then(({ records }) => {
       if (!records.length)
         throw createHttpError(404, `Group ${group_id} not found`)
@@ -164,12 +159,11 @@ exports.patch_group = (req, res, next) => {
   const session = driver.session()
 
   const query = `
-    ${user_query}
-
+    MATCH (user:User {_id: $user_id})
     WITH user
-    ${group_query}
+    MATCH (group:Group {_id: $group_id})
     // Only allow group admin or super admin
-    AND ( (group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
+    WHERE ( (group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
 
     // Patch properties
     // += implies update of existing properties
@@ -208,14 +202,14 @@ exports.delete_group = (req, res, next) => {
 
   const query = `
     // Find the current user
-    ${user_query}
+    MATCH (user:User {_id: $user_id})
 
     // Find group
     WITH user
-    ${group_query}
+    MATCH (group:Group {_id: $group_id})
 
     // Only allow group admin or super admin
-    AND ( (group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
+    WHERE ( (group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
 
     // Delete the group
     DETACH DELETE group
@@ -250,12 +244,12 @@ exports.join_group = (req, res, next) => {
   const session = driver.session()
 
   const query = `
-    ${user_query}
+    MATCH (user:User {_id: $user_id})
     WITH user
-    ${group_query}
+    MATCH (group:Group {_id: $group_id})
 
     // TODO: allow admin to join
-    AND (NOT EXISTS(group.restricted) OR NOT group.restricted)
+    WHERE (NOT EXISTS(group.restricted) OR NOT group.restricted)
 
     MERGE (user)-[:BELONGS_TO]->(group)
 
@@ -293,9 +287,9 @@ exports.leave_group = (req, res, next) => {
   const session = driver.session()
 
   const query = `
-    ${user_query}
+    MATCH (user:User {_id: $user_id})
     WITH user
-    ${group_query}
+    MATCH (group:Group {_id: $group_id})
     WITH user, group
 
     MATCH (user)-[r:BELONGS_TO]->(group)
@@ -334,7 +328,7 @@ exports.get_parent_groups_of_group = (req, res, next) => {
   const session = driver.session()
 
   const query = `
-    ${group_query}
+    MATCH (group:Group {_id: $group_id})
     WITH group
     OPTIONAL MATCH (group)-[:BELONGS_TO]->(parent:Group)
     ${req.query.direct ? direct_only_query : ""}
@@ -368,7 +362,7 @@ exports.get_groups_of_group = (req, res, next) => {
   const session = driver.session()
 
   const query = `
-    ${group_query}
+    MATCH (group:Group {_id: $group_id})
     WITH group
     OPTIONAL MATCH (subgroup:Group)-[:BELONGS_TO]->(group:Group)
     ${req.query.direct === "true" ? direct_only_query : ""}
@@ -404,7 +398,7 @@ exports.add_group_to_group = (req, res, next) => {
   const session = driver.session()
 
   const query = `
-    ${user_query}
+    MATCH (user:User {_id: $user_id})
 
     // Find child group
     WITH user
@@ -472,7 +466,7 @@ exports.remove_group_from_group = (req, res, next) => {
   const session = driver.session()
 
   const query = `
-    ${user_query}
+    MATCH (user:User {_id: $user_id})
 
     // Find the child group group
     WITH user
@@ -534,7 +528,7 @@ exports.get_groups_directly_belonging_to_group = (req, res, next) => {
   const session = driver.session()
 
   const query = `
-    ${group_query}
+    MATCH (group:Group {_id: $group_id})
     WITH group as parent
     // Match children that only have a direct connection to parent
     OPTIONAL MATCH (parent)<-[:BELONGS_TO]-(group:Group)

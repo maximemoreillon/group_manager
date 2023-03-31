@@ -1,67 +1,65 @@
-const {drivers: {v1: driver}} = require('../../db.js')
-const { group_query } = require('../../utils.js')
+const {
+  drivers: { v1: driver },
+} = require("../../db.js")
+const createHttpError = require("http-errors")
 
 exports.get_group = (req, res) => {
-
-  const group_id = req.params.group_id
-    || req.query.id
-    || req.query.group_id
+  const group_id = req.params.group_id || req.query.id || req.query.group_id
 
   const session = driver.session()
-  session
-  .run(`
-    ${group_query}
+
+  const query = `
+    MATCH (group:Group {_id: $group_id})
     RETURN group
-    `, {
-    group_id,
-  })
-  .then( ({records}) => {
-    // NOTE: Not too sure about sendig only one record
-    // How about sending all records and let the front end deal with it?
-    if(records.length < 1) return res.status(404).send('Not found')
-    res.send(records[0].get('group'))
-  })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
-  .finally( () => { session.close() })
+    `
+
+  session
+    .run(query, { group_id })
+    .then(({ records }) => {
+      // NOTE: Not too sure about sendig only one record
+      // How about sending all records and let the front end deal with it?
+      if (!records.length) throw createHttpError(404, "Not found")
+      res.send(records[0].get("group"))
+    })
+    .catch((error) => {
+      console.log(error)
+      res.status(400).send(`Error accessing DB: ${error}`)
+    })
+    .finally(() => {
+      session.close()
+    })
 }
-
-
-
 
 exports.get_top_level_groups = (req, res) => {
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
 
-  const session = driver.session();
-  session
-  .run(`
-    // Find groups
+  const session = driver.session()
+  const query = `
     MATCH (group:Group)
-
-    // That do not belong to any group
     WHERE NOT (group)-[:BELONGS_TO]->(:Group)
-
-    // NOT SURE WHY DISTINCT NEEDED
     RETURN DISTINCT(group)
-    `, {})
-  .then(result => {
-    res.send(result.records)
-  })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
-  .finally( () => { session.close() })
+    `
+
+  session
+    .run(query, {})
+    .then((result) => {
+      res.send(result.records)
+    })
+    .catch((error) => {
+      console.log(error)
+      res.status(400).send(`Error accessing DB: ${error}`)
+    })
+    .finally(() => {
+      session.close()
+    })
 }
 
 exports.get_top_level_official_groups = (req, res) => {
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
 
-  const session = driver.session();
-  session
-  .run(`
+  const session = driver.session()
+
+  const query = `
     // Find groups
     MATCH (group:Group)
 
@@ -72,150 +70,162 @@ exports.get_top_level_official_groups = (req, res) => {
 
     // NOT SURE WHY DISTINCT NEEDED
     RETURN DISTINCT(group)
-    `, {})
-  .then(result => {
-    res.send(result.records)
-   })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
-  .finally( () => { session.close() })
+    `
+  session
+    .run(query, {})
+    .then((result) => {
+      res.send(result.records)
+    })
+    .catch((error) => {
+      console.log(error)
+      res.status(400).send(`Error accessing DB: ${error}`)
+    })
+    .finally(() => {
+      session.close()
+    })
 }
 
 exports.get_top_level_non_official_groups = (req, res) => {
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
 
-  const session = driver.session();
-  session
-  .run(`
-    // Find groups
-    MATCH (group:Group) // Final
+  const session = driver.session()
 
-    // That do not belong to any group
+  const query = `
+    MATCH (group:Group)
     WHERE NOT (group)-[:BELONGS_TO]->(:Group)
       AND (NOT EXISTS(group.official) OR NOT group.official)
 
-    // NOT SURE WHY DISTINCT NEEDED
     RETURN DISTINCT(group)
-    `, {})
-  .then(result => {
-    res.send(result.records)
-   })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
-  .finally( () => { session.close() })
+    `
+  session
+    .run(query, {})
+    .then((result) => {
+      res.send(result.records)
+    })
+    .catch((error) => {
+      console.log(error)
+      res.status(400).send(`Error accessing DB: ${error}`)
+    })
+    .finally(() => {
+      session.close()
+    })
 }
 
 exports.get_groups_directly_belonging_to_group = (req, res) => {
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
 
+  const group_id = req.query.id ?? req.query.group_id ?? req.params.group_id
 
+  if (!group_id) return res.status(400).send("Group ID not defined")
 
-  const group_id = req.query.id
-    ?? req.query.group_id
-    ?? req.params.group_id
+  const session = driver.session()
 
-  if(!group_id) return res.status(400).send('Group ID not defined')
-
-  const session = driver.session();
-  session
-  .run(`
-    ${group_query}
+  const query = `
+    MATCH (group:Group {_id: $group_id})
     WITH group as parent_group
     MATCH (parent_group)<-[:BELONGS_TO]-(group:Group)
     WHERE NOT (group)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(parent_group)
 
     // DISTINCT JUST IN CASE
     RETURN DISTINCT(group)
-    `,
-    { group_id })
-  .then(result => {
-    res.send(result.records)
-   })
-  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
-  .finally( () => { session.close() })
+    `
+
+  session
+    .run(query, { group_id })
+    .then((result) => {
+      res.send(result.records)
+    })
+    .catch((error) => {
+      res.status(400).send(`Error accessing DB: ${error}`)
+    })
+    .finally(() => {
+      session.close()
+    })
 }
 
 exports.get_parent_groups_of_group = (req, res) => {
   // Route to retrieve groups inside a group
 
+  const subgroup_id = req.params.group_id ?? req.query.id ?? req.query.group_id
 
-  const subgroup_id = req.params.group_id
-    ?? req.query.id
-    ?? req.query.group_id
-
-  if(!subgroup_id) return res.status(400).send('Group ID not defined')
+  if (!subgroup_id) return res.status(400).send("Group ID not defined")
 
   const session = driver.session()
-  session
-  .run(`
-    ${group_query}
+
+  const query = `
+    MATCH (group:Group {_id: $group_id})
     WITH group as child
     MATCH (child)-[:BELONGS_TO]->(group:Group)
     RETURN group
-    `,
-    { group_id: subgroup_id })
-  .then(result => {
-    res.send(result.records)
-  })
-  .catch(error => {
-    console.log(error)
-    res.status(400).send(`Error accessing DB: ${error}`)
-  })
-  .finally( () => { session.close() })
+    `
+
+  const params = { group_id: subgroup_id }
+  session
+    .run(query, params)
+    .then((result) => {
+      res.send(result.records)
+    })
+    .catch((error) => {
+      console.log(error)
+      res.status(400).send(`Error accessing DB: ${error}`)
+    })
+    .finally(() => {
+      session.close()
+    })
 }
 
 exports.get_groups_of_group = (req, res) => {
   // Route to retrieve groups inside a group
 
-  const group_id = req.query.id
-    ?? req.query.group_id
-    ?? req.params.group_id
-    ?? req.params.id
+  const group_id =
+    req.query.id ?? req.query.group_id ?? req.params.group_id ?? req.params.id
 
-  const session = driver.session();
-  session
-  .run(`
-    ${group_query}
+  const session = driver.session()
+
+  const query = `
+    MATCH (group:Group {_id: $group_id})
     WITH group as parent
     MATCH (group:Group)-[:BELONGS_TO]->(parent)
     RETURN group
-    `,
-    { group_id })
-  .then(result => {
-    res.send(result.records)
-   })
-  .catch(error => { res.status(400).send(`Error accessing DB: ${error}`) })
-  .finally( () => { session.close() })
+    `
+
+  session
+    .run(query, { group_id })
+    .then((result) => {
+      res.send(result.records)
+    })
+    .catch((error) => {
+      res.status(400).send(`Error accessing DB: ${error}`)
+    })
+    .finally(() => {
+      session.close()
+    })
 }
 
 exports.add_group_to_group = (req, res) => {
-  res.status(410).send('deprecated')
+  res.status(410).send("deprecated")
 }
 
 exports.remove_group_from_group = (req, res) => {
-  res.status(410).send('deprecated')
+  res.status(410).send("deprecated")
 }
 
 exports.create_group = (req, res) => {
-  res.status(410).send('Deprecated')
+  res.status(410).send("Deprecated")
 }
 
 exports.delete_group = (req, res) => {
-  res.status(410).send('Deprecated')
+  res.status(410).send("Deprecated")
 }
 
 exports.join_group = (req, res) => {
-  res.status(410).send('Deprecated')
+  res.status(410).send("Deprecated")
 }
 
 exports.leave_group = (req, res) => {
-  res.status(410).send('Deprecated')
+  res.status(410).send("Deprecated")
 }
 
 exports.patch_group = (req, res) => {
-  res.status(410).send('deprecated')
+  res.status(410).send("deprecated")
 }

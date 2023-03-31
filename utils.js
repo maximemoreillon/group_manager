@@ -9,12 +9,6 @@ exports.get_current_user_id = (res) => {
   return _id
 }
 
-exports.user_id_filter = `WHERE user._id = $user_id`
-exports.user_query = `MATCH (user:User {_id: $user_id})`
-exports.current_user_query = `MATCH (current_user:User {_id: $current_user_id} )`
-exports.group_id_filter = `WHERE group._id = $group_id`
-exports.group_query = `MATCH (group:Group {_id: $group_id})`
-
 exports.batch_items = (batch_size) => `
 // Aggregation
 WITH
@@ -40,7 +34,7 @@ RETURN
 exports.format_batched_response = (records) => {
   const record = records[0]
 
-  // TODO: This is a dirty fix for missing result record
+  // TODO: This is a temporary fix for missing result record
   if (!record)
     return {
       count: 0,
