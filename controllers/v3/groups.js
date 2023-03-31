@@ -74,14 +74,15 @@ exports.read_groups = (req, res, next) => {
   } = req.query
 
   const filtering_query = `
-    WITH group
     UNWIND KEYS($filters) as filterKey
-    WITH group
+    WITH filterKey
+    // NOTE: This MATCH overrides the previous
+    OPTIONAL MATCH (group:Group)
     WHERE group[filterKey] = $filters[filterKey]
     `
 
-  const as_parent_query = `<-[:BELONGS_TO]-(subgroup:Group {_id: $subgroup_id})`
-  const as_subgroup_query = `-[:BELONGS_TO]->(parent:Group {_id: $parent_id})`
+  const as_parent_query = `AND (group)<-[:BELONGS_TO]-(:Group {_id: $subgroup_id})`
+  const as_subgroup_query = `AND (group)-[:BELONGS_TO]->(:Group {_id: $parent_id})`
 
   // TODO: There must be a simpler way to do this
   const direct_query = `
@@ -104,17 +105,19 @@ exports.read_groups = (req, res, next) => {
     "AND (NOT EXISTS(group.official) OR NOT group.official)"
 
   const query = `
-    // OPTIONAL MATCH so as to allow for batching even when no match
-    OPTIONAL MATCH (group:Group)
+    ${
+      Object.keys(filters).length
+        ? filtering_query
+        : "OPTIONAL MATCH (group:Group) WHERE EXISTS(group._id)"
+    }    
     ${parent_id ? as_subgroup_query : ""}
     ${subgroup_id ? as_parent_query : ""}
-
-    WHERE EXISTS(group._id)
     ${direct ? direct_query : ""}
     ${shallow ? shallow_query : ""}
     ${official ? official_query : ""}
     ${nonofficial ? non_official_query : ""}
-    ${Object.keys(filters).length ? filtering_query : ""}
+    
+    // Renaming as item for universal batching function
     WITH group as item
     ${batch_items(batch_size)}
     `

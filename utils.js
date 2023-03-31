@@ -1,3 +1,5 @@
+const createHttpError = require("http-errors")
+
 exports.get_current_user_id = (res) => {
   const current_user = res.locals.user
   const _id =
@@ -12,7 +14,7 @@ exports.get_current_user_id = (res) => {
 exports.batch_items = (batch_size) => `
 // Aggregation
 WITH
-  COLLECT(properties(item)) as items,
+  COLLECT(PROPERTIES(item)) as items,
   COUNT(item) as count,
   toInteger($start_index) as start_index,
   toInteger($batch_size) as batch_size,
@@ -35,11 +37,7 @@ exports.format_batched_response = (records) => {
   const record = records[0]
 
   // TODO: This is a temporary fix for missing result record
-  if (!record)
-    return {
-      count: 0,
-      items: [],
-    }
+  if (!record) throw createHttpError(400, "Query did not yield any match")
 
   const items = record.get("batch")
   items.forEach((item) => {
