@@ -33,11 +33,14 @@ describe("/v1", () => {
 
   before(async () => {
     //console.log = function () {}
+    console.log(LOGIN_URL)
     jwt = await login()
+    console.log({ jwt })
     user = await whoami(jwt)
+    console.log({ user })
   })
 
-  describe("POST /v2/groups", () => {
+  describe("POST /v1/groups", () => {
     it("Should allow the creation of groups", async () => {
       let { body, status } = await request(app)
         .post("/v2/groups")
