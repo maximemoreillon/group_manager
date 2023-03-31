@@ -2,6 +2,9 @@ const request = require("supertest")
 const { expect } = require("chai")
 const { app } = require("../index.js")
 const axios = require("axios")
+const dotenv = require("dotenv")
+
+dotenv.config()
 
 const {
   LOGIN_URL,
