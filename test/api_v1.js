@@ -13,6 +13,11 @@ const {
   TEST_USER_PASSWORD,
 } = process.env
 
+const sleep = (delay) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, delay)
+  })
+
 const login = async () => {
   const body = { username: TEST_USER_USERNAME, password: TEST_USER_PASSWORD }
   const {
@@ -33,7 +38,8 @@ describe("/v1", () => {
 
   before(async () => {
     //console.log = function () {}
-    console.log(LOGIN_URL)
+    await sleep(10000)
+
     try {
       jwt = await login()
       user = await whoami(jwt)

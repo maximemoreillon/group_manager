@@ -52,7 +52,7 @@ test:
       --hostname tdd-db
       --env NEO4J_AUTH=none
       neo4j:4.4.6
-    - sleep 100 # Wait for Neo4J to become available
+    - sleep 60 # Wait for Neo4J to become available
     # Todo: Add user manager here
     - >
       docker run
