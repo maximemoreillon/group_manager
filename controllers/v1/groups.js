@@ -3,7 +3,7 @@ const {
 } = require("../../db.js")
 const createHttpError = require("http-errors")
 
-exports.get_group = (req, res) => {
+exports.get_group = (req, res, next) => {
   const group_id = req.params.group_id || req.query.id || req.query.group_id
 
   const session = driver.session()
@@ -27,7 +27,7 @@ exports.get_group = (req, res) => {
     })
 }
 
-exports.get_top_level_groups = (req, res) => {
+exports.get_top_level_groups = (req, res, next) => {
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
 
   const session = driver.session()
@@ -48,7 +48,7 @@ exports.get_top_level_groups = (req, res) => {
     })
 }
 
-exports.get_top_level_official_groups = (req, res) => {
+exports.get_top_level_official_groups = (req, res, next) => {
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
 
   const session = driver.session()
@@ -76,7 +76,7 @@ exports.get_top_level_official_groups = (req, res) => {
     })
 }
 
-exports.get_top_level_non_official_groups = (req, res) => {
+exports.get_top_level_non_official_groups = (req, res, next) => {
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
 
   const session = driver.session()
@@ -99,12 +99,12 @@ exports.get_top_level_non_official_groups = (req, res) => {
     })
 }
 
-exports.get_groups_directly_belonging_to_group = (req, res) => {
+exports.get_groups_directly_belonging_to_group = (req, res, next) => {
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
 
   const group_id = req.query.id ?? req.query.group_id ?? req.params.group_id
 
-  if (!group_id) return res.status(400).send("Group ID not defined")
+  if (!group_id) throw createHttpError(400, "Group ID not defined")
 
   const session = driver.session()
 
@@ -131,12 +131,12 @@ exports.get_groups_directly_belonging_to_group = (req, res) => {
     })
 }
 
-exports.get_parent_groups_of_group = (req, res) => {
+exports.get_parent_groups_of_group = (req, res, next) => {
   // Route to retrieve groups inside a group
 
   const subgroup_id = req.params.group_id ?? req.query.id ?? req.query.group_id
 
-  if (!subgroup_id) return res.status(400).send("Group ID not defined")
+  if (!subgroup_id) throw createHttpError(400, "Group ID not defined")
 
   const session = driver.session()
 
@@ -159,7 +159,7 @@ exports.get_parent_groups_of_group = (req, res) => {
     })
 }
 
-exports.get_groups_of_group = (req, res) => {
+exports.get_groups_of_group = (req, res, next) => {
   // Route to retrieve groups inside a group
 
   const group_id =
@@ -187,30 +187,30 @@ exports.get_groups_of_group = (req, res) => {
     })
 }
 
-exports.add_group_to_group = (req, res) => {
+exports.add_group_to_group = (req, res, next) => {
   res.status(410).send("deprecated")
 }
 
-exports.remove_group_from_group = (req, res) => {
+exports.remove_group_from_group = (req, res, next) => {
   res.status(410).send("deprecated")
 }
 
-exports.create_group = (req, res) => {
+exports.create_group = (req, res, next) => {
   res.status(410).send("Deprecated")
 }
 
-exports.delete_group = (req, res) => {
+exports.delete_group = (req, res, next) => {
   res.status(410).send("Deprecated")
 }
 
-exports.join_group = (req, res) => {
+exports.join_group = (req, res, next) => {
   res.status(410).send("Deprecated")
 }
 
-exports.leave_group = (req, res) => {
+exports.leave_group = (req, res, next) => {
   res.status(410).send("Deprecated")
 }
 
-exports.patch_group = (req, res) => {
+exports.patch_group = (req, res, next) => {
   res.status(410).send("deprecated")
 }

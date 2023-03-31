@@ -3,7 +3,7 @@ const {
 } = require("../../db.js")
 const { get_current_user_id } = require("../../utils.js")
 
-exports.get_user = (req, res) => {
+exports.get_user = (req, res, next) => {
   // Route to retrieve a user's info
 
   let user_id =
@@ -34,7 +34,7 @@ exports.get_user = (req, res) => {
     })
 }
 
-exports.get_members_of_group = (req, res) => {
+exports.get_members_of_group = (req, res, next) => {
   // Route to retrieve a user's groups
 
   const group_id =
@@ -62,7 +62,7 @@ exports.get_members_of_group = (req, res) => {
     })
 }
 
-exports.get_groups_of_user = (req, res) => {
+exports.get_groups_of_user = (req, res, next) => {
   // Route to retrieve a user's groups
 
   let member_id =
@@ -97,7 +97,7 @@ exports.get_groups_of_user = (req, res) => {
     })
 }
 
-exports.users_with_no_group = (req, res) => {
+exports.users_with_no_group = (req, res, next) => {
   // Route to retrieve users without a group
 
   const session = driver.session()
@@ -119,10 +119,10 @@ exports.users_with_no_group = (req, res) => {
     })
 }
 
-exports.add_member_to_group = (req, res) => {
+exports.add_member_to_group = (req, res, next) => {
   res.status(410).send("Deprecated")
 }
 
-exports.remove_user_from_group = (req, res) => {
+exports.remove_user_from_group = (req, res, next) => {
   res.status(410).send("Deprecated")
 }
