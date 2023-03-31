@@ -73,7 +73,7 @@ describe("/v1", () => {
 
   describe("GET /v1/group/:group_id", () => {
     it("Should allow the query of a single group", async () => {
-      const { status, body } = await request(app)
+      const { status } = await request(app)
         .get(`/v1/groups/${group_id}`)
         .set("Authorization", `Bearer ${jwt}`)
 
@@ -81,7 +81,7 @@ describe("/v1", () => {
     })
 
     it("Should respond 404 to inexistent group", async () => {
-      const { status, body } = await request(app)
+      const { status } = await request(app)
         .get(`/v1/groups/111111`)
         .set("Authorization", `Bearer ${jwt}`)
 

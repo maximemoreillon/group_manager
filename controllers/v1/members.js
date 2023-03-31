@@ -28,10 +28,7 @@ exports.get_user = (req, res) => {
     .then((result) => {
       res.send(result.records)
     })
-    .catch((error) => {
-      console.log(error)
-      res.status(400).send(`Error accessing DB: ${error}`)
-    })
+    .catch(next)
     .finally(() => {
       session.close()
     })
@@ -59,10 +56,7 @@ exports.get_members_of_group = (req, res) => {
     .then((result) => {
       res.send(result.records)
     })
-    .catch((error) => {
-      console.log(error)
-      res.status(400).send(`Error accessing DB: ${error}`)
-    })
+    .catch(next)
     .finally(() => {
       session.close()
     })
@@ -97,10 +91,7 @@ exports.get_groups_of_user = (req, res) => {
     .then((result) => {
       res.send(result.records)
     })
-    .catch((error) => {
-      console.log(error)
-      res.status(400).send(`Error accessing DB: ${error}`)
-    })
+    .catch(next)
     .finally(() => {
       session.close()
     })
@@ -122,10 +113,7 @@ exports.users_with_no_group = (req, res) => {
     .then((result) => {
       res.send(result.records)
     })
-    .catch((error) => {
-      console.log(error)
-      res.status(400).send(`Error accessing DB: ${error}`)
-    })
+    .catch(next)
     .finally(() => {
       session.close()
     })

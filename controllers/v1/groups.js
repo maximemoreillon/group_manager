@@ -21,10 +21,7 @@ exports.get_group = (req, res) => {
       if (!records.length) throw createHttpError(404, "Not found")
       res.send(records[0].get("group"))
     })
-    .catch((error) => {
-      console.log(error)
-      res.status(400).send(`Error accessing DB: ${error}`)
-    })
+    .catch(next)
     .finally(() => {
       session.close()
     })
@@ -45,10 +42,7 @@ exports.get_top_level_groups = (req, res) => {
     .then((result) => {
       res.send(result.records)
     })
-    .catch((error) => {
-      console.log(error)
-      res.status(400).send(`Error accessing DB: ${error}`)
-    })
+    .catch(next)
     .finally(() => {
       session.close()
     })
@@ -76,10 +70,7 @@ exports.get_top_level_official_groups = (req, res) => {
     .then((result) => {
       res.send(result.records)
     })
-    .catch((error) => {
-      console.log(error)
-      res.status(400).send(`Error accessing DB: ${error}`)
-    })
+    .catch(next)
     .finally(() => {
       session.close()
     })
@@ -102,10 +93,7 @@ exports.get_top_level_non_official_groups = (req, res) => {
     .then((result) => {
       res.send(result.records)
     })
-    .catch((error) => {
-      console.log(error)
-      res.status(400).send(`Error accessing DB: ${error}`)
-    })
+    .catch(next)
     .finally(() => {
       session.close()
     })
@@ -165,10 +153,7 @@ exports.get_parent_groups_of_group = (req, res) => {
     .then((result) => {
       res.send(result.records)
     })
-    .catch((error) => {
-      console.log(error)
-      res.status(400).send(`Error accessing DB: ${error}`)
-    })
+    .catch(next)
     .finally(() => {
       session.close()
     })
