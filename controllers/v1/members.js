@@ -2,6 +2,7 @@ const {
   drivers: { v1: driver },
 } = require("../../db.js")
 const { get_current_user_id } = require("../../utils.js")
+const createHttpError = require("http-errors")
 
 exports.get_user = (req, res, next) => {
   // Route to retrieve a user's info
@@ -14,7 +15,7 @@ exports.get_user = (req, res, next) => {
     req.query.id
 
   if (user_id === "self") user_id = get_current_user_id(res)
-  if (!user_id) return res.status(400).send("User ID not defined")
+  if (!user_id) throw createHttpError(400, "User ID not defined")
 
   const session = driver.session()
 
@@ -40,7 +41,7 @@ exports.get_members_of_group = (req, res, next) => {
   const group_id =
     req.query.id ?? req.query.group_id ?? req.params.id ?? req.params.group_id
 
-  if (!group_id) return res.status(400).send("Group ID not defined")
+  if (!group_id) throw createHttpError(400, "Group ID not defined")
 
   // Todo: allow user to pass what key they want to query
   // IDEA: Could be done with GraphQL
@@ -63,8 +64,6 @@ exports.get_members_of_group = (req, res, next) => {
 }
 
 exports.get_groups_of_user = (req, res, next) => {
-  // Route to retrieve a user's groups
-
   let member_id =
     req.query.member_id ??
     req.query.user_id ??
@@ -98,18 +97,15 @@ exports.get_groups_of_user = (req, res, next) => {
 }
 
 exports.users_with_no_group = (req, res, next) => {
-  // Route to retrieve users without a group
-
   const session = driver.session()
-  session
-    .run(
-      `
+
+  const query = `
     MATCH (user:User)
     WHERE NOT (user)-[:BELONGS_TO]->(:Group)
     RETURN user
-    `,
-      {}
-    )
+    `
+  session
+    .run(query, {})
     .then((result) => {
       res.send(result.records)
     })

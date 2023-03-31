@@ -123,9 +123,7 @@ exports.get_groups_directly_belonging_to_group = (req, res, next) => {
     .then((result) => {
       res.send(result.records)
     })
-    .catch((error) => {
-      res.status(400).send(`Error accessing DB: ${error}`)
-    })
+    .catch(next)
     .finally(() => {
       session.close()
     })
@@ -179,9 +177,7 @@ exports.get_groups_of_group = (req, res, next) => {
     .then((result) => {
       res.send(result.records)
     })
-    .catch((error) => {
-      res.status(400).send(`Error accessing DB: ${error}`)
-    })
+    .catch(next)
     .finally(() => {
       session.close()
     })
