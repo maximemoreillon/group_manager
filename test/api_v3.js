@@ -29,7 +29,7 @@ const whoami = async (jwt) => {
 
 // We will test for api users
 describe("/v3/", () => {
-  let user, jwt, group_id, subgroup_id, other_user_id
+  let user, jwt, group_id, subgroup_id
 
   before(async () => {
     //console.log = function () {}

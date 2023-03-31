@@ -34,10 +34,13 @@ describe("/v1", () => {
   before(async () => {
     //console.log = function () {}
     console.log(LOGIN_URL)
-    jwt = await login()
-    console.log({ jwt })
-    user = await whoami(jwt)
-    console.log({ user })
+    try {
+      jwt = await login()
+      user = await whoami(jwt)
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
   })
 
   describe("POST /v1/groups", () => {
