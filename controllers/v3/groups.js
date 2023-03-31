@@ -110,15 +110,13 @@ exports.read_groups = (req, res, next) => {
     OPTIONAL MATCH (group:Group)
     ${parent_id ? as_subgroup_query : ""}
     ${subgroup_id ? as_parent_query : ""}
-    ${Object.keys(filters).length ? filtering_query : ""}
 
-    // using dummy WHERE here so as to use AND in other queryies
-    WITH group
     WHERE EXISTS(group._id)
     ${direct ? direct_query : ""}
     ${shallow ? shallow_query : ""}
     ${official ? official_query : ""}
     ${nonofficial ? non_official_query : ""}
+    ${Object.keys(filters).length ? filtering_query : ""}
     WITH group as item
     ${batch_items(batch_size)}
     `
