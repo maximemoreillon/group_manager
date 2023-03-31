@@ -72,7 +72,15 @@ exports.read_groups = (req, res, next) => {
     direct,
     official,
     nonofficial,
+    ...filters
   } = req.query
+
+  const filtering_query = `
+    WITH group
+    UNWIND KEYS($filters) as filterKey
+    WITH group
+    WHERE group[filterKey] = $filters[filterKey]
+    `
 
   const as_parent_query = `<-[:BELONGS_TO]-(subgroup:Group {_id: $subgroup_id})`
   const as_subgroup_query = `-[:BELONGS_TO]->(parent:Group {_id: $parent_id})`
@@ -102,8 +110,10 @@ exports.read_groups = (req, res, next) => {
     OPTIONAL MATCH (group:Group)
     ${parent_id ? as_subgroup_query : ""}
     ${subgroup_id ? as_parent_query : ""}
+    ${Object.keys(filters).length ? filtering_query : ""}
 
     // using dummy WHERE here so as to use AND in other queryies
+    WITH group
     WHERE EXISTS(group._id)
     ${direct ? direct_query : ""}
     ${shallow ? shallow_query : ""}
@@ -113,7 +123,7 @@ exports.read_groups = (req, res, next) => {
     ${batch_items(batch_size)}
     `
 
-  const params = { batch_size, start_index, parent_id, subgroup_id }
+  const params = { batch_size, start_index, parent_id, subgroup_id, filters }
 
   const session = driver.session()
   session
