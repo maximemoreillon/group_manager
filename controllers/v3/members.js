@@ -10,7 +10,6 @@ const {
 } = require("../../utils.js")
 
 exports.add_member_to_group = (req, res, next) => {
-  // Add a user to a group
   const current_user_id = get_current_user_id(res)
 
   const { group_id } = req.params
@@ -105,7 +104,6 @@ exports.add_member_to_group = (req, res, next) => {
 }
 
 exports.get_user = (req, res, next) => {
-  // Route to retrieve a user's info
   // This should not be a feature of group manager
   // but it is used in front-end
 
@@ -139,8 +137,6 @@ exports.get_user = (req, res, next) => {
 }
 
 exports.get_members_of_group = (req, res, next) => {
-  // Route to retrieve a user's groups
-
   const { group_id } = req.params
   if (!group_id || group_id === "undefined")
     throw createHttpError(400, "Group ID not defined")
@@ -177,8 +173,6 @@ exports.get_members_of_group = (req, res, next) => {
 }
 
 exports.remove_user_from_group = (req, res, next) => {
-  // Route to make a user leave a group
-
   const current_user_id = get_current_user_id(res)
 
   let { group_id, member_id: user_id } = req.params
@@ -234,8 +228,6 @@ exports.remove_user_from_group = (req, res, next) => {
 }
 
 exports.get_groups_of_user = (req, res, next) => {
-  // Route to retrieve a user's groups
-
   let { member_id: user_id } = req.params
   if (user_id === "self") user_id = get_current_user_id(res)
   if (!user_id) throw createHttpError(400, "User ID not defined")
@@ -290,8 +282,6 @@ exports.get_groups_of_user = (req, res, next) => {
 }
 
 exports.users_with_no_group = (req, res, next) => {
-  // Route to retrieve users without a group
-
   const session = driver.session()
 
   const { batch_size = default_batch_size, start_index = 0 } = req.query
@@ -321,8 +311,6 @@ exports.users_with_no_group = (req, res, next) => {
 }
 
 exports.get_groups_of_users = (req, res, next) => {
-  // This is still in development
-
   const session = driver.session()
 
   const { batch_size = default_batch_size, start_index = 0 } = req.query

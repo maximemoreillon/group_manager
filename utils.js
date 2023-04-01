@@ -25,9 +25,7 @@ WITH
 RETURN
   count,
   ${
-    batch_size >= 0
-      ? "items[start_index..end_index] AS batch"
-      : "items AS batch"
+    batch_size > 0 ? "items[start_index..end_index] AS batch" : "items AS batch"
   },
   start_index,
   batch_size

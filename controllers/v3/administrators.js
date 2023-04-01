@@ -12,8 +12,6 @@ const {
 const { default_batch_size } = require("../../config.js")
 
 exports.get_administrators_of_group = (req, res, next) => {
-  // Route to retrieve a user's groups
-
   const { group_id } = req.params
   if (!group_id || group_id === "undefined")
     throw createHttpError(400, "Group ID not defined")
@@ -47,8 +45,6 @@ exports.get_administrators_of_group = (req, res, next) => {
 }
 
 exports.make_user_administrator_of_group = (req, res, next) => {
-  // Route to leave a group
-
   const { group_id } = req.params
   const { user_id, user_ids } = req.body
 
@@ -117,8 +113,6 @@ exports.make_user_administrator_of_group = (req, res, next) => {
 }
 
 exports.remove_user_from_administrators = (req, res, next) => {
-  // Route to remove a user from the administrators of a group
-
   const { group_id } = req.params
   const { administrator_id: user_id } = req.params
 
@@ -170,7 +164,6 @@ exports.remove_user_from_administrators = (req, res, next) => {
 }
 
 exports.get_groups_of_administrator = (req, res, next) => {
-  // Route to retrieve a user's groups
   let { administrator_id: user_id } = req.params
   if (user_id === "self") user_id = get_current_user_id(res)
 

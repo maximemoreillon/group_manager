@@ -43,7 +43,7 @@ app.get("/", (req, res) => {
   })
 })
 
-// From here on, all routes are protected
+// From here on, all routes require authentication
 app.use(auth(auth_options))
 app.use("/", router_v1)
 app.use("/v1", router_v1) //alias
