@@ -9,7 +9,7 @@
     "coverage": "nyc mocha --timeout 15000 --exit"
   },
   "author": "Maxime MOREILLON",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "@moreillon/express_identification_middleware": "^1.1.0",
     "axios": "^0.24.0",

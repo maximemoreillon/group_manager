@@ -36,7 +36,6 @@ RETURN
 exports.format_batched_response = (records) => {
   const record = records[0]
 
-  // TODO: This is a temporary fix for missing result record
   if (!record) throw createHttpError(400, "Query did not yield any match")
 
   const items = record.get("batch")
