@@ -111,36 +111,6 @@ describe("/v1", () => {
     })
   })
 
-  describe("GET /v1/groups/:group_id/administrators", () => {
-    it("Should respond with 410", async () => {
-      const { status } = await request(app)
-        .get(`/v1/groups/${group_id}/administrators`)
-        .set("Authorization", `Bearer ${jwt}`)
-
-      expect(status).to.equal(410)
-    })
-  })
-
-  describe("POST /v1/groups/:group_id/administrators", () => {
-    it("Should respond with 410", async () => {
-      const { status } = await request(app)
-        .post(`/v1/groups/${group_id}/administrators`)
-        .set("Authorization", `Bearer ${jwt}`)
-
-      expect(status).to.equal(410)
-    })
-  })
-
-  describe("DELETE /v1/groups/:group_id/administrators/:administrator_id", () => {
-    it("Should respond with 410", async () => {
-      const { status } = await request(app)
-        .post(`/v1/groups/${group_id}/administrators/banana`)
-        .set("Authorization", `Bearer ${jwt}`)
-
-      expect(status).to.equal(410)
-    })
-  })
-
   describe("GET /v1/users/self/groups/", () => {
     it("Should allow to get one's groups", async () => {
       const { status, body } = await request(app)

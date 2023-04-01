@@ -52,7 +52,7 @@ test:
       --hostname tdd-db
       --env NEO4J_AUTH=none
       neo4j:4.4.6
-    - sleep 60 # Wait for Neo4J to become available
+    - sleep 30 # Wait for Neo4J to become available
     # Todo: Add user manager here
     - >
       docker run
@@ -64,7 +64,7 @@ test:
       --env NEO4J_URL=bolt://tdd-db
       --env JWT_SECRET=keyboardcat
       moreillon/user-manager:c891ad1a
-    - sleep 30 # Wait for User manager to become available
+    - sleep 10 # Wait for User manager to become available
   script:
     - >
       docker run
