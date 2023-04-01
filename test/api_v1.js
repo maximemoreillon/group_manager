@@ -44,12 +44,12 @@ describe("/v1", () => {
   })
 
   describe("POST /v1/groups", () => {
-    it("Should respond with 401", async () => {
+    it("Should respond with 410", async () => {
       const { status } = await request(app)
         .post("/v1/groups")
         .set("Authorization", `Bearer ${jwt}`)
 
-      expect(status).to.equal(401)
+      expect(status).to.equal(410)
     })
   })
 
@@ -112,32 +112,32 @@ describe("/v1", () => {
   })
 
   describe("GET /v1/groups/:group_id/administrators", () => {
-    it("Should respond with 401", async () => {
+    it("Should respond with 410", async () => {
       const { status } = await request(app)
         .get(`/v1/groups/${group_id}/administrators`)
         .set("Authorization", `Bearer ${jwt}`)
 
-      expect(status).to.equal(401)
+      expect(status).to.equal(410)
     })
   })
 
   describe("POST /v1/groups/:group_id/administrators", () => {
-    it("Should respond with 401", async () => {
+    it("Should respond with 410", async () => {
       const { status } = await request(app)
         .post(`/v1/groups/${group_id}/administrators`)
         .set("Authorization", `Bearer ${jwt}`)
 
-      expect(status).to.equal(401)
+      expect(status).to.equal(410)
     })
   })
 
   describe("DELETE /v1/groups/:group_id/administrators/:administrator_id", () => {
-    it("Should respond with 401", async () => {
+    it("Should respond with 410", async () => {
       const { status } = await request(app)
         .post(`/v1/groups/${group_id}/administrators/banana`)
         .set("Authorization", `Bearer ${jwt}`)
 
-      expect(status).to.equal(401)
+      expect(status).to.equal(410)
     })
   })
 
@@ -171,13 +171,13 @@ describe("/v1", () => {
     })
   })
 
-  describe("DELETE /v1/groups", () => {
-    it("Should respond with 401", async () => {
+  describe("DELETE /v1/groups/:group_id", () => {
+    it("Should respond with 410", async () => {
       const { status } = await request(app)
         .delete(`/v1/groups/${group_id}`)
         .set("Authorization", `Bearer ${jwt}`)
 
-      expect(status).to.equal(401)
+      expect(status).to.equal(410)
     })
   })
 
