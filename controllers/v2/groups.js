@@ -39,9 +39,7 @@ exports.create_group = (req, res, next) => {
       if (!records.length)
         throw createHttpError(500, `Error while creating group ${name}`)
       const group = records[0].get("group")
-      console.log(
-        `User ${get_current_user_id(res)} created group ${group.properties._id}`
-      )
+      console.log(`User ${user_id} created group ${group.properties._id}`)
 
       res.send(group)
     })
@@ -459,8 +457,7 @@ exports.remove_group_from_group = (req, res, next) => {
 
   // TODO: Should the user be admin of child group?
 
-  const { group_id: parent_group_id } = req.params
-  const { subgroup_id: child_group_id } = req.params
+  const { group_id: parent_group_id, subgroup_id: child_group_id } = req.params
   const user_id = get_current_user_id(res)
 
   const session = driver.session()

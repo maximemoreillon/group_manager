@@ -100,7 +100,7 @@ exports.remove_user_from_administrators = (req, res, next) => {
   if (!group_id) throw createHttpError(400, "Group ID not defined")
 
   const { administrator_id: user_id } = req.params
-  if (!user_id) return res.status(400).send("Missing administrator_id")
+  if (!user_id) throw createHttpError(400, "administrator_id ID not defined")
 
   const session = driver.session()
 
