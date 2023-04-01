@@ -88,12 +88,12 @@ exports.read_groups = (req, res, next) => {
   const direct_query = `
     ${
       parent_id
-        ? "AND NOT (group)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(parent)"
+        ? "AND NOT (group)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(:Group {_id: $parent_id})"
         : ""
     }
     ${
       subgroup_id
-        ? "AND NOT (subgroup)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(group)"
+        ? "AND NOT (:Group {_id: $subgroup_id})-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(group)"
         : ""
     }
   `
