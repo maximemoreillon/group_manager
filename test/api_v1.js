@@ -39,19 +39,23 @@ describe("/v1", () => {
   before(async () => {
     //console.log = function () {}
     await sleep(10000)
+    jwt = await login()
+    user = await whoami(jwt)
+  })
 
-    try {
-      jwt = await login()
-      user = await whoami(jwt)
-    } catch (error) {
-      console.error(error)
-      throw error
-    }
+  describe("POST /v1/groups", () => {
+    it("Should respond with 401", async () => {
+      const { status } = await request(app)
+        .post("/v1/groups")
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(401)
+    })
   })
 
   describe("POST /v2/groups", () => {
     it("Should allow the creation of groups", async () => {
-      let { body, status } = await request(app)
+      const { body, status } = await request(app)
         .post("/v2/groups")
         .send({ name: "tdd_v1" })
         .set("Authorization", `Bearer ${jwt}`)
@@ -63,7 +67,7 @@ describe("/v1", () => {
 
   describe("GET /v1/groups/top_level", () => {
     it("Should allow the query of groups", async () => {
-      const { status, body } = await request(app)
+      const { status } = await request(app)
         .get("/v1/groups/top_level")
         .set("Authorization", `Bearer ${jwt}`)
 
@@ -91,7 +95,7 @@ describe("/v1", () => {
 
   describe("GET /v1/groups/:group_id/members/", () => {
     it("Should allow querying members of a group", async () => {
-      const { status, body } = await request(app)
+      const { status } = await request(app)
         .get(`/v1/groups/${group_id}/members/`)
         .set("Authorization", `Bearer ${jwt}`)
 
@@ -99,11 +103,41 @@ describe("/v1", () => {
     })
 
     it("Should allow querying members of no group", async () => {
-      const { status, body } = await request(app)
+      const { status } = await request(app)
         .get(`/v1/groups/none/members/`)
         .set("Authorization", `Bearer ${jwt}`)
 
       expect(status).to.equal(200)
+    })
+  })
+
+  describe("GET /v1/groups/:group_id/administrators", () => {
+    it("Should respond with 401", async () => {
+      const { status } = await request(app)
+        .get(`/v1/groups/${group_id}/administrators`)
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(401)
+    })
+  })
+
+  describe("POST /v1/groups/:group_id/administrators", () => {
+    it("Should respond with 401", async () => {
+      const { status } = await request(app)
+        .post(`/v1/groups/${group_id}/administrators`)
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(401)
+    })
+  })
+
+  describe("DELETE /v1/groups/:group_id/administrators/:administrator_id", () => {
+    it("Should respond with 401", async () => {
+      const { status } = await request(app)
+        .post(`/v1/groups/${group_id}/administrators/banana`)
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(401)
     })
   })
 
@@ -129,7 +163,7 @@ describe("/v1", () => {
 
   describe("GET /v1/groups/:group_id/groups/direct", () => {
     it("Should allow the query of direct subgroups", async () => {
-      const { status, body } = await request(app)
+      const { status } = await request(app)
         .get(`/v1/groups/${group_id}/groups/direct`)
         .set("Authorization", `Bearer ${jwt}`)
 
@@ -137,9 +171,19 @@ describe("/v1", () => {
     })
   })
 
+  describe("DELETE /v1/groups", () => {
+    it("Should respond with 401", async () => {
+      const { status } = await request(app)
+        .delete(`/v1/groups/${group_id}`)
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(401)
+    })
+  })
+
   describe("DELETE /v2/groups/:group_id", () => {
     it("Should allow the deletion of a group", async () => {
-      const { status, body } = await request(app)
+      const { status } = await request(app)
         .delete(`/v2/groups/${group_id}`)
         .set("Authorization", `Bearer ${jwt}`)
 

@@ -3,6 +3,10 @@ const {
 } = require("../../db.js")
 const createHttpError = require("http-errors")
 
+exports.create_group = (req, res, next) => {
+  res.status(410).send("Deprecated")
+}
+
 exports.get_group = (req, res, next) => {
   const group_id = req.params.group_id || req.query.id || req.query.group_id
 
@@ -189,10 +193,6 @@ exports.add_group_to_group = (req, res, next) => {
 
 exports.remove_group_from_group = (req, res, next) => {
   res.status(410).send("deprecated")
-}
-
-exports.create_group = (req, res, next) => {
-  res.status(410).send("Deprecated")
 }
 
 exports.delete_group = (req, res, next) => {
