@@ -37,13 +37,12 @@ kind: Ingress
 metadata:
   name: ${APPLICATION_NAME}
   annotations:
-    kubernetes.io/ingress.class: nginx
-    cert-manager.io/cluster-issuer: letsencrypt-prod
+    cert-manager.io/cluster-issuer: letsencrypt
 spec:
   tls:
     - hosts:
         - ${K8S_INGRESS_HOST}
-      secretName: ${APPLICATION_NAME}
+      secretName: ${APPLICATION_NAME}-tls
   rules:
     - host: ${K8S_INGRESS_HOST}
       http:
