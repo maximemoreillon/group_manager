@@ -2,6 +2,8 @@ const express = require("express")
 const cors = require("cors")
 const dotenv = require("dotenv")
 const apiMetrics = require("prometheus-api-metrics")
+const swaggerUi = require ("swagger-ui-express")
+const swaggerDocument = require( "./swagger-output.json")
 const router_v1 = require("./routes/v1/index.js")
 const router_v2 = require("./routes/v2/index.js")
 const router_v3 = require("./routes/v3/index.js")
@@ -28,6 +30,7 @@ const app = express()
 app.use(express.json())
 app.use(cors())
 app.use(apiMetrics())
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument))
 
 app.get("/", (req, res) => {
   res.send({

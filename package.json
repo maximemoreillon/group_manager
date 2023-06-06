@@ -1,12 +1,13 @@
 {
   "name": "group_manager",
-  "version": "4.6.3",
+  "version": "4.7.0",
   "description": "",
   "main": "group_manager.js",
   "scripts": {
     "dev": "nodemon",
     "test": "mocha --timeout 10000 --exit",
-    "coverage": "nyc mocha --timeout 15000 --exit"
+    "coverage": "nyc mocha --timeout 15000 --exit",
+    "swagger-autogen": "node swagger.js"
   },
   "author": "Maxime MOREILLON",
   "license": "MIT",
@@ -19,7 +20,9 @@
     "http-errors": "^2.0.0",
     "neo4j-driver": "^4.4.5",
     "prom-client": "^12.0.0",
-    "prometheus-api-metrics": "^3.2.1"
+    "prometheus-api-metrics": "^3.2.1",
+    "swagger-autogen": "^2.23.1",
+    "swagger-ui-express": "^4.6.3"
   },
   "devDependencies": {
     "chai": "^4.3.6",
