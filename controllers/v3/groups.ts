@@ -1,15 +1,20 @@
-const createHttpError = require("http-errors")
-const {
-  drivers: { v2: driver },
-} = require("../../db.js")
-const { default_batch_size } = require("../../config.js")
-const {
+import createHttpError from "http-errors"
+import { drivers } from "../../db"
+import { DEFAULT_BATCH_SIZE } from "../../config"
+import {
   get_current_user_id,
   batch_items,
   format_batched_response,
-} = require("../../utils.js")
+} from "../../utils"
+import { Request, Response, NextFunction } from "express"
 
-exports.create_group = (req, res, next) => {
+const driver = drivers.v2
+
+export const create_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Create a group
   // TODO: validation with joi
 
@@ -53,7 +58,11 @@ exports.create_group = (req, res, next) => {
     })
 }
 
-exports.read_groups = (req, res, next) => {
+export const read_groups = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Queries: official vs non official, top level vs normal, type
 
   // WARNING: Querying top level official groups means groups whith no parent THAT ARE OFFICIAL
@@ -64,7 +73,7 @@ exports.read_groups = (req, res, next) => {
   const { parent_id, subgroup_id } = req.params
 
   const {
-    batch_size = default_batch_size,
+    batch_size = DEFAULT_BATCH_SIZE,
     start_index = 0,
     shallow, // Only query top level groups
     direct,
@@ -119,7 +128,7 @@ exports.read_groups = (req, res, next) => {
     
     // Renaming as item for universal batching function
     WITH group as item
-    ${batch_items(batch_size)}
+    ${batch_items(batch_size as number)}
     `
 
   const params = { batch_size, start_index, parent_id, subgroup_id, filters }
@@ -137,7 +146,7 @@ exports.read_groups = (req, res, next) => {
     })
 }
 
-exports.read_group = (req, res, next) => {
+export const read_group = (req: Request, res: Response, next: NextFunction) => {
   const { group_id } = req.params
   if (!group_id || group_id === "undefined")
     throw createHttpError(400, "Group ID not defined")
@@ -159,7 +168,11 @@ exports.read_group = (req, res, next) => {
     })
 }
 
-exports.update_group = (req, res, next) => {
+export const update_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const { group_id } = req.params
   if (!group_id || group_id === "undefined")
     throw createHttpError(400, "Group ID not defined")
@@ -225,7 +238,11 @@ exports.update_group = (req, res, next) => {
     .finally(() => session.close())
 }
 
-exports.delete_group = (req, res, next) => {
+export const delete_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const { group_id } = req.params
   if (!group_id || group_id === "undefined")
     throw createHttpError(400, "Group ID not defined")
@@ -272,7 +289,11 @@ exports.delete_group = (req, res, next) => {
     })
 }
 
-exports.add_group_to_group = (req, res, next) => {
+export const add_group_to_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to make a group join a group
   // Can only be done if user is admin of both groups
 
@@ -341,7 +362,11 @@ exports.add_group_to_group = (req, res, next) => {
     })
 }
 
-exports.remove_group_from_group = (req, res, next) => {
+export const remove_group_from_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to make a user join a group
 
   // TODO: Should the user be admin of child group?

@@ -1,15 +1,21 @@
-const createHttpError = require("http-errors")
-const {
-  drivers: { v2: driver },
-} = require("../../db.js")
-const { default_batch_size } = require("../../config.js")
-const {
+import createHttpError from "http-errors"
+import { drivers } from "../../db"
+import { Request, Response, NextFunction } from "express"
+
+import { DEFAULT_BATCH_SIZE } from "../../config"
+import {
   get_current_user_id,
   batch_items,
   format_batched_response,
-} = require("../../utils.js")
+} from "../../utils"
 
-exports.add_member_to_group = (req, res, next) => {
+const driver = drivers.v2
+
+export const add_member_to_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const current_user_id = get_current_user_id(res)
 
   const { group_id } = req.params
@@ -103,7 +109,7 @@ exports.add_member_to_group = (req, res, next) => {
     })
 }
 
-exports.get_user = (req, res, next) => {
+export const get_user = (req: Request, res: Response, next: NextFunction) => {
   // This should not be a feature of group manager
   // but it is used in front-end
 
@@ -136,12 +142,16 @@ exports.get_user = (req, res, next) => {
     })
 }
 
-exports.get_members_of_group = (req, res, next) => {
+export const get_members_of_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const { group_id } = req.params
   if (!group_id || group_id === "undefined")
     throw createHttpError(400, "Group ID not defined")
 
-  const { batch_size = default_batch_size, start_index = 0 } = req.query
+  const { batch_size = DEFAULT_BATCH_SIZE, start_index = 0 } = req.query
 
   const session = driver.session()
 
@@ -153,7 +163,7 @@ exports.get_members_of_group = (req, res, next) => {
     OPTIONAL MATCH (user:User)-[:BELONGS_TO]->(group)
 
     WITH user as item
-    ${batch_items(batch_size)}
+    ${batch_items(batch_size as number)}
     `
 
   const params = { group_id, batch_size, start_index }
@@ -172,7 +182,11 @@ exports.get_members_of_group = (req, res, next) => {
     })
 }
 
-exports.remove_user_from_group = (req, res, next) => {
+export const remove_user_from_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const current_user_id = get_current_user_id(res)
 
   let { group_id, member_id: user_id } = req.params
@@ -227,13 +241,17 @@ exports.remove_user_from_group = (req, res, next) => {
     })
 }
 
-exports.get_groups_of_user = (req, res, next) => {
+export const get_groups_of_user = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   let { member_id: user_id } = req.params
   if (user_id === "self") user_id = get_current_user_id(res)
   if (!user_id) throw createHttpError(400, "User ID not defined")
 
   const {
-    batch_size = default_batch_size,
+    batch_size = DEFAULT_BATCH_SIZE,
     start_index = 0,
     shallow,
     official,
@@ -261,7 +279,7 @@ exports.get_groups_of_user = (req, res, next) => {
     ${nonofficial ? non_official_query : ""}
 
     WITH group as item
-    ${batch_items(batch_size)}
+    ${batch_items(batch_size as number)}
     `
 
   const params = { user_id, batch_size, start_index }
@@ -281,16 +299,20 @@ exports.get_groups_of_user = (req, res, next) => {
     })
 }
 
-exports.users_with_no_group = (req, res, next) => {
+export const users_with_no_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const session = driver.session()
 
-  const { batch_size = default_batch_size, start_index = 0 } = req.query
+  const { batch_size = DEFAULT_BATCH_SIZE, start_index = 0 } = req.query
 
   const query = `
     OPTIONAL MATCH (user:User)
     WHERE NOT (user)-[:BELONGS_TO]->(:Group)
     WITH user as item
-    ${batch_items(batch_size)}
+    ${batch_items(batch_size as number)}
     `
 
   const params = { batch_size, start_index }
@@ -310,10 +332,14 @@ exports.users_with_no_group = (req, res, next) => {
     })
 }
 
-exports.get_groups_of_users = (req, res, next) => {
+export const get_groups_of_users = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const session = driver.session()
 
-  const { batch_size = default_batch_size, start_index = 0 } = req.query
+  const { batch_size = DEFAULT_BATCH_SIZE, start_index = 0 } = req.query
 
   const user_ids = req.query.user_ids || req.query.member_ids || req.query.ids
 
@@ -323,7 +349,7 @@ exports.get_groups_of_users = (req, res, next) => {
 
     // Currently no batching
     WITH {user: properties(user), groups: collect(properties(group))} as item
-    ${batch_items(batch_size)}
+    ${batch_items(batch_size as number)}
     `
 
   const params = { user_ids, batch_size, start_index }

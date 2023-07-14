@@ -23,6 +23,7 @@ build:
     - dind
   only:
     - master
+    - typescript
   before_script:
     # Docker hub login
     - echo "${DOCKER_HUB_PASSWORD}" | docker login --username ${DOCKER_HUB_USERNAME} --password-stdin
@@ -36,6 +37,7 @@ test:
   coverage: '/All files[^|]*\|[^|]*\s+([\d\.]+)/'
   only:
     - master
+    - typescript
   tags:
     - dind
   before_script:

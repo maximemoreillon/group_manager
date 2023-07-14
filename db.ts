@@ -1,9 +1,9 @@
-const neo4j = require("neo4j-driver")
-const dotenv = require("dotenv")
+import neo4j from "neo4j-driver"
+import dotenv from "dotenv"
 
 dotenv.config()
 
-const {
+export const {
   NEO4J_URL = "bolt://neo4j",
   NEO4J_USERNAME = "neo4j",
   NEO4J_PASSWORD = "neo4j",
@@ -16,7 +16,7 @@ const options = {
   v2: { disableLosslessIntegers: true },
 }
 
-const drivers = {
+export const drivers = {
   v1: neo4j.driver(NEO4J_URL, auth, options.v1),
   v2: neo4j.driver(NEO4J_URL, auth, options.v2),
 }
@@ -73,7 +73,7 @@ const create_constraints = async () => {
   }
 }
 
-const init = async () => {
+export const init = async () => {
   if (await get_connection_status()) {
     connected = true
 
@@ -89,8 +89,4 @@ const init = async () => {
   }
 }
 
-exports.url = NEO4J_URL
-exports.drivers = drivers
-exports.connected = () => connected
-
-exports.init = init
+export const getConnected = () => connected

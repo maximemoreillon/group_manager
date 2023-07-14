@@ -1,22 +1,27 @@
-const {
-  drivers: { v2: driver },
-} = require("../../db.js")
-const createHttpError = require("http-errors")
+import { drivers } from "../../db"
+import createHttpError from "http-errors"
+import { Request, Response, NextFunction } from "express"
 
-const {
+import {
   get_current_user_id,
   batch_items,
   format_batched_response,
-} = require("../../utils.js")
+} from "../../utils"
 
-const { default_batch_size } = require("../../config.js")
+import { DEFAULT_BATCH_SIZE } from "../../config"
 
-exports.get_administrators_of_group = (req, res, next) => {
+const driver = drivers.v2
+
+export const get_administrators_of_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const { group_id } = req.params
   if (!group_id || group_id === "undefined")
     throw createHttpError(400, "Group ID not defined")
 
-  const { batch_size = default_batch_size, start_index = 0 } = req.query
+  const { batch_size = DEFAULT_BATCH_SIZE, start_index = 0 } = req.query
 
   const session = driver.session()
 
@@ -25,7 +30,7 @@ exports.get_administrators_of_group = (req, res, next) => {
     WITH group
     OPTIONAL MATCH (admin:User)<-[:ADMINISTRATED_BY]-(group:Group)
     WITH admin as item
-    ${batch_items(batch_size)}
+    ${batch_items(batch_size as number)}
     `
 
   const params = { group_id, batch_size, start_index }
@@ -44,7 +49,11 @@ exports.get_administrators_of_group = (req, res, next) => {
     })
 }
 
-exports.make_user_administrator_of_group = (req, res, next) => {
+export const make_user_administrator_of_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const { group_id } = req.params
   const { user_id, user_ids } = req.body
 
@@ -112,7 +121,11 @@ exports.make_user_administrator_of_group = (req, res, next) => {
     })
 }
 
-exports.remove_user_from_administrators = (req, res, next) => {
+export const remove_user_from_administrators = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const { group_id } = req.params
   const { administrator_id: user_id } = req.params
 
@@ -163,12 +176,16 @@ exports.remove_user_from_administrators = (req, res, next) => {
     })
 }
 
-exports.get_groups_of_administrator = (req, res, next) => {
+export const get_groups_of_administrator = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   let { administrator_id: user_id } = req.params
   if (user_id === "self") user_id = get_current_user_id(res)
 
   const {
-    batch_size = default_batch_size,
+    batch_size = DEFAULT_BATCH_SIZE,
     start_index = 0,
     shallow,
     official,
@@ -192,7 +209,7 @@ exports.get_groups_of_administrator = (req, res, next) => {
     ${nonofficial ? non_official_query : ""}
 
     WITH group as item
-    ${batch_items(batch_size)}
+    ${batch_items(batch_size as number)}
     `
 
   const params = { user_id, batch_size, start_index }

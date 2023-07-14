@@ -1,9 +1,9 @@
-const { Router } = require("express")
+import { Router } from "express"
 
-const administrator_router = require("./administrators.js")
-const member_router = require("./members.js")
+import administrator_router from "./administrators"
+import member_router from "./members"
 
-const {
+import {
   create_group,
   read_groups,
   read_group,
@@ -11,8 +11,8 @@ const {
   delete_group,
   add_group_to_group,
   remove_group_from_group,
-} = require("../../controllers/v3/groups.js")
-const { users_with_no_group } = require("../../controllers/v3/members.js")
+} from "../../controllers/v3/groups"
+import { users_with_no_group } from "../../controllers/v3/members"
 
 const router = Router()
 
@@ -52,4 +52,4 @@ router.use("/users", member_router)
 router.use("/groups/:group_id/administrators", administrator_router)
 router.use("/administrators", administrator_router)
 
-module.exports = router
+export default router
