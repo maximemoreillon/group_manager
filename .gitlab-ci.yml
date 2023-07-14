@@ -22,6 +22,7 @@ build:
   stage: build
   only:
     - master
+    - tags
   tags:
     - dind
   before_script:
@@ -37,6 +38,7 @@ test:
   coverage: '/All files[^|]*\|[^|]*\s+([\d\.]+)/'
   only:
     - master
+    - tags
   tags:
     - dind
   before_script:
