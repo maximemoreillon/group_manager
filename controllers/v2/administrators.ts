@@ -1,10 +1,14 @@
-const {
-  drivers: { v2: driver },
-} = require("../../db.js")
-const createHttpError = require("http-errors")
-const { get_current_user_id } = require("../../utils.js")
+import { drivers } from "../../db"
+import createHttpError from "http-errors"
+import { get_current_user_id } from "../../utils"
+import { Request, Response, NextFunction } from "express"
+const driver = drivers.v2
 
-exports.get_administrators_of_group = (req, res, next) => {
+export const get_administrators_of_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to retrieve a user's groups
 
   const { group_id } = req.params
@@ -25,7 +29,7 @@ exports.get_administrators_of_group = (req, res, next) => {
       if (!records.length)
         throw createHttpError(400, `Group ${group_id} not found`)
       const admins = records[0].get("administrators")
-      admins.forEach((admin) => {
+      admins.forEach((admin: any) => {
         delete admin.properties.password_hashed
       })
       res.send(admins)
@@ -36,7 +40,11 @@ exports.get_administrators_of_group = (req, res, next) => {
     })
 }
 
-exports.make_user_administrator_of_group = (req, res, next) => {
+export const make_user_administrator_of_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to leave a group
 
   const { group_id } = req.params
@@ -93,7 +101,11 @@ exports.make_user_administrator_of_group = (req, res, next) => {
     })
 }
 
-exports.remove_user_from_administrators = (req, res, next) => {
+export const remove_user_from_administrators = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to remove a user from the administrators of a group
 
   const { group_id } = req.params
@@ -143,7 +155,11 @@ exports.remove_user_from_administrators = (req, res, next) => {
     })
 }
 
-exports.get_groups_of_administrator = (req, res, next) => {
+export const get_groups_of_administrator = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to retrieve a user's groups
   let { administrator_id: user_id } = req.params
   if (user_id === "self") user_id = get_current_user_id(res)

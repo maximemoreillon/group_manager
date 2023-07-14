@@ -1,10 +1,11 @@
-const {
-  drivers: { v1: driver },
-} = require("../../db.js")
-const { get_current_user_id } = require("../../utils.js")
-const createHttpError = require("http-errors")
+import { drivers } from "../../db"
+import { get_current_user_id } from "../../utils"
+import createHttpError from "http-errors"
+import { Request, Response, NextFunction } from "express"
 
-exports.get_user = (req, res, next) => {
+const driver = drivers.v1
+
+export const get_user = (req: Request, res: Response, next: NextFunction) => {
   // Route to retrieve a user's info
 
   let user_id =
@@ -35,7 +36,11 @@ exports.get_user = (req, res, next) => {
     })
 }
 
-exports.get_members_of_group = (req, res, next) => {
+export const get_members_of_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to retrieve a user's groups
 
   const group_id =
@@ -63,7 +68,11 @@ exports.get_members_of_group = (req, res, next) => {
     })
 }
 
-exports.get_groups_of_user = (req, res, next) => {
+export const get_groups_of_user = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   let member_id =
     req.query.member_id ??
     req.query.user_id ??
@@ -96,7 +105,11 @@ exports.get_groups_of_user = (req, res, next) => {
     })
 }
 
-exports.users_with_no_group = (req, res, next) => {
+export const users_with_no_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const session = driver.session()
 
   const query = `
@@ -115,10 +128,18 @@ exports.users_with_no_group = (req, res, next) => {
     })
 }
 
-exports.add_member_to_group = (req, res, next) => {
+export const add_member_to_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   res.status(410).send("Deprecated")
 }
 
-exports.remove_user_from_group = (req, res, next) => {
+export const remove_user_from_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   res.status(410).send("Deprecated")
 }

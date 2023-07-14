@@ -1,13 +1,18 @@
-const {
-  drivers: { v1: driver },
-} = require("../../db.js")
-const createHttpError = require("http-errors")
+import { drivers } from "../../db"
+import createHttpError from "http-errors"
+import { Request, Response, NextFunction } from "express"
 
-exports.create_group = (req, res, next) => {
+const driver = drivers.v1
+
+export const create_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   res.status(410).send("Deprecated")
 }
 
-exports.get_group = (req, res, next) => {
+export const get_group = (req: Request, res: Response, next: NextFunction) => {
   const group_id = req.params.group_id || req.query.id || req.query.group_id
 
   const session = driver.session()
@@ -31,7 +36,11 @@ exports.get_group = (req, res, next) => {
     })
 }
 
-exports.get_top_level_groups = (req, res, next) => {
+export const get_top_level_groups = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
 
   const session = driver.session()
@@ -52,7 +61,11 @@ exports.get_top_level_groups = (req, res, next) => {
     })
 }
 
-exports.get_top_level_official_groups = (req, res, next) => {
+export const get_top_level_official_groups = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
 
   const session = driver.session()
@@ -80,7 +93,11 @@ exports.get_top_level_official_groups = (req, res, next) => {
     })
 }
 
-exports.get_top_level_non_official_groups = (req, res, next) => {
+export const get_top_level_non_official_groups = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
 
   const session = driver.session()
@@ -103,7 +120,11 @@ exports.get_top_level_non_official_groups = (req, res, next) => {
     })
 }
 
-exports.get_groups_directly_belonging_to_group = (req, res, next) => {
+export const get_groups_directly_belonging_to_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
 
   const group_id = req.query.id ?? req.query.group_id ?? req.params.group_id
@@ -133,7 +154,11 @@ exports.get_groups_directly_belonging_to_group = (req, res, next) => {
     })
 }
 
-exports.get_parent_groups_of_group = (req, res, next) => {
+export const get_parent_groups_of_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to retrieve groups inside a group
 
   const subgroup_id = req.params.group_id ?? req.query.id ?? req.query.group_id
@@ -161,7 +186,11 @@ exports.get_parent_groups_of_group = (req, res, next) => {
     })
 }
 
-exports.get_groups_of_group = (req, res, next) => {
+export const get_groups_of_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to retrieve groups inside a group
 
   const group_id =
@@ -187,26 +216,46 @@ exports.get_groups_of_group = (req, res, next) => {
     })
 }
 
-exports.add_group_to_group = (req, res, next) => {
+export const add_group_to_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   res.status(410).send("deprecated")
 }
 
-exports.remove_group_from_group = (req, res, next) => {
+export const remove_group_from_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   res.status(410).send("deprecated")
 }
 
-exports.delete_group = (req, res, next) => {
+export const delete_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   res.status(410).send("Deprecated")
 }
 
-exports.join_group = (req, res, next) => {
+export const join_group = (req: Request, res: Response, next: NextFunction) => {
   res.status(410).send("Deprecated")
 }
 
-exports.leave_group = (req, res, next) => {
+export const leave_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   res.status(410).send("Deprecated")
 }
 
-exports.patch_group = (req, res, next) => {
+export const patch_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   res.status(410).send("deprecated")
 }

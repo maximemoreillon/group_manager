@@ -1,10 +1,15 @@
-const {
-  drivers: { v2: driver },
-} = require("../../db.js")
-const createHttpError = require("http-errors")
-const { get_current_user_id } = require("../../utils.js")
+import { drivers } from "../../db"
+import createHttpError from "http-errors"
+import { get_current_user_id } from "../../utils"
+import { Request, Response, NextFunction } from "express"
 
-exports.create_group = (req, res, next) => {
+const driver = drivers.v2
+
+export const create_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Create a group
   // TODO: validation with joi
 
@@ -50,7 +55,11 @@ exports.create_group = (req, res, next) => {
     })
 }
 
-exports.get_groups = async (req, res, next) => {
+export const get_groups = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Queries: official vs non official, top level vs normal, type
 
   // NOTE: Querying top level official groups means groups whith no parent THAT ARE OFFICIAL
@@ -107,7 +116,7 @@ exports.get_groups = async (req, res, next) => {
     })
 }
 
-exports.get_group = (req, res, next) => {
+export const get_group = (req: Request, res: Response, next: NextFunction) => {
   const { group_id } = req.params
 
   const session = driver.session()
@@ -130,7 +139,11 @@ exports.get_group = (req, res, next) => {
     })
 }
 
-exports.patch_group = (req, res, next) => {
+export const patch_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const { group_id } = req.params
 
   if (!group_id) throw createHttpError(400, "Group ID not defined")
@@ -189,7 +202,11 @@ exports.patch_group = (req, res, next) => {
     .finally(() => session.close())
 }
 
-exports.delete_group = (req, res, next) => {
+export const delete_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to delete a group
 
   const { group_id } = req.params
@@ -230,7 +247,7 @@ exports.delete_group = (req, res, next) => {
     })
 }
 
-exports.join_group = (req, res, next) => {
+export const join_group = (req: Request, res: Response, next: NextFunction) => {
   // TODO: Could be combined with make user member of group
   // Route to join a group (only works if group is not private)
 
@@ -274,7 +291,11 @@ exports.join_group = (req, res, next) => {
     })
 }
 
-exports.leave_group = (req, res, next) => {
+export const leave_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to leave a group
 
   const { group_id } = req.params
@@ -313,7 +334,11 @@ exports.leave_group = (req, res, next) => {
     })
 }
 
-exports.get_parent_groups_of_group = (req, res, next) => {
+export const get_parent_groups_of_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to retrieve groups inside a group
 
   const { group_id } = req.params
@@ -348,7 +373,11 @@ exports.get_parent_groups_of_group = (req, res, next) => {
     })
 }
 
-exports.get_groups_of_group = (req, res, next) => {
+export const get_groups_of_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to retrieve groups inside a group
 
   const { group_id } = req.params
@@ -384,7 +413,11 @@ exports.get_groups_of_group = (req, res, next) => {
     })
 }
 
-exports.add_group_to_group = (req, res, next) => {
+export const add_group_to_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to make a group join a group
   // Can only be done if user is admin of both groups
 
@@ -452,7 +485,11 @@ exports.add_group_to_group = (req, res, next) => {
     })
 }
 
-exports.remove_group_from_group = (req, res, next) => {
+export const remove_group_from_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to make a user join a group
 
   // TODO: Should the user be admin of child group?
@@ -512,7 +549,11 @@ exports.remove_group_from_group = (req, res, next) => {
     })
 }
 
-exports.get_groups_directly_belonging_to_group = (req, res, next) => {
+export const get_groups_directly_belonging_to_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // THIS IS LEGACY
 
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
@@ -551,7 +592,11 @@ exports.get_groups_directly_belonging_to_group = (req, res, next) => {
     })
 }
 
-exports.get_top_level_groups = (req, res, next) => {
+export const get_top_level_groups = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // This is legacy
 
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
@@ -582,7 +627,11 @@ exports.get_top_level_groups = (req, res, next) => {
     })
 }
 
-exports.get_top_level_official_groups = (req, res, next) => {
+export const get_top_level_official_groups = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // This is legacy
 
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)
@@ -612,7 +661,11 @@ exports.get_top_level_official_groups = (req, res, next) => {
     })
 }
 
-exports.get_top_level_non_official_groups = (req, res, next) => {
+export const get_top_level_non_official_groups = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // This is legacy
 
   // Route to retrieve the top level groups (i.e. groups that don't belong to any other group)

@@ -1,6 +1,8 @@
+import { Response } from "express"
+
 const createHttpError = require("http-errors")
 
-exports.get_current_user_id = (res) => {
+export const get_current_user_id = (res: Response) => {
   const current_user = res.locals.user
   const _id =
     current_user._id || // futureproofing
@@ -11,7 +13,7 @@ exports.get_current_user_id = (res) => {
   return _id
 }
 
-exports.batch_items = (batch_size) => `
+export const batch_items = (batch_size: number) => `
 // Aggregation
 WITH
   COLLECT(PROPERTIES(item)) as items,
@@ -31,13 +33,13 @@ RETURN
   batch_size
 `
 
-exports.format_batched_response = (records) => {
+export const format_batched_response = (records: any) => {
   const record = records[0]
 
   if (!record) throw createHttpError(400, "Query did not yield any match")
 
   const items = record.get("batch")
-  items.forEach((item) => {
+  items.forEach((item: any) => {
     if (item.password_hashed) delete item.password_hashed
   })
 

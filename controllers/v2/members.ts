@@ -1,10 +1,11 @@
-const {
-  drivers: { v2: driver },
-} = require("../../db.js")
-const createHttpError = require("http-errors")
-const { get_current_user_id } = require("../../utils.js")
+import { drivers } from "../../db"
+import createHttpError from "http-errors"
+import { get_current_user_id } from "../../utils"
+import { Request, Response, NextFunction } from "express"
 
-exports.get_user = (req, res, next) => {
+const driver = drivers.v2
+
+export const get_user = (req: Request, res: Response, next: NextFunction) => {
   // Route to retrieve a user's info
   // This should not be a feature of group manager
   // Used in front-end
@@ -43,7 +44,11 @@ exports.get_user = (req, res, next) => {
     })
 }
 
-exports.get_members_of_group = (req, res, next) => {
+export const get_members_of_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to retrieve a user's groups
 
   const group_id = req.params.group_id || req.query.group_id
@@ -66,7 +71,7 @@ exports.get_members_of_group = (req, res, next) => {
     .then(({ records }) => {
       if (!records.length) throw createHttpError(404, "Group not found")
       const users = records[0].get("users")
-      users.forEach((user) => {
+      users.forEach((user: any) => {
         delete user.properties.password_hashed
       })
       res.send(users)
@@ -77,7 +82,11 @@ exports.get_members_of_group = (req, res, next) => {
     })
 }
 
-exports.add_member_to_group = (req, res, next) => {
+export const add_member_to_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to make a user join a group
 
   const { group_id } = req.params
@@ -135,7 +144,11 @@ exports.add_member_to_group = (req, res, next) => {
     })
 }
 
-exports.remove_user_from_group = (req, res, next) => {
+export const remove_user_from_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to make a user leave a group
 
   const { group_id, member_id: user_id } = req.params
@@ -185,7 +198,11 @@ exports.remove_user_from_group = (req, res, next) => {
     })
 }
 
-exports.get_groups_of_user = (req, res, next) => {
+export const get_groups_of_user = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to retrieve a user's groups
 
   let { member_id: user_id } = req.params
@@ -215,7 +232,11 @@ exports.get_groups_of_user = (req, res, next) => {
     })
 }
 
-exports.users_with_no_group = (req, res, next) => {
+export const users_with_no_group = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to retrieve users without a group
 
   const session = driver.session()
@@ -243,11 +264,16 @@ exports.users_with_no_group = (req, res, next) => {
     })
 }
 
-exports.get_members_of_groups = (req, res, next) => {
+export const get_members_of_groups = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Retrieve a multiple groups' members
   // Still in beta
 
-  const group_ids = req.query.group_ids || req.query.ids
+  const group_ids: any = req.query.group_ids || req.query.ids
+  if (!group_ids) throw createHttpError(400, "group_ids undefined")
 
   const query = `
   UNWIND $group_ids AS group_id
@@ -283,7 +309,11 @@ exports.get_members_of_groups = (req, res, next) => {
     })
 }
 
-exports.get_groups_of_users = (req, res, next) => {
+export const get_groups_of_users = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Retrieve a multiple users' groups
   // Still in beta
 

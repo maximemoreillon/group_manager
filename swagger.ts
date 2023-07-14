@@ -1,5 +1,5 @@
-const swaggerAutogen = require("swagger-autogen")
-const { version, name } = require("./package.json")
+import swaggerAutogen from "swagger-autogen"
+import { version, name } from "./package.json"
 
 const generate = swaggerAutogen()
 
