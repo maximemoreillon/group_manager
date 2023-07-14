@@ -1,7 +1,13 @@
 stages:
   - build
   - test
+  - release
   - deploy
+
+# Needed for Docker in docker build
+image: moreillon/ci-dind
+services:
+  - name: docker:19.03.12-dind
 
 variables:
   APPLICATION_NAME: group-manager
@@ -9,21 +15,15 @@ variables:
   CONTAINER_IMAGE: ${CONTAINER_REGISTRY}/${APPLICATION_NAME}
   CONTAINER_IMAGE_TEST: ${CONTAINER_IMAGE}:test
   CONTAINER_IMAGE_LATEST: ${CONTAINER_IMAGE}:latest
-  CONTAINER_IMAGE_TAGGED: ${CONTAINER_IMAGE}:${CI_COMMIT_SHORT_SHA}
+  CONTAINER_IMAGE_TAGGED: ${CONTAINER_IMAGE}:${CI_COMMIT_TAG}
   K8S_INGRESS_HOST: api.groups.maximemoreillon.com
-
-# Needed for Docker in docker build
-image: moreillon/ci-dind
-services:
-  - name: docker:19.03.12-dind
 
 build:
   stage: build
-  tags:
-    - dind
   only:
     - master
-    - typescript
+  tags:
+    - dind
   before_script:
     # Docker hub login
     - echo "${DOCKER_HUB_PASSWORD}" | docker login --username ${DOCKER_HUB_USERNAME} --password-stdin
@@ -37,7 +37,6 @@ test:
   coverage: '/All files[^|]*\|[^|]*\s+([\d\.]+)/'
   only:
     - master
-    - typescript
   tags:
     - dind
   before_script:
@@ -80,6 +79,17 @@ test:
       --env TEST_USER_PASSWORD=admin
       ${CONTAINER_IMAGE_TEST}
       npm run coverage
+
+release:
+  stage: release
+  tags:
+    - dind
+  only:
+    - tags
+  before_script:
+    - echo "${DOCKER_HUB_PASSWORD}" | docker login --username ${DOCKER_HUB_USERNAME} --password-stdin
+  script:
+    - docker pull ${CONTAINER_IMAGE_TEST}
     # Tagging
     - docker tag ${CONTAINER_IMAGE_TEST} ${CONTAINER_IMAGE_TAGGED}
     - docker tag ${CONTAINER_IMAGE_TEST} ${CONTAINER_IMAGE_LATEST}
@@ -92,7 +102,7 @@ deploy:
   tags:
     - dind
   only:
-    - master
+    - tags
   before_script:
     - kubectl config use-context moreillon_ci/moreillon_k8s/kubernetes-agent:cloud
   script:
