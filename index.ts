@@ -8,7 +8,6 @@ import router_v1 from "./routes/v1"
 import router_v2 from "./routes/v2"
 import router_v3 from "./routes/v3"
 import { version, author } from "./package.json"
-import { commit } from "./commit.json"
 import auth from "@moreillon/express_identification_middleware"
 import {
   NEO4J_URL,
@@ -42,7 +41,6 @@ app.get("/", (req, res) => {
       connected: neo4j_connected(),
     },
     identification_url: IDENTIFICATION_URL,
-    commit,
   })
 })
 
