@@ -53,7 +53,7 @@ test:
       --network tdd
       --hostname tdd-db
       --env NEO4J_AUTH=none
-      neo4j:4.4.6
+      neo4j:5.12.0
     - sleep 30 # Wait for Neo4J to become available
     # Todo: Add user manager here
     - >
