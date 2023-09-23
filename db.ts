@@ -63,7 +63,7 @@ const create_constraints = async () => {
   const session = drivers.v2.session()
 
   try {
-    await session.run(`CREATE CONSTRAINT ON (g:Group) ASSERT g._id IS UNIQUE`)
+    await session.run(`CREATE CONSTRAINT FOR (g:Group) REQUIRE g._id IS UNIQUE`)
     console.log(`[Neo4J] Created constraints`)
   } catch (error) {
     console.error(`Creating contraints failed`)
