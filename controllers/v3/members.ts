@@ -32,7 +32,7 @@ export const add_member_to_group = (
     // Allow user to join unrestricted groups even if not admin
     OR (
       $user_id = $current_user_id 
-      AND ( NOT EXISTS(group.restricted) 
+      AND ( (group.restricted IS NOT NULL) 
         OR NOT group.restricted
       )
     )`
@@ -264,7 +264,7 @@ export const get_groups_of_user = (
     "AND NOT (group)-[:BELONGS_TO]->(:Group)<-[:BELONGS_TO]-(user)"
   const official_query = "AND group.official"
   const non_official_query =
-    "AND (NOT EXISTS(group.official) OR NOT group.official)"
+    "AND (NOT (group.official IS NOT NULL) OR NOT group.official)"
 
   const query = `
     MATCH (user:User {_id: $user_id})
@@ -273,7 +273,7 @@ export const get_groups_of_user = (
     OPTIONAL MATCH (user)-[:BELONGS_TO]->(group:Group)
 
     // using dummy WHERE here so as to use AND in other queryies
-    WHERE EXISTS(group._id)
+    WHERE group._id IS NOT NULL
     ${shallow ? shallow_query : ""}
     ${official ? official_query : ""}
     ${nonofficial ? non_official_query : ""}

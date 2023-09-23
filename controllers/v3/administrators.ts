@@ -196,14 +196,14 @@ export const get_groups_of_administrator = (
     "AND NOT (group)-[:BELONGS_TO]->(:Group)<-[:ADMINISTRATED_BY]-(user)"
   const official_query = "AND group.official"
   const non_official_query =
-    "AND (NOT EXISTS(group.official) OR NOT group.official)"
+    "AND ((group.official IS NOT NULL) OR NOT group.official)"
   const query = `
     MATCH (user:User {_id: $user_id})
     WITH user
     OPTIONAL MATCH (user)<-[:ADMINISTRATED_BY]-(group:Group)
 
     // using dummy WHERE here so as to use AND in other queryies
-    WHERE EXISTS(group._id)
+    WHERE group._id IS NOT NULL
     ${shallow ? shallow_query : ""}
     ${official ? official_query : ""}
     ${nonofficial ? non_official_query : ""}

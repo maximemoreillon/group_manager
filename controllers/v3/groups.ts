@@ -111,13 +111,13 @@ export const read_groups = (
 
   const official_query = "AND group.official"
   const non_official_query =
-    "AND (NOT EXISTS(group.official) OR NOT group.official)"
+    "AND ((group.official IS NOT NULL) OR NOT group.official)"
 
   const query = `
     ${
       Object.keys(filters).length
         ? filtering_query
-        : "OPTIONAL MATCH (group:Group) WHERE EXISTS(group._id)"
+        : "OPTIONAL MATCH (group:Group) WHERE group._id IS NOT NULL"
     }    
     ${parent_id ? as_subgroup_query : ""}
     ${subgroup_id ? as_parent_query : ""}
