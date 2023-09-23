@@ -65,7 +65,7 @@ test:
       --hostname tdd-user-manager
       --env NEO4J_URL=bolt://tdd-db
       --env JWT_SECRET=keyboardcat
-      moreillon/user-manager:4.5.3
+      moreillon/user-manager:v4.5.3
     - sleep 10 # Wait for User manager to become available
   script:
     - >
