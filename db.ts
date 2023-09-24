@@ -41,7 +41,7 @@ const get_connection_status = async () => {
 const set_ids = async () => {
   const id_setting_query = `
     MATCH (g:Group)
-    WHERE g._id IS NOT NULL
+    WHERE g._id IS NULL
     SET g._id = toString(id(g))
     RETURN COUNT(g) as count
     `
