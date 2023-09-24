@@ -111,7 +111,7 @@ export const read_groups = (
 
   const official_query = "AND group.official"
   const non_official_query =
-    "AND ((group.official IS NOT NULL) OR NOT group.official)"
+    "AND (group.official IS NULL OR NOT group.official)"
 
   const query = `
     ${

@@ -75,7 +75,7 @@ export const get_groups = async (
   const non_official_query =
     req.query.nonofficial == null
       ? ""
-      : "WITH group WHERE ((group.official IS NOT NULL) OR NOT group.official)"
+      : "WITH group WHERE (group.official IS NULL OR NOT group.official)"
 
   const batching = batch_size
     ? `WITH group_count, groups[toInteger($start_index)..toInteger($start_index)+toInteger($batch_size)] AS groups`
@@ -264,7 +264,7 @@ export const join_group = (req: Request, res: Response, next: NextFunction) => {
     MATCH (group:Group {_id: $group_id})
 
     // TODO: allow admin to join
-    WHERE ((group.restricted IS NOT NULL) OR NOT group.restricted)
+    WHERE (group.restricted IS NULL OR NOT group.restricted)
 
     MERGE (user)-[:BELONGS_TO]->(group)
 
@@ -677,7 +677,7 @@ export const get_top_level_non_official_groups = (
 
     // That do not belong to any group
     WHERE NOT (group)-[:BELONGS_TO]->(:Group)
-      AND ( (group.official IS NOT NULL) OR NOT group.official )
+      AND ( group.official IS NULL OR NOT group.official )
 
     // USED TO BE DISTINCT
     RETURN group

@@ -105,7 +105,7 @@ export const get_top_level_non_official_groups = (
   const query = `
     MATCH (group:Group)
     WHERE NOT (group)-[:BELONGS_TO]->(:Group)
-      AND ((group.official IS NOT NULL) OR NOT group.official)
+      AND (group.official IS NULL OR NOT group.official)
 
     RETURN DISTINCT(group)
     `
