@@ -262,7 +262,7 @@ export const get_groups_of_user = (
     "AND NOT (group)-[:BELONGS_TO]->(:Group)<-[:BELONGS_TO]-(user)"
   const official_query = "AND group.official"
   const non_official_query =
-    "AND (NOT group.official IS NULL OR NOT group.official)"
+    "AND (group.official IS NULL OR NOT group.official)"
 
   const query = `
     MATCH (user:User {_id: $user_id})
