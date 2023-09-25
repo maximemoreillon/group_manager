@@ -21,7 +21,6 @@ variables:
 build:
   stage: build
   only:
-    - master
     - tags
   tags:
     - dind
@@ -36,7 +35,6 @@ test:
   stage: test
   coverage: '/All files[^|]*\|[^|]*\s+([\d\.]+)/'
   only:
-    - master
     - tags
   tags:
     - dind
