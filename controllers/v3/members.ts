@@ -287,7 +287,6 @@ export const get_groups_of_user = (
     .then(({ records }) => {
       if (!records.length)
         throw createHttpError(404, `User ${user_id} not found`)
-      console.log(`Groups of user ${user_id} queried`)
       const response = format_batched_response(records)
       res.send(response)
     })
@@ -344,9 +343,8 @@ export const get_groups_of_users = (
   const query = `
     UNWIND $user_ids AS user_id
     MATCH (user:User {_id: user_id})-[:BELONGS_TO]->(group:Group)
-
-    // Currently no batching
-    WITH {user: properties(user), groups: collect(properties(group))} as item
+    WITH COLLECT(PROPERTIES(group)) as groupProperties, PROPERTIES(user) as userProperties
+    WITH {user: userProperties, groups: groupProperties} as item
     ${batch_items(batch_size as number)}
     `
 
