@@ -79,6 +79,7 @@ export const read_groups = (
     direct,
     official,
     nonofficial,
+    search,
     ...filters
   } = req.query
 
@@ -113,6 +114,9 @@ export const read_groups = (
   const non_official_query =
     "AND (group.official IS NULL OR NOT group.official)"
 
+  const search_query =
+    "AND toLower(toString(group.name)) CONTAINS toLower($search) "
+
   const query = `
     ${
       Object.keys(filters).length
@@ -125,13 +129,21 @@ export const read_groups = (
     ${shallow ? shallow_query : ""}
     ${official ? official_query : ""}
     ${nonofficial ? non_official_query : ""}
+    ${search ? search_query : ""}
     
     // Renaming as item for universal batching function
     WITH group as item
     ${batch_items(batch_size as number)}
     `
 
-  const params = { batch_size, start_index, parent_id, subgroup_id, filters }
+  const params = {
+    batch_size,
+    start_index,
+    parent_id,
+    subgroup_id,
+    filters,
+    search,
+  }
 
   const session = driver.session()
   session
