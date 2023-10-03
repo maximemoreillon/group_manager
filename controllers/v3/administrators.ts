@@ -220,7 +220,6 @@ export const get_groups_of_administrator = (
     .then(({ records }) => {
       if (!records.length)
         throw createHttpError(400, `User ${user_id} not found`)
-      console.log(`Groups of administrator ${user_id} queried`)
       const response = format_batched_response(records)
       res.send(response)
     })

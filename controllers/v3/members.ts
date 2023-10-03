@@ -132,7 +132,6 @@ export const get_user = (req: Request, res: Response, next: NextFunction) => {
       delete user.password_hashed
 
       res.send(user)
-      console.log(`User ${user_id} queried`)
     })
     .catch(next)
     .finally(() => {
@@ -318,8 +317,6 @@ export const users_with_no_group = (
     .run(query, params)
     .then(({ records }) => {
       if (!records.length) throw createHttpError(404, `No users with no groups`)
-      console.log(`Queried users with no group`)
-
       const response = format_batched_response(records)
       res.send(response)
     })
@@ -354,8 +351,6 @@ export const get_groups_of_users = (
     .run(query, params)
     .then(({ records }) => {
       if (!records.length) throw createHttpError(404, `No users found`)
-      console.log(`Queried users with no group`)
-
       const response = format_batched_response(records)
       res.send(response)
     })
