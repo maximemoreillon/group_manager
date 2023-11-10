@@ -1,4 +1,4 @@
-import { Response } from "express"
+import { Request, Response, NextFunction } from "express"
 
 const createHttpError = require("http-errors")
 
@@ -49,4 +49,16 @@ export const format_batched_response = (records: any) => {
     count: record.get("count"),
     items,
   }
+}
+
+export const errorHandler = (
+  error: any,
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  console.error(error)
+  let { statusCode = 500, message = error } = error
+  if (isNaN(statusCode) || statusCode > 600) statusCode = 500
+  res.status(statusCode).send(message)
 }
