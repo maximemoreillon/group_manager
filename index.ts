@@ -2,7 +2,7 @@ import dotenv from "dotenv"
 dotenv.config()
 import express from "express"
 import cors from "cors"
-import apiMetrics from "prometheus-api-metrics"
+import promBundle from "express-prom-bundle"
 import swaggerUi from "swagger-ui-express"
 import swaggerDocument from "./swagger-output.json"
 import { version } from "./package.json"
@@ -15,11 +15,12 @@ console.log(`= Group manager v${version} =`)
 db_init()
 
 const { APP_PORT = 80 } = process.env
+const promOptions = { includeMethod: true, includePath: true }
 
 export const app = express()
 app.use(express.json())
 app.use(cors())
-app.use(apiMetrics())
+app.use(promBundle(promOptions))
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument))
 app.use("/", router)
 app.use(errorHandler)
