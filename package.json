@@ -5,7 +5,8 @@
   "main": "group_manager.js",
   "scripts": {
     "dev": "nodemon index.ts",
-    "start": "ts-node index.ts",
+    "start": "node ./build/index.js",
+    "build": "tsc -p .",
     "test": "mocha -r ts-node/register test/*.ts --timeout 10000 --exit",
     "coverage": "nyc mocha -r ts-node/register test/*.ts --timeout 15000 --exit",
     "swagger-autogen": "ts-node swagger.ts"
