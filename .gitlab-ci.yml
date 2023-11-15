@@ -7,7 +7,7 @@ stages:
 # Needed for Docker in docker build
 image: moreillon/ci-dind
 services:
-  - name: docker:19.03.12-dind
+  - name: docker:24.0.7-dind
 
 variables:
   APPLICATION_NAME: group-manager
