@@ -37,7 +37,7 @@ kind: Ingress
 metadata:
   name: ${APPLICATION_NAME}
   annotations:
-    cert-manager.io/cluster-issuer: cloudflare
+    cert-manager.io/cluster-issuer: letsencrypt
 spec:
   tls:
     - hosts:
