@@ -294,7 +294,7 @@ export const get_groups_of_user = (
     .run(query, params)
     .then(({ records }) => {
       if (!records.length)
-        throw createHttpError(404, `User ${user_id} not found`)
+        throw createHttpError(404, `No group found for user ${user_id}`)
       const response = format_batched_response(records)
       res.send(response)
     })
