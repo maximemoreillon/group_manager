@@ -247,15 +247,23 @@ export const get_groups_of_user = (
   if (user_id === "self") user_id = get_current_user_id(res)
   if (!user_id) throw createHttpError(400, "User ID not defined")
 
+  // TODO: add filters
   const {
     batch_size = DEFAULT_BATCH_SIZE,
     start_index = 0,
     shallow,
     official,
     nonofficial,
+    ...filters
   } = req.query
 
   const session = driver.session()
+
+  const filtering_query = `
+    UNWIND KEYS($filters) as filterKey
+    WITH filterKey, group
+    WHERE group[filterKey] = $filters[filterKey]
+    `
 
   const shallow_query =
     "AND NOT (group)-[:BELONGS_TO]->(:Group)<-[:BELONGS_TO]-(user)"
@@ -266,11 +274,12 @@ export const get_groups_of_user = (
   const query = `
     MATCH (user:User {_id: $user_id})
     WITH user
-    // OPTIONAL because still want to perform query even if no groups
     OPTIONAL MATCH (user)-[:BELONGS_TO]->(group:Group)
 
     // using dummy WHERE here so as to use AND in other queryies
     WHERE group._id IS NOT NULL
+    
+    ${Object.keys(filters).length ? filtering_query : ""} 
     ${shallow ? shallow_query : ""}
     ${official ? official_query : ""}
     ${nonofficial ? non_official_query : ""}
@@ -279,7 +288,7 @@ export const get_groups_of_user = (
     ${batch_items(batch_size as number)}
     `
 
-  const params = { user_id, batch_size, start_index }
+  const params = { user_id, batch_size, start_index, filters }
 
   session
     .run(query, params)
