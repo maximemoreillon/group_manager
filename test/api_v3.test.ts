@@ -2,9 +2,6 @@ import request from "supertest"
 import { expect } from "chai"
 import { app } from "../index"
 import axios from "axios"
-import dotenv from "dotenv"
-
-dotenv.config()
 
 const {
   LOGIN_URL,
