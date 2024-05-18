@@ -14,8 +14,8 @@
   "author": "Maxime MOREILLON",
   "license": "MIT",
   "dependencies": {
-    "@moreillon/express_identification_middleware": "^1.3.5",
-    "axios": "^0.24.0",
+    "@moreillon/express_identification_middleware": "^1.4.0",
+    "axios": "^1.6.8",
     "cors": "^2.8.5",
     "express": "^4.17.3",
     "express-prom-bundle": "^6.6.0",
