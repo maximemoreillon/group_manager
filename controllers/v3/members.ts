@@ -342,19 +342,38 @@ export const get_groups_of_users = (
 ) => {
   const session = driver.session()
 
-  const { batch_size = DEFAULT_BATCH_SIZE, start_index = 0 } = req.query
+  const {
+    batch_size = DEFAULT_BATCH_SIZE,
+    start_index = 0,
+    user_ids,
+    member_ids,
+    ids,
+    shallow, // Only query top level groups
+    official,
+    nonofficial,
+  } = req.query
 
-  const user_ids = req.query.user_ids || req.query.member_ids || req.query.ids
+  const userIds = user_ids || member_ids || ids
+
+  const shallow_query = "AND NOT (group)-[:BELONGS_TO]->(:Group)"
+  const official_query = "AND group.official"
+  const non_official_query =
+    "AND (group.official IS NULL OR NOT group.official)"
 
   const query = `
-    UNWIND $user_ids AS user_id
+    UNWIND $userIds AS user_id
     MATCH (user:User {_id: user_id})-[:BELONGS_TO]->(group:Group)
+    // Dummy WHERE to allow optional queries below
+    WHERE group._id IS NOT NULL
+    ${shallow ? shallow_query : ""}
+    ${official ? official_query : ""}
+    ${nonofficial ? non_official_query : ""}
     WITH COLLECT(PROPERTIES(group)) as groupProperties, PROPERTIES(user) as userProperties
     WITH {user: userProperties, groups: groupProperties} as item
     ${batch_items(batch_size as number)}
     `
 
-  const params = { user_ids, batch_size, start_index }
+  const params = { userIds, batch_size, start_index }
 
   session
     .run(query, params)
