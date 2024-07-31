@@ -60,10 +60,11 @@ const create_constraints = async () => {
   const session = drivers.v2.session()
 
   try {
-    await session.run(`CREATE CONSTRAINT FOR (g:Group) REQUIRE g._id IS UNIQUE`)
+    await session.run(
+      `CREATE CONSTRAINT IF NOT EXISTS FOR (g:Group) REQUIRE g._id IS UNIQUE`
+    )
     console.log(`[Neo4J] Created constraints`)
   } catch (error) {
-    console.error(`Creating contraints failed`)
     throw error
   } finally {
     session.close()
@@ -74,13 +75,10 @@ export const init = async () => {
   if (await get_connection_status()) {
     connected = true
 
-    try {
-      console.log("[Neo4J] Initializing DB")
-      await set_ids()
-      await create_constraints()
-    } catch (error) {
-      console.log(error)
-    }
+    console.log("[Neo4J] Initializing DB...")
+    await set_ids()
+    await create_constraints()
+    console.log("[Neo4J] DB initialized")
   } else {
     setTimeout(init, 10000)
   }
