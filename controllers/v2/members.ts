@@ -1,6 +1,6 @@
 import { drivers } from "../../db"
 import createHttpError from "http-errors"
-import { get_current_user_id } from "../../utils"
+import { get_current_user_id, getCypherUserIdentifiers } from "../../utils"
 import { Request, Response, NextFunction } from "express"
 
 const driver = drivers.v2
@@ -25,7 +25,7 @@ export const get_user = (req: Request, res: Response, next: NextFunction) => {
   session
     .run(
       `
-    MATCH (user:User {_id: $user_id})
+    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
     RETURN user
     `,
       { user_id }
@@ -101,7 +101,9 @@ export const add_member_to_group = (
 
   const query = `
     // Find the current user
-    MATCH (current_user:User {_id: $current_user_id} )
+    MATCH (current_user:User) WHERE $current_user_id IN ${getCypherUserIdentifiers(
+      "current_user"
+    )}
 
     // Find group
     WITH current_user
@@ -112,7 +114,7 @@ export const add_member_to_group = (
 
     // Find the user
     WITH group
-    MATCH (user:User {_id: $user_id})
+    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
 
     // MERGE relationship
     MERGE (user)-[:BELONGS_TO]->(group)
@@ -161,14 +163,18 @@ export const remove_user_from_group = (
   const session = driver.session()
 
   const query = `
-    MATCH (current_user:User {_id: $current_user_id} )
+    MATCH (current_user:User) WHERE $current_user_id IN ${getCypherUserIdentifiers(
+      "current_user"
+    )}
 
     WITH current_user
     MATCH (group:Group {_id: $group_id})
     WHERE ( (group)-[:ADMINISTRATED_BY]->(current_user) OR current_user.isAdmin )
 
     WITH group
-    MATCH (user:User {_id: $user_id})-[r:BELONGS_TO]->(group)
+    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers(
+      "user"
+    )}-[r:BELONGS_TO]->(group)
 
     DELETE r
 
@@ -211,7 +217,7 @@ export const get_groups_of_user = (
   const session = driver.session()
 
   const query = `
-    MATCH (user:User {_id: $user_id})
+    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
     WITH user
     MATCH (user)-[:BELONGS_TO]->(group:Group)
     RETURN collect(group) as groups
@@ -323,7 +329,7 @@ export const get_groups_of_users = (
   UNWIND $user_ids AS user_id
   MATCH (user:User)
   // CANNOT USE QUERY TEMPLATE BECAUSE NOT $group_id
-  WHERE user._id = user_id
+  WHERE user_id IN ${getCypherUserIdentifiers("user")}
 
   WITH user
   MATCH (user)-[:BELONGS_TO]->(group:Group)

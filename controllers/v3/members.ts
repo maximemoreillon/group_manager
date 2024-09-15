@@ -7,6 +7,7 @@ import {
   get_current_user_id,
   batch_items,
   format_batched_response,
+  getCypherUserIdentifiers,
 } from "../../utils"
 
 const driver = drivers.v2
@@ -38,7 +39,7 @@ export const add_member_to_group = (
   const single_user_add_query = `
     
     WITH group
-    MATCH (user:User {_id: $user_id})
+    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
     MERGE (user)-[:BELONGS_TO]->(group)
     `
 
@@ -52,13 +53,15 @@ export const add_member_to_group = (
       END AS user_id
 
     OPTIONAL MATCH (user:User)
-    WHERE user._id = user_id
+    WHERE user_id IN ${getCypherUserIdentifiers("user")}
     WITH group, collect(user) as users
     FOREACH(user IN users | MERGE (user)-[:BELONGS_TO]->(group))
     `
 
   const query = `
-    MATCH (current_user:User {_id: $current_user_id} )
+    MATCH (current_user:User) WHERE $current_user_id IN ${getCypherUserIdentifiers(
+      "current_user"
+    )}
 
     WITH current_user
     MATCH (group:Group {_id: $group_id})
@@ -118,7 +121,7 @@ export const get_user = (req: Request, res: Response, next: NextFunction) => {
   const session = driver.session()
 
   const query = `
-    MATCH (user:User {_id: $user_id}) 
+    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")} 
     RETURN properties(user) as user
     `
 
@@ -196,7 +199,9 @@ export const remove_user_from_group = (
   const session = driver.session()
 
   const query = `
-    MATCH (current_user:User {_id: $current_user_id} )
+    MATCH (current_user:User) WHERE $current_user_id IN ${getCypherUserIdentifiers(
+      "current_user"
+    )}
 
     WITH current_user
     MATCH (group:Group {_id: $group_id})
@@ -208,7 +213,9 @@ export const remove_user_from_group = (
     )
     
     WITH group
-    MATCH (user:User {_id: $user_id})-[r:BELONGS_TO]->(group)
+    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers(
+      "user"
+    )}-[r:BELONGS_TO]->(group)
 
     DELETE r
 
@@ -272,7 +279,7 @@ export const get_groups_of_user = (
     "AND (group.official IS NULL OR NOT group.official)"
 
   const query = `
-    MATCH (user:User {_id: $user_id})
+    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
     WITH user
     OPTIONAL MATCH (user)-[:BELONGS_TO]->(group:Group)
 

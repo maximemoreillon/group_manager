@@ -1,6 +1,6 @@
 import { drivers } from "../../db"
 import createHttpError from "http-errors"
-import { get_current_user_id } from "../../utils"
+import { get_current_user_id, getCypherUserIdentifiers } from "../../utils"
 import { Request, Response, NextFunction } from "express"
 const driver = drivers.v2
 
@@ -61,7 +61,9 @@ export const make_user_administrator_of_group = (
   const session = driver.session()
 
   const query = `
-    MATCH (current_user:User {_id: $current_user_id} )
+    MATCH (current_user:User) WHERE $current_user_id IN ${getCypherUserIdentifiers(
+      "current_user"
+    )}
     WITH current_user
 
     MATCH (group:Group {_id: $group_id})
@@ -70,7 +72,7 @@ export const make_user_administrator_of_group = (
 
     // Find the user
     WITH group
-    MATCH (user:User {_id: $user_id})
+    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
 
     // Merge relationship
     MERGE (group)-[:ADMINISTRATED_BY]->(user)
@@ -119,7 +121,9 @@ export const remove_user_from_administrators = (
   const current_user_id = get_current_user_id(res)
 
   const query = `
-    MATCH (current_user:User {_id: $current_user_id} )
+    MATCH (current_user:User) WHERE $current_user_id IN ${getCypherUserIdentifiers(
+      "current_user"
+    )}
 
     WITH current_user
     MATCH (group:Group {_id: $group_id})
@@ -167,7 +171,9 @@ export const get_groups_of_administrator = (
   const session = driver.session()
 
   const query = `
-    MATCH (user:User {_id: $user_id})<-[:ADMINISTRATED_BY]-(group:Group)
+    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers(
+      "user"
+    )}<-[:ADMINISTRATED_BY]-(group:Group)
     RETURN collect(group) as groups
     `
   session
