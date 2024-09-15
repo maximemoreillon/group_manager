@@ -65,4 +65,6 @@ export const errorHandler = (
 }
 
 export const getCypherUserIdentifiers = (name: string = "user") =>
-  `["${userIdentifiers.map((i) => `${name}.${i}`).join('","')}']`
+  `[${userIdentifiers.map((i) => `${name}.${i}`).join(",")}]`
+
+console.log(getCypherUserIdentifiers("user"))
