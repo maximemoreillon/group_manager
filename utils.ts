@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express"
+import { userIdentifiers } from "./config"
 
 const createHttpError = require("http-errors")
 
@@ -62,3 +63,8 @@ export const errorHandler = (
   if (isNaN(statusCode) || statusCode > 600) statusCode = 500
   res.status(statusCode).send(message)
 }
+
+export const getCypherUserIdentifiers = (name: string = "user") =>
+  `[${userIdentifiers.map((i) => `${name}.${i}`).join(",")}]`
+
+console.log(getCypherUserIdentifiers("user"))

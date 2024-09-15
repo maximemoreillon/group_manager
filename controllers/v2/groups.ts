@@ -1,6 +1,6 @@
 import { drivers } from "../../db"
 import createHttpError from "http-errors"
-import { get_current_user_id } from "../../utils"
+import { get_current_user_id, getCypherUserIdentifiers } from "../../utils"
 import { Request, Response, NextFunction } from "express"
 
 const driver = drivers.v2
@@ -27,7 +27,7 @@ export const create_group = (
 
     // Create relationships
     WITH group
-    MATCH (user:User {_id: $user_id})
+    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
     CREATE (group)-[:ADMINISTRATED_BY]->(user)
     CREATE (group)-[creation:CREATED_BY]->(user)
     CREATE (group)<-[:BELONGS_TO]-(user)
@@ -170,7 +170,7 @@ export const patch_group = (
   const session = driver.session()
 
   const query = `
-    MATCH (user:User {_id: $user_id})
+    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
     WITH user
     MATCH (group:Group {_id: $group_id})
     // Only allow group admin or super admin
@@ -217,7 +217,7 @@ export const delete_group = (
 
   const query = `
     // Find the current user
-    MATCH (user:User {_id: $user_id})
+    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
 
     // Find group
     WITH user
@@ -259,7 +259,7 @@ export const join_group = (req: Request, res: Response, next: NextFunction) => {
   const session = driver.session()
 
   const query = `
-    MATCH (user:User {_id: $user_id})
+    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
     WITH user
     MATCH (group:Group {_id: $group_id})
 
@@ -306,7 +306,7 @@ export const leave_group = (
   const session = driver.session()
 
   const query = `
-    MATCH (user:User {_id: $user_id})
+    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
     WITH user
     MATCH (group:Group {_id: $group_id})
     WITH user, group
@@ -429,7 +429,7 @@ export const add_group_to_group = (
   const session = driver.session()
 
   const query = `
-    MATCH (user:User {_id: $user_id})
+    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
 
     // Find child group
     WITH user
@@ -500,7 +500,7 @@ export const remove_group_from_group = (
   const session = driver.session()
 
   const query = `
-    MATCH (user:User {_id: $user_id})
+    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
 
     // Find the child group group
     WITH user

@@ -6,13 +6,13 @@ import swaggerDocument from "./swagger-output.json"
 import { version } from "./package.json"
 import { init as db_init } from "./db"
 import { errorHandler } from "./utils"
+import { APP_PORT } from "./config"
 import router from "./routes/"
 
 console.log(`= Group manager v${version} =`)
 
 db_init()
 
-const { APP_PORT = 80 } = process.env
 const promOptions = { includeMethod: true, includePath: true }
 
 export const app = express()

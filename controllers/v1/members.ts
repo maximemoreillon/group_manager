@@ -1,5 +1,5 @@
 import { drivers } from "../../db"
-import { get_current_user_id } from "../../utils"
+import { get_current_user_id, getCypherUserIdentifiers } from "../../utils"
 import createHttpError from "http-errors"
 import { Request, Response, NextFunction } from "express"
 
@@ -21,7 +21,7 @@ export const get_user = (req: Request, res: Response, next: NextFunction) => {
   const session = driver.session()
 
   const query = `
-    MATCH (user:User {_id: $user_id})
+    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
     RETURN user
     `
 
@@ -85,7 +85,7 @@ export const get_groups_of_user = (
   const session = driver.session()
 
   const query = `
-    MATCH (user:User {_id: $user_id})
+    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
     WITH user
     MATCH (user)-[:BELONGS_TO]->(group:Group)
     RETURN group

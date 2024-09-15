@@ -6,6 +6,7 @@ import {
   get_current_user_id,
   batch_items,
   format_batched_response,
+  getCypherUserIdentifiers,
 } from "../../utils"
 
 import { DEFAULT_BATCH_SIZE } from "../../config"
@@ -68,7 +69,7 @@ export const make_user_administrator_of_group = (
 
   const single_user_add_query = `
     WITH group
-    MATCH (user:User {_id: $user_id})
+    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
     MERGE (user)<-[:ADMINISTRATED_BY]-(group)
     `
 
@@ -82,13 +83,15 @@ export const make_user_administrator_of_group = (
       END AS user_id
 
     OPTIONAL MATCH (user:User)
-    WHERE user._id = user_id
+    WHERE user_id IN ${getCypherUserIdentifiers("user")}
     WITH group, collect(user) as users
     FOREACH(user IN users | MERGE (user)<-[:ADMINISTRATED_BY]-(group))
     `
 
   const query = `
-    MATCH (current_user:User {_id: $current_user_id} )
+    MATCH (current_user:User) WHERE $current_user_id IN ${getCypherUserIdentifiers(
+      "current_user"
+    )}
 
     WITH current_user
     MATCH (group:Group {_id: $group_id})
@@ -139,7 +142,9 @@ export const remove_user_from_administrators = (
   const current_user_id = get_current_user_id(res)
 
   const query = `
-    MATCH (current_user:User {_id: $current_user_id} )
+    MATCH (current_user:User) WHERE $current_user_id IN ${getCypherUserIdentifiers(
+      "current_user"
+    )}
 
     WITH current_user
     MATCH (group:Group {_id: $group_id})
@@ -198,7 +203,7 @@ export const get_groups_of_administrator = (
   const non_official_query =
     "AND ( group.official IS NULL OR NOT group.official)"
   const query = `
-    MATCH (user:User {_id: $user_id})
+    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
     WITH user
     OPTIONAL MATCH (user)<-[:ADMINISTRATED_BY]-(group:Group)
 
