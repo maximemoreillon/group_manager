@@ -213,9 +213,9 @@ export const remove_user_from_group = (
     )
     
     WITH group
-    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers(
+    MATCH (user:User)-[r:BELONGS_TO]->(group) WHERE $user_id IN ${getCypherUserIdentifiers(
       "user"
-    )}-[r:BELONGS_TO]->(group)
+    )}
 
     DELETE r
 
@@ -279,7 +279,8 @@ export const get_groups_of_user = (
     "AND (group.official IS NULL OR NOT group.official)"
 
   const query = `
-    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
+    MATCH (user:User)
+    WHERE $user_id IN ${getCypherUserIdentifiers("user")}
     WITH user
     OPTIONAL MATCH (user)-[:BELONGS_TO]->(group:Group)
 
@@ -369,7 +370,8 @@ export const get_groups_of_users = (
 
   const query = `
     UNWIND $userIds AS user_id
-    MATCH (user:User {_id: user_id})-[:BELONGS_TO]->(group:Group)
+    MATCH (user:User)-[:BELONGS_TO]->(group:Group)
+    WHERE user_id IN ${getCypherUserIdentifiers("user")}
     // Dummy WHERE to allow optional queries below
     WHERE group._id IS NOT NULL
     ${shallow ? shallow_query : ""}

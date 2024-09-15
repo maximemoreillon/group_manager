@@ -171,9 +171,8 @@ export const get_groups_of_administrator = (
   const session = driver.session()
 
   const query = `
-    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers(
-      "user"
-    )}<-[:ADMINISTRATED_BY]-(group:Group)
+    MATCH (user:User)<-[:ADMINISTRATED_BY]-(group:Group)
+    WHERE $user_id IN ${getCypherUserIdentifiers("user")}
     RETURN collect(group) as groups
     `
   session

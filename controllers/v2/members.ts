@@ -101,9 +101,8 @@ export const add_member_to_group = (
 
   const query = `
     // Find the current user
-    MATCH (current_user:User) WHERE $current_user_id IN ${getCypherUserIdentifiers(
-      "current_user"
-    )}
+    MATCH (current_user:User)
+    WHERE $current_user_id IN ${getCypherUserIdentifiers("current_user")}
 
     // Find group
     WITH current_user
@@ -163,18 +162,16 @@ export const remove_user_from_group = (
   const session = driver.session()
 
   const query = `
-    MATCH (current_user:User) WHERE $current_user_id IN ${getCypherUserIdentifiers(
-      "current_user"
-    )}
+    MATCH (current_user:User)
+    WHERE $current_user_id IN ${getCypherUserIdentifiers("current_user")}
 
     WITH current_user
     MATCH (group:Group {_id: $group_id})
     WHERE ( (group)-[:ADMINISTRATED_BY]->(current_user) OR current_user.isAdmin )
 
     WITH group
-    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers(
-      "user"
-    )}-[r:BELONGS_TO]->(group)
+    MATCH (user:User)-[r:BELONGS_TO]->(group)
+    WHERE $user_id IN ${getCypherUserIdentifiers("user")}
 
     DELETE r
 
@@ -217,7 +214,8 @@ export const get_groups_of_user = (
   const session = driver.session()
 
   const query = `
-    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
+    MATCH (user:User)
+    WHERE $user_id IN ${getCypherUserIdentifiers("user")}
     WITH user
     MATCH (user)-[:BELONGS_TO]->(group:Group)
     RETURN collect(group) as groups
@@ -328,9 +326,9 @@ export const get_groups_of_users = (
   const query = `
   UNWIND $user_ids AS user_id
   MATCH (user:User)
-  // CANNOT USE QUERY TEMPLATE BECAUSE NOT $group_id
   WHERE user_id IN ${getCypherUserIdentifiers("user")}
-
+  
+  // CANNOT USE QUERY TEMPLATE BECAUSE NOT $group_id
   WITH user
   MATCH (user)-[:BELONGS_TO]->(group:Group)
   RETURN user, COLLECT(group) AS groups
