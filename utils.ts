@@ -1,22 +1,22 @@
 import { Request, Response, NextFunction } from "express"
-import { userIdentifiers } from "./config"
+import { authUseridentifiers, dbUserIdentifiers } from "./config"
 import createHttpError from "http-errors"
 
 export const get_current_user_id = (req: Request, res: Response) => {
   const current_user = res.locals?.user ?? (req as any).user
 
+  if (!current_user) return
+
   let userId = current_user._id ?? current_user.properties?._id
 
-  // TODO: figure out if this should use the same userIdentifiers as for queries
-  for (const identifier of userIdentifiers) {
-    if (current_user[identifier]) {
-      userId = current_user[identifier]
-      console.log(`User identifier retrieved from current_user.${identifier}`)
-      break
-    }
-  }
+  if (userId) return userId
 
-  return userId
+  const aui = authUseridentifiers.find(
+    (aui) => current_user[aui] ?? current_user.properties?.[aui]
+  )
+  if (aui) return current_user[aui]
+
+  return
 }
 
 export const batch_items = (batch_size: number) => `
@@ -70,4 +70,4 @@ export const errorHandler = (
 }
 
 export const getCypherUserIdentifiers = (name: string = "user") =>
-  `[${userIdentifiers.map((i) => `${name}.${i}`).join(",")}]`
+  `[${dbUserIdentifiers.map((i) => `${name}.${i}`).join(",")}]`
