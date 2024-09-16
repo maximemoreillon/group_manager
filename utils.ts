@@ -1,19 +1,22 @@
 import { Request, Response, NextFunction } from "express"
 import { userIdentifiers } from "./config"
-
-const createHttpError = require("http-errors")
+import createHttpError from "http-errors"
 
 export const get_current_user_id = (req: Request, res: Response) => {
   const current_user = res.locals?.user ?? (req as any).user
 
-  const _id =
-    current_user._id ?? // futureproofing
-    current_user.properties?._id ??
-    current_user.identity?.low ?? // remove this when done
-    current_user.identity ?? // remove this when done
-    current_user.legacy_id
+  let userId = current_user._id ?? current_user.properties?._id
 
-  return _id
+  // TODO: figure out if this should use the same userIdentifiers as for queries
+  for (const identifier of userIdentifiers) {
+    if (current_user[identifier]) {
+      userId = current_user[identifier]
+      console.log(`User identifier retrieved from current_user.${identifier}`)
+      break
+    }
+  }
+
+  return userId
 }
 
 export const batch_items = (batch_size: number) => `
