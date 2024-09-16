@@ -13,7 +13,7 @@ export const create_group = (
   // Create a group
   // TODO: validation with joi
 
-  const user_id = get_current_user_id(res)
+  const user_id = get_current_user_id(req, res)
   const { name } = req.body
   if (!name) throw createHttpError(400, `Missing group name`)
 
@@ -147,7 +147,7 @@ export const patch_group = (
   const { group_id } = req.params
 
   if (!group_id) throw createHttpError(400, "Group ID not defined")
-  const user_id = get_current_user_id(res)
+  const user_id = get_current_user_id(req, res)
 
   const properties = req.body
 
@@ -213,7 +213,7 @@ export const delete_group = (
 
   if (!group_id) throw createHttpError(400, "Group ID not defined")
 
-  const user_id = get_current_user_id(res)
+  const user_id = get_current_user_id(req, res)
 
   const query = `
     // Find the current user
@@ -254,7 +254,7 @@ export const join_group = (req: Request, res: Response, next: NextFunction) => {
   const { group_id } = req.params
   if (!group_id) throw createHttpError(400, "Group ID not defined")
 
-  const user_id = get_current_user_id(res)
+  const user_id = get_current_user_id(req, res)
 
   const session = driver.session()
 
@@ -301,7 +301,7 @@ export const leave_group = (
   const { group_id } = req.params
   if (!group_id) throw createHttpError(400, "Group ID not defined")
 
-  const user_id = get_current_user_id(res)
+  const user_id = get_current_user_id(req, res)
 
   const session = driver.session()
 
@@ -424,7 +424,7 @@ export const add_group_to_group = (
   const { group_id: parent_group_id } = req.params
   const { group_id: child_group_id } = req.body
 
-  const user_id = get_current_user_id(res)
+  const user_id = get_current_user_id(req, res)
 
   const session = driver.session()
 
@@ -495,7 +495,7 @@ export const remove_group_from_group = (
   // TODO: Should the user be admin of child group?
 
   const { group_id: parent_group_id, subgroup_id: child_group_id } = req.params
-  const user_id = get_current_user_id(res)
+  const user_id = get_current_user_id(req, res)
 
   const session = driver.session()
 

@@ -19,7 +19,7 @@ export const create_group = (
   // Create a group
   // TODO: validation with joi
 
-  const user_id = get_current_user_id(res)
+  const user_id = get_current_user_id(req, res)
   const { name } = req.body
   if (!name) throw createHttpError(400, `Missing group name`)
 
@@ -51,7 +51,9 @@ export const create_group = (
         throw createHttpError(500, `Error while creating group ${name}`)
       const group = records[0].get("group")
       res.send(group)
-      console.log(`User ${get_current_user_id(res)} created group ${group._id}`)
+      console.log(
+        `User ${get_current_user_id(req, res)} created group ${group._id}`
+      )
     })
     .catch(next)
     .finally(() => {
@@ -190,7 +192,7 @@ export const update_group = (
   if (!group_id || group_id === "undefined")
     throw createHttpError(400, "Group ID not defined")
 
-  const user_id = get_current_user_id(res)
+  const user_id = get_current_user_id(req, res)
 
   const properties = req.body
 
@@ -260,7 +262,7 @@ export const delete_group = (
   if (!group_id || group_id === "undefined")
     throw createHttpError(400, "Group ID not defined")
 
-  const user_id = get_current_user_id(res)
+  const user_id = get_current_user_id(req, res)
 
   const { deep } = req.query
 
@@ -318,7 +320,7 @@ export const add_group_to_group = (
   if (!subgroup_id || subgroup_id === "undefined")
     throw createHttpError(400, "Child group ID not defined")
 
-  const user_id = get_current_user_id(res)
+  const user_id = get_current_user_id(req, res)
 
   const session = driver.session()
 
@@ -391,7 +393,7 @@ export const remove_group_from_group = (
   if (!subgroup_id || subgroup_id === "undefined")
     throw createHttpError(400, "Child group ID not defined")
 
-  const user_id = get_current_user_id(res)
+  const user_id = get_current_user_id(req, res)
 
   const session = driver.session()
 

@@ -15,7 +15,7 @@ export const get_user = (req: Request, res: Response, next: NextFunction) => {
     req.query.user_id ??
     req.query.id
 
-  if (user_id === "self") user_id = get_current_user_id(res)
+  if (user_id === "self") user_id = get_current_user_id(req, res)
   if (!user_id) throw createHttpError(400, "User ID not defined")
 
   const session = driver.session()
@@ -78,9 +78,9 @@ export const get_groups_of_user = (
     req.query.user_id ??
     req.query.id ??
     req.params.member_id ??
-    get_current_user_id(res)
+    get_current_user_id(req, res)
 
-  if (member_id === "self") member_id = get_current_user_id(res)
+  if (member_id === "self") member_id = get_current_user_id(req, res)
 
   const session = driver.session()
 

@@ -63,7 +63,7 @@ export const make_user_administrator_of_group = (
   if (!user_id && !user_ids)
     throw createHttpError(400, "User ID(s) not defined")
 
-  const current_user_id = get_current_user_id(res)
+  const current_user_id = get_current_user_id(req, res)
 
   const session = driver.session()
 
@@ -139,7 +139,7 @@ export const remove_user_from_administrators = (
 
   const session = driver.session()
 
-  const current_user_id = get_current_user_id(res)
+  const current_user_id = get_current_user_id(req, res)
 
   const query = `
     MATCH (current_user:User) WHERE $current_user_id IN ${getCypherUserIdentifiers(
@@ -187,7 +187,7 @@ export const get_groups_of_administrator = (
   next: NextFunction
 ) => {
   let { administrator_id: user_id } = req.params
-  if (user_id === "self") user_id = get_current_user_id(res)
+  if (user_id === "self") user_id = get_current_user_id(req, res)
 
   const {
     batch_size = DEFAULT_BATCH_SIZE,
