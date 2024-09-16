@@ -3,20 +3,15 @@ import { authUseridentifiers, dbUserIdentifiers } from "./config"
 import createHttpError from "http-errors"
 
 export const get_current_user_id = (req: Request, res: Response) => {
-  const current_user = res.locals?.user ?? (req as any).user
+  const current_user =
+    res.locals?.user ?? res.locals?.user?.properties ?? (req as any).user
 
   if (!current_user) return
 
-  let userId = current_user._id ?? current_user.properties?._id
+  const aui = ["_id", ...authUseridentifiers].find((aui) => current_user[aui])
+  if (!aui) return
 
-  if (userId) return userId
-
-  const aui = authUseridentifiers.find(
-    (aui) => current_user[aui] ?? current_user.properties?.[aui]
-  )
-  if (aui) return current_user[aui]
-
-  return
+  return current_user[aui]
 }
 
 export const batch_items = (batch_size: number) => `
