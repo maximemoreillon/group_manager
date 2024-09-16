@@ -56,7 +56,7 @@ export const make_user_administrator_of_group = (
     req.body.administrator_id ??
     req.params.administrator_id
 
-  const current_user_id = get_current_user_id(res)
+  const current_user_id = get_current_user_id(req, res)
 
   const session = driver.session()
 
@@ -118,7 +118,7 @@ export const remove_user_from_administrators = (
 
   const session = driver.session()
 
-  const current_user_id = get_current_user_id(res)
+  const current_user_id = get_current_user_id(req, res)
 
   const query = `
     MATCH (current_user:User) WHERE $current_user_id IN ${getCypherUserIdentifiers(
@@ -166,7 +166,7 @@ export const get_groups_of_administrator = (
 ) => {
   // Route to retrieve a user's groups
   let { administrator_id: user_id } = req.params
-  if (user_id === "self") user_id = get_current_user_id(res)
+  if (user_id === "self") user_id = get_current_user_id(req, res)
 
   const session = driver.session()
 

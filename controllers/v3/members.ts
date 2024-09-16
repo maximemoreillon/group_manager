@@ -17,7 +17,7 @@ export const add_member_to_group = (
   res: Response,
   next: NextFunction
 ) => {
-  const current_user_id = get_current_user_id(res)
+  const current_user_id = get_current_user_id(req, res)
 
   const { group_id } = req.params
   let { user_id, user_ids } = req.body
@@ -115,7 +115,7 @@ export const get_user = (req: Request, res: Response, next: NextFunction) => {
   // but it is used in front-end
 
   let { member_id: user_id } = req.params
-  if (user_id === "self") user_id = get_current_user_id(res)
+  if (user_id === "self") user_id = get_current_user_id(req, res)
   if (!user_id) throw createHttpError(400, "User ID not defined")
 
   const session = driver.session()
@@ -187,7 +187,7 @@ export const remove_user_from_group = (
   res: Response,
   next: NextFunction
 ) => {
-  const current_user_id = get_current_user_id(res)
+  const current_user_id = get_current_user_id(req, res)
 
   let { group_id, member_id: user_id } = req.params
   if (user_id === "self") user_id = current_user_id
@@ -251,7 +251,7 @@ export const get_groups_of_user = (
   next: NextFunction
 ) => {
   let { member_id: user_id } = req.params
-  if (user_id === "self") user_id = get_current_user_id(res)
+  if (user_id === "self") user_id = get_current_user_id(req, res)
   if (!user_id) throw createHttpError(400, "User ID not defined")
 
   // TODO: add filters
