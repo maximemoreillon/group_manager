@@ -6,7 +6,12 @@ import router_v1 from "./v1"
 import router_v2 from "./v2"
 import router_v3 from "./v3"
 
-import { IDENTIFICATION_URL, OIDC_JWKS_URI } from "../config"
+import {
+  IDENTIFICATION_URL,
+  OIDC_JWKS_URI,
+  dbUserIdentifiers,
+  authUseridentifiers,
+} from "../config"
 import { useMiddleware } from "../auth"
 
 const router = Router({ mergeParams: true })
@@ -23,6 +28,8 @@ router.get("/", (req, res) => {
     auth: {
       identification_url: IDENTIFICATION_URL,
       oidc_jwks_uri: OIDC_JWKS_URI,
+      dbUserIdentifiers,
+      authUseridentifiers,
     },
   })
 })

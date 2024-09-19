@@ -10,4 +10,5 @@ export const {
 const additionalDbUseridentifiers = DB_USER_ID_FIELDS?.split(",") ?? []
 export const dbUserIdentifiers = ["_id", ...additionalDbUseridentifiers]
 
-export const authUseridentifiers = AUTH_USER_ID_FIELDS?.split(",") ?? []
+const additionalAuthUserIdentifiers = AUTH_USER_ID_FIELDS?.split(",") ?? []
+export const authUseridentifiers = ["_id", ...additionalAuthUserIdentifiers]

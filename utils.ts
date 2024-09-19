@@ -3,12 +3,11 @@ import { authUseridentifiers, dbUserIdentifiers } from "./config"
 import createHttpError from "http-errors"
 
 export const get_current_user_id = (req: Request, res: Response) => {
-  const current_user =
-    res.locals?.user ?? res.locals?.user?.properties ?? (req as any).user
+  const current_user = res.locals?.user ?? res.locals?.user?.properties
 
   if (!current_user) return
 
-  const aui = ["_id", ...authUseridentifiers].find((aui) => current_user[aui])
+  const aui = authUseridentifiers.find((aui) => current_user[aui])
   if (!aui) return
 
   return current_user[aui]
