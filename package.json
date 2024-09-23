@@ -1,6 +1,6 @@
 {
   "name": "group_manager",
-  "version": "4.13.4",
+  "version": "4.13.5",
   "description": "",
   "main": "group_manager.js",
   "scripts": {
