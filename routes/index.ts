@@ -12,7 +12,7 @@ import {
   dbUserIdentifiers,
   authUseridentifiers,
 } from "../config"
-import { authMiddleware } from "../auth"
+import { registerAuthMiddleware } from "../auth"
 
 const router = Router({ mergeParams: true })
 
@@ -34,7 +34,7 @@ router.get("/", (req, res) => {
   })
 })
 
-router.use(authMiddleware)
+registerAuthMiddleware(router)
 router.use("/", router_v1)
 router.use("/v1", router_v1) //alias
 router.use("/v2", router_v2)
