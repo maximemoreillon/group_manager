@@ -22,6 +22,8 @@ export const authMiddleware = async (
 
   if (OIDC_JWKS_URI) oidcAuth({ jwksUri: OIDC_JWKS_URI })(req, res, next)
 
-  if (!IDENTIFICATION_URL && !OIDC_JWKS_URI)
+  if (!IDENTIFICATION_URL && !OIDC_JWKS_URI) {
+    console.error(`Authentication not configured`)
     res.status(500).send(`Authentication not configured`)
+  }
 }

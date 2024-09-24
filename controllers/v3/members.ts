@@ -371,9 +371,7 @@ export const get_groups_of_users = (
   const query = `
     UNWIND $userIds AS user_id
     MATCH (user:User)-[:BELONGS_TO]->(group:Group)
-    WHERE user_id IN ${getCypherUserIdentifiers("user")}
-    // Dummy WHERE to allow optional queries below
-    WHERE group._id IS NOT NULL
+    WHERE user_id IN ${getCypherUserIdentifiers("user")}     
     ${shallow ? shallow_query : ""}
     ${official ? official_query : ""}
     ${nonofficial ? non_official_query : ""}
