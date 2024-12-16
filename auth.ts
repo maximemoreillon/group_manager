@@ -12,6 +12,8 @@ export const registerAuthMiddleware = (router: Router) => {
   if (OIDC_JWKS_URI) {
     console.log(`[Auth] OIDC auth enabled with JWKS URI: ${OIDC_JWKS_URI}`)
 
+    const oidcMiddleware = oidcAuth({ jwksUri: OIDC_JWKS_URI })
+
     if (IDENTIFICATION_URL) {
       console.log(`[Auth] Both Legacy and OIDC auth are enabled`)
       const wrappingMiddleware = (
@@ -24,18 +26,14 @@ export const registerAuthMiddleware = (router: Router) => {
         if (res.locals.user) return next()
         if (!OIDC_JWKS_URI) return next()
 
-        oidcAuth({ jwksUri: OIDC_JWKS_URI })(req, res, next)
+        oidcMiddleware(req, res, next)
       }
 
       router.use(wrappingMiddleware)
     }
     // If just OIDC, register as usual
     else {
-      router.use(
-        oidcAuth({
-          jwksUri: OIDC_JWKS_URI,
-        })
-      )
+      router.use(oidcMiddleware)
     }
   }
 }
