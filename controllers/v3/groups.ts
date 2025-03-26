@@ -1,15 +1,15 @@
-import createHttpError from "http-errors"
-import { drivers } from "../../db"
-import { DEFAULT_BATCH_SIZE } from "../../config"
+import createHttpError from "http-errors";
+import { drivers } from "../../db";
+import { DEFAULT_BATCH_SIZE } from "../../config";
 import {
   get_current_user_id,
   batch_items,
   format_batched_response,
   getCypherUserIdentifiers,
-} from "../../utils"
-import { Request, Response, NextFunction } from "express"
+} from "../../utils";
+import { Request, Response, NextFunction } from "express";
 
-const driver = drivers.v2
+const driver = drivers.v2;
 
 export const create_group = (
   req: Request,
@@ -19,11 +19,11 @@ export const create_group = (
   // Create a group
   // TODO: validation with joi
 
-  const user_id = get_current_user_id(req, res)
-  const { name } = req.body
-  if (!name) throw createHttpError(400, `Missing group name`)
+  const user_id = get_current_user_id(req, res);
+  const { name } = req.body;
+  if (!name) throw createHttpError(400, `Missing group name`);
 
-  const session = driver.session()
+  const session = driver.session();
 
   const query = `
     // Create the group
@@ -42,24 +42,24 @@ export const create_group = (
     SET creation.date = date()
 
     RETURN properties(group) as group
-    `
+    `;
 
   session
     .run(query, { user_id, name })
     .then(({ records }) => {
       if (!records.length)
-        throw createHttpError(500, `Error while creating group ${name}`)
-      const group = records[0].get("group")
-      res.send(group)
+        throw createHttpError(500, `Error while creating group ${name}`);
+      const group = records[0].get("group");
+      res.send(group);
       console.log(
         `User ${get_current_user_id(req, res)} created group ${group._id}`
-      )
+      );
     })
     .catch(next)
     .finally(() => {
-      session.close()
-    })
-}
+      session.close();
+    });
+};
 
 export const read_groups = (
   req: Request,
@@ -73,7 +73,7 @@ export const read_groups = (
 
   // Shallow: only groups that are not part of another group
 
-  const { parent_id, subgroup_id } = req.params
+  const { parent_id, subgroup_id } = req.params;
 
   const {
     batch_size = DEFAULT_BATCH_SIZE,
@@ -84,7 +84,7 @@ export const read_groups = (
     nonofficial,
     search,
     ...filters
-  } = req.query
+  } = req.query;
 
   const filtering_query = `
     UNWIND KEYS($filters) as filterKey
@@ -92,10 +92,10 @@ export const read_groups = (
     // NOTE: This MATCH overrides the previous
     OPTIONAL MATCH (group:Group)
     WHERE group[filterKey] = $filters[filterKey]
-    `
+    `;
 
-  const as_parent_query = `AND (group)<-[:BELONGS_TO]-(:Group {_id: $subgroup_id})`
-  const as_subgroup_query = `AND (group)-[:BELONGS_TO]->(:Group {_id: $parent_id})`
+  const as_parent_query = `AND (group)<-[:BELONGS_TO]-(:Group {_id: $subgroup_id})`;
+  const as_subgroup_query = `AND (group)-[:BELONGS_TO]->(:Group {_id: $parent_id})`;
 
   // TODO: There must be a simpler way to do this
   const direct_query = `
@@ -109,16 +109,16 @@ export const read_groups = (
         ? "AND NOT (:Group {_id: $subgroup_id})-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(group)"
         : ""
     }
-  `
+  `;
 
-  const shallow_query = "AND NOT (group)-[:BELONGS_TO]->(:Group)"
+  const shallow_query = "AND NOT (group)-[:BELONGS_TO]->(:Group)";
 
-  const official_query = "AND group.official"
+  const official_query = "AND group.official";
   const non_official_query =
-    "AND (group.official IS NULL OR NOT group.official)"
+    "AND (group.official IS NULL OR NOT group.official)";
 
   const search_query =
-    "AND toLower(toString(group.name)) CONTAINS toLower($search) "
+    "AND toLower(toString(group.name)) CONTAINS toLower($search) ";
 
   const query = `
     ${
@@ -137,7 +137,7 @@ export const read_groups = (
     // Renaming as item for universal batching function
     WITH group as item
     ${batch_items(batch_size as number)}
-    `
+    `;
 
   const params = {
     batch_size,
@@ -146,78 +146,78 @@ export const read_groups = (
     subgroup_id,
     filters,
     search,
-  }
+  };
 
-  const session = driver.session()
+  const session = driver.session();
   session
     .run(query, params)
     .then(({ records }) => {
-      const response = format_batched_response(records)
-      res.send(response)
+      const response = format_batched_response(records);
+      res.send(response);
     })
     .catch(next)
     .finally(() => {
-      session.close()
-    })
-}
+      session.close();
+    });
+};
 
 export const read_group = (req: Request, res: Response, next: NextFunction) => {
-  const { group_id } = req.params
+  const { group_id } = req.params;
   if (!group_id || group_id === "undefined")
-    throw createHttpError(400, "Group ID not defined")
+    throw createHttpError(400, "Group ID not defined");
 
-  const query = `MATCH (group:Group {_id: $group_id}) RETURN properties(group) as group`
-  const params = { group_id }
+  const query = `MATCH (group:Group {_id: $group_id}) RETURN properties(group) as group`;
+  const params = { group_id };
 
-  const session = driver.session()
+  const session = driver.session();
   session
     .run(query, params)
     .then(({ records }) => {
       if (!records.length)
-        throw createHttpError(404, `Group ${group_id} not found`)
-      res.send(records[0].get("group"))
+        throw createHttpError(404, `Group ${group_id} not found`);
+      res.send(records[0].get("group"));
     })
     .catch(next)
     .finally(() => {
-      session.close()
-    })
-}
+      session.close();
+    });
+};
 
 export const update_group = (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
-  const { group_id } = req.params
+  const { group_id } = req.params;
   if (!group_id || group_id === "undefined")
-    throw createHttpError(400, "Group ID not defined")
+    throw createHttpError(400, "Group ID not defined");
 
-  const user_id = get_current_user_id(req, res)
+  const user_id = get_current_user_id(req, res);
 
-  const properties = req.body
+  const properties = req.body;
 
   // TODO: Have this list in an external file
-  let customizable_fields = ["avatar_src", "name", "restricted"]
+  let customizable_fields = ["avatar_src", "name", "restricted"];
 
-  const current_user = res.locals.user
+  const current_user = res.locals.user;
   const current_user_is_admin =
-    current_user.isAdmin || current_user.properties.isAdmin
+    current_user.isAdmin || current_user.properties?.isAdmin;
 
   // Allow master admin to make groups officials
   // TODO: improve concatenation
-  if (current_user_is_admin) customizable_fields.push("official")
+  if (current_user_is_admin) customizable_fields.push("official");
 
   // prevent user from modifying disallowed properties
   // TODO: could be achieved using JOI
   for (let [key, value] of Object.entries(properties)) {
     if (!customizable_fields.includes(key)) {
-      delete req.body[key]
+      delete req.body[key];
       // TODO: forbid changes
-      throw createHttpError(403, `Not allowed to modify property ${key}`)
+      throw createHttpError(403, `Not allowed to modify property ${key}`);
     }
   }
 
-  const session = driver.session()
+  const session = driver.session();
 
   const query = `
     MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
@@ -232,45 +232,45 @@ export const update_group = (
     SET group += $properties
 
     RETURN properties(group) as group
-    `
+    `;
 
   const params = {
     user_id,
     group_id,
     properties,
-  }
+  };
 
   session
     .run(query, params)
     .then(({ records }) => {
       if (!records.length)
-        throw createHttpError(400, `Error patching group ${group_id}`)
-      console.log(`User ${user_id} patched group ${group_id}`)
-      const group = records[0].get("group")
-      res.send(group)
+        throw createHttpError(400, `Error patching group ${group_id}`);
+      console.log(`User ${user_id} patched group ${group_id}`);
+      const group = records[0].get("group");
+      res.send(group);
     })
     .catch(next)
-    .finally(() => session.close())
-}
+    .finally(() => session.close());
+};
 
 export const delete_group = (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
-  const { group_id } = req.params
+  const { group_id } = req.params;
   if (!group_id || group_id === "undefined")
-    throw createHttpError(400, "Group ID not defined")
+    throw createHttpError(400, "Group ID not defined");
 
-  const user_id = get_current_user_id(req, res)
+  const user_id = get_current_user_id(req, res);
 
-  const { deep } = req.query
+  const { deep } = req.query;
 
   const deep_delete_query = `
     WITH group
     OPTIONAL MATCH (subgroup:Group)-[:BELONGS_TO]->(group)
     DETACH DELETE subgroup
-  `
+  `;
 
   const query = `
     MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
@@ -286,23 +286,23 @@ export const delete_group = (
     DETACH DELETE group
 
     RETURN $group_id as group_id
-    `
+    `;
 
-  const session = driver.session()
+  const session = driver.session();
 
   session
     .run(query, { user_id, group_id })
     .then(({ records }) => {
       if (!records.length)
-        throw createHttpError(404, `Group ${group_id} not found`)
-      console.log(`User ${user_id} deleted group ${group_id}`)
-      res.send({ group_id })
+        throw createHttpError(404, `Group ${group_id} not found`);
+      console.log(`User ${user_id} deleted group ${group_id}`);
+      res.send({ group_id });
     })
     .catch(next)
     .finally(() => {
-      session.close()
-    })
-}
+      session.close();
+    });
+};
 
 export const add_group_to_group = (
   req: Request,
@@ -312,17 +312,17 @@ export const add_group_to_group = (
   // Route to make a group join a group
   // Can only be done if user is admin of both groups
 
-  const { parent_id } = req.params
-  const subgroup_id = req.params.subgroup_id || req.body.group_id
+  const { parent_id } = req.params;
+  const subgroup_id = req.params.subgroup_id || req.body.group_id;
 
   if (!parent_id || parent_id === "undefined")
-    throw createHttpError(400, "Parent group ID not defined")
+    throw createHttpError(400, "Parent group ID not defined");
   if (!subgroup_id || subgroup_id === "undefined")
-    throw createHttpError(400, "Child group ID not defined")
+    throw createHttpError(400, "Child group ID not defined");
 
-  const user_id = get_current_user_id(req, res)
+  const user_id = get_current_user_id(req, res);
 
-  const session = driver.session()
+  const session = driver.session();
 
   const query = `
     MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
@@ -353,9 +353,9 @@ export const add_group_to_group = (
 
     // Return
     RETURN properties(child_group) as child_group
-    `
+    `;
 
-  const params = { user_id, parent_id, subgroup_id }
+  const params = { user_id, parent_id, subgroup_id };
 
   session
     .run(query, params)
@@ -364,18 +364,18 @@ export const add_group_to_group = (
         throw createHttpError(
           400,
           `Failed to add group ${subgroup_id} in ${parent_id}`
-        )
+        );
       console.log(
         `User ${user_id} added group ${subgroup_id} to group ${parent_id}`
-      )
-      const child_group = records[0].get("child_group")
-      res.send(child_group)
+      );
+      const child_group = records[0].get("child_group");
+      res.send(child_group);
     })
     .catch(next)
     .finally(() => {
-      session.close()
-    })
-}
+      session.close();
+    });
+};
 
 export const remove_group_from_group = (
   req: Request,
@@ -386,16 +386,16 @@ export const remove_group_from_group = (
 
   // TODO: Should the user be admin of child group?
 
-  const { parent_id, subgroup_id } = req.params
+  const { parent_id, subgroup_id } = req.params;
 
   if (!parent_id || parent_id === "undefined")
-    throw createHttpError(400, "Parent group ID not defined")
+    throw createHttpError(400, "Parent group ID not defined");
   if (!subgroup_id || subgroup_id === "undefined")
-    throw createHttpError(400, "Child group ID not defined")
+    throw createHttpError(400, "Child group ID not defined");
 
-  const user_id = get_current_user_id(req, res)
+  const user_id = get_current_user_id(req, res);
 
-  const session = driver.session()
+  const session = driver.session();
 
   const query = `
     MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
@@ -419,13 +419,13 @@ export const remove_group_from_group = (
 
     // Return
     RETURN properties(child_group) as child_group
-  `
+  `;
 
   const params = {
     user_id,
     parent_id,
     subgroup_id,
-  }
+  };
 
   session
     .run(query, params)
@@ -434,15 +434,15 @@ export const remove_group_from_group = (
         throw createHttpError(
           400,
           `Failed to remove group ${subgroup_id} from group ${parent_id}`
-        )
+        );
       console.log(
         `User ${user_id} removed group ${subgroup_id} from group ${parent_id}`
-      )
-      const subgroup = records[0].get("child_group")
-      res.send(subgroup)
+      );
+      const subgroup = records[0].get("child_group");
+      res.send(subgroup);
     })
     .catch(next)
     .finally(() => {
-      session.close()
-    })
-}
+      session.close();
+    });
+};
