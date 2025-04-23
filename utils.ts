@@ -1,17 +1,17 @@
-import { Request, Response, NextFunction } from "express"
-import { authUseridentifiers, dbUserIdentifiers } from "./config"
-import createHttpError from "http-errors"
+import { Request, Response, NextFunction } from "express";
+import { authUseridentifiers, dbUserIdentifiers } from "./config";
+import createHttpError from "http-errors";
 
 export const get_current_user_id = (req: Request, res: Response) => {
-  const current_user = res.locals?.user ?? res.locals?.user?.properties
+  const current_user = res.locals?.user ?? res.locals?.user?.properties;
 
-  if (!current_user) return
+  if (!current_user) return;
 
-  const aui = authUseridentifiers.find((aui) => current_user[aui])
-  if (!aui) return
+  const aui = authUseridentifiers.find((aui) => current_user[aui]);
+  if (!aui) return;
 
-  return current_user[aui]
-}
+  return current_user[aui];
+};
 
 export const batch_items = (batch_size: number) => `
 // Aggregation
@@ -31,25 +31,25 @@ RETURN
   },
   start_index,
   batch_size
-`
+`;
 
 export const format_batched_response = (records: any) => {
-  const record = records[0]
+  const record = records[0];
 
-  if (!record) throw createHttpError(400, "Query did not yield any match")
+  if (!record) throw createHttpError(400, "Query did not yield any match");
 
-  const items = record.get("batch")
+  const items = record.get("batch");
   items.forEach((item: any) => {
-    if (item.password_hashed) delete item.password_hashed
-  })
+    if (item.password_hashed) delete item.password_hashed;
+  });
 
   return {
     batch_size: record.get("batch_size"),
     start_index: record.get("start_index"),
     count: record.get("count"),
     items,
-  }
-}
+  };
+};
 
 export const errorHandler = (
   error: any,
@@ -57,11 +57,18 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ) => {
-  console.error(error)
-  let { statusCode = 500, message = error } = error
-  if (isNaN(statusCode) || statusCode > 600) statusCode = 500
-  res.status(statusCode).send(message)
-}
+  console.error(error);
+  let { statusCode = 500, message = error } = error;
+  if (isNaN(statusCode) || statusCode > 600) statusCode = 500;
+  res.status(statusCode).send(message);
+};
 
 export const getCypherUserIdentifiers = (name: string = "user") =>
-  `[${dbUserIdentifiers.map((i) => `${name}.${i}`).join(",")}]`
+  `[${dbUserIdentifiers.map((i) => `${name}.${i}`).join(",")}]`;
+
+export const filtering_query = `
+WITH item
+UNWIND KEYS($filters) as filterKey
+WITH item, filterKey
+WHERE item[filterKey] = $filters[filterKey]
+`;

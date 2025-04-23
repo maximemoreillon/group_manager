@@ -6,6 +6,7 @@ import {
   batch_items,
   format_batched_response,
   getCypherUserIdentifiers,
+  filtering_query,
 } from "../../utils";
 import { Request, Response, NextFunction } from "express";
 
@@ -86,13 +87,7 @@ export const read_groups = (
     ...filters
   } = req.query;
 
-  const filtering_query = `
-    UNWIND KEYS($filters) as filterKey
-    WITH filterKey
-    // NOTE: This MATCH overrides the previous
-    OPTIONAL MATCH (group:Group)
-    WHERE group[filterKey] = $filters[filterKey]
-    `;
+  const hasFilters = Object.keys(filters).length > 0;
 
   const as_parent_query = `AND (group)<-[:BELONGS_TO]-(:Group {_id: $subgroup_id})`;
   const as_subgroup_query = `AND (group)-[:BELONGS_TO]->(:Group {_id: $parent_id})`;
@@ -121,11 +116,7 @@ export const read_groups = (
     "AND toLower(toString(group.name)) CONTAINS toLower($search) ";
 
   const query = `
-    ${
-      Object.keys(filters).length
-        ? filtering_query
-        : "OPTIONAL MATCH (group:Group) WHERE group._id IS NOT NULL"
-    }    
+    OPTIONAL MATCH (group:Group) WHERE group._id IS NOT NULL
     ${parent_id ? as_subgroup_query : ""}
     ${subgroup_id ? as_parent_query : ""}
     ${direct ? direct_query : ""}
@@ -133,9 +124,11 @@ export const read_groups = (
     ${official ? official_query : ""}
     ${nonofficial ? non_official_query : ""}
     ${search ? search_query : ""}
+
     
-    // Renaming as item for universal batching function
+    // Renaming as item for generic filtering and batching function
     WITH group as item
+    ${hasFilters ? filtering_query : ""}
     ${batch_items(batch_size as number)}
     `;
 

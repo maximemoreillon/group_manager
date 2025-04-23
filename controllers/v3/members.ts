@@ -8,6 +8,7 @@ import {
   batch_items,
   format_batched_response,
   getCypherUserIdentifiers,
+  filtering_query,
 } from "../../utils";
 
 const driver = drivers.v2;
@@ -151,7 +152,13 @@ export const get_members_of_group = (
   if (!group_id || group_id === "undefined")
     throw createHttpError(400, "Group ID not defined");
 
-  const { batch_size = DEFAULT_BATCH_SIZE, start_index = 0 } = req.query;
+  const {
+    batch_size = DEFAULT_BATCH_SIZE,
+    start_index = 0,
+    ...filters
+  } = req.query;
+
+  const hasFilters = Object.keys(filters).length > 0;
 
   const session = driver.session();
 
@@ -163,16 +170,16 @@ export const get_members_of_group = (
     OPTIONAL MATCH (user:User)-[:BELONGS_TO]->(group)
 
     WITH user as item
+    ${hasFilters ? filtering_query : ""} 
     ${batch_items(batch_size as number)}
     `;
 
-  const params = { group_id, batch_size, start_index };
+  const params = { group_id, batch_size, start_index, filters };
 
   session
     .run(query, params)
     .then(({ records }) => {
-      if (!records.length)
-        throw createHttpError(404, `Member query: group ${group_id} not found`);
+      if (!records.length) throw createHttpError(404, `No record found`);
       const response = format_batched_response(records);
       res.send(response);
     })
@@ -254,7 +261,6 @@ export const get_groups_of_user = (
   if (user_id === "self") user_id = get_current_user_id(req, res);
   if (!user_id) throw createHttpError(400, "User ID not defined");
 
-  // TODO: add filters
   const {
     batch_size = DEFAULT_BATCH_SIZE,
     start_index = 0,
@@ -264,13 +270,9 @@ export const get_groups_of_user = (
     ...filters
   } = req.query;
 
-  const session = driver.session();
+  const hasFilters = Object.keys(filters).length > 0;
 
-  const filtering_query = `
-    UNWIND KEYS($filters) as filterKey
-    WITH filterKey, group
-    WHERE group[filterKey] = $filters[filterKey]
-    `;
+  const session = driver.session();
 
   const shallow_query =
     "AND NOT (group)-[:BELONGS_TO]->(:Group)<-[:BELONGS_TO]-(user)";
@@ -287,12 +289,12 @@ export const get_groups_of_user = (
     // using dummy WHERE here so as to use AND in other queryies
     WHERE group._id IS NOT NULL
     
-    ${Object.keys(filters).length ? filtering_query : ""} 
     ${shallow ? shallow_query : ""}
     ${official ? official_query : ""}
     ${nonofficial ? non_official_query : ""}
-
+    
     WITH group as item
+    ${hasFilters ? filtering_query : ""} 
     ${batch_items(batch_size as number)}
     `;
 
@@ -319,16 +321,23 @@ export const users_with_no_group = (
 ) => {
   const session = driver.session();
 
-  const { batch_size = DEFAULT_BATCH_SIZE, start_index = 0 } = req.query;
+  const {
+    batch_size = DEFAULT_BATCH_SIZE,
+    start_index = 0,
+    ...filters
+  } = req.query;
+
+  const hasFilters = Object.keys(filters).length > 0;
 
   const query = `
     OPTIONAL MATCH (user:User)
     WHERE NOT (user)-[:BELONGS_TO]->(:Group)
     WITH user as item
+    ${hasFilters ? filtering_query : ""}
     ${batch_items(batch_size as number)}
     `;
 
-  const params = { batch_size, start_index };
+  const params = { batch_size, start_index, filters };
 
   session
     .run(query, params)

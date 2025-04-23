@@ -1,77 +1,85 @@
-import { drivers } from "../../db"
-import createHttpError from "http-errors"
-import { Request, Response, NextFunction } from "express"
+import { drivers } from "../../db";
+import createHttpError from "http-errors";
+import { Request, Response, NextFunction } from "express";
 
 import {
   get_current_user_id,
   batch_items,
   format_batched_response,
   getCypherUserIdentifiers,
-} from "../../utils"
+  filtering_query,
+} from "../../utils";
 
-import { DEFAULT_BATCH_SIZE } from "../../config"
+import { DEFAULT_BATCH_SIZE } from "../../config";
 
-const driver = drivers.v2
+const driver = drivers.v2;
 
 export const get_administrators_of_group = (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
-  const { group_id } = req.params
+  const { group_id } = req.params;
   if (!group_id || group_id === "undefined")
-    throw createHttpError(400, "Group ID not defined")
+    throw createHttpError(400, "Group ID not defined");
 
-  const { batch_size = DEFAULT_BATCH_SIZE, start_index = 0 } = req.query
+  const {
+    batch_size = DEFAULT_BATCH_SIZE,
+    start_index = 0,
+    ...filters
+  } = req.query;
 
-  const session = driver.session()
+  const hasFilters = Object.keys(filters).length > 0;
+
+  const session = driver.session();
 
   const query = `
     MATCH (group:Group {_id: $group_id})
     WITH group
     OPTIONAL MATCH (admin:User)<-[:ADMINISTRATED_BY]-(group:Group)
     WITH admin as item
+    ${hasFilters ? filtering_query : ""}
     ${batch_items(batch_size as number)}
-    `
+    `;
 
-  const params = { group_id, batch_size, start_index }
+  const params = { group_id, batch_size, start_index, filters };
 
   session
     .run(query, params)
     .then(({ records }) => {
       if (!records.length)
-        throw createHttpError(400, `Group ${group_id} not found`)
-      const response = format_batched_response(records)
-      res.send(response)
+        throw createHttpError(400, `Group ${group_id} not found`);
+      const response = format_batched_response(records);
+      res.send(response);
     })
     .catch(next)
     .finally(() => {
-      session.close()
-    })
-}
+      session.close();
+    });
+};
 
 export const make_user_administrator_of_group = (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
-  const { group_id } = req.params
-  const { user_id, user_ids } = req.body
+  const { group_id } = req.params;
+  const { user_id, user_ids } = req.body;
 
   if (!group_id || group_id === "undefined")
-    throw createHttpError(400, "Group ID not defined")
+    throw createHttpError(400, "Group ID not defined");
   if (!user_id && !user_ids)
-    throw createHttpError(400, "User ID(s) not defined")
+    throw createHttpError(400, "User ID(s) not defined");
 
-  const current_user_id = get_current_user_id(req, res)
+  const current_user_id = get_current_user_id(req, res);
 
-  const session = driver.session()
+  const session = driver.session();
 
   const single_user_add_query = `
     WITH group
     MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
     MERGE (user)<-[:ADMINISTRATED_BY]-(group)
-    `
+    `;
 
   const multiple_user_add_query = `
     WITH group
@@ -86,7 +94,7 @@ export const make_user_administrator_of_group = (
     WHERE user_id IN ${getCypherUserIdentifiers("user")}
     WITH group, collect(user) as users
     FOREACH(user IN users | MERGE (user)<-[:ADMINISTRATED_BY]-(group))
-    `
+    `;
 
   const query = `
     MATCH (current_user:User) WHERE $current_user_id IN ${getCypherUserIdentifiers(
@@ -106,40 +114,40 @@ export const make_user_administrator_of_group = (
 
     // Return
     RETURN properties(group) as group
-    `
+    `;
 
-  const params = { current_user_id, user_id, user_ids, group_id }
+  const params = { current_user_id, user_id, user_ids, group_id };
 
   session
     .run(query, params)
     .then(({ records }) => {
       if (!records.length)
-        throw createHttpError(400, `Error adding user to administrators`)
-      console.log(`User ${user_id} added administrators to group ${group_id}`)
-      res.send(records[0].get("group"))
+        throw createHttpError(400, `Error adding user to administrators`);
+      console.log(`User ${user_id} added administrators to group ${group_id}`);
+      res.send(records[0].get("group"));
     })
     .catch(next)
     .finally(() => {
-      session.close()
-    })
-}
+      session.close();
+    });
+};
 
 export const remove_user_from_administrators = (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
-  const { group_id } = req.params
-  const { administrator_id: user_id } = req.params
+  const { group_id } = req.params;
+  const { administrator_id: user_id } = req.params;
 
   if (!group_id || group_id === "undefined")
-    throw createHttpError(400, "Group ID not defined")
+    throw createHttpError(400, "Group ID not defined");
   if (!user_id || user_id === "undefined")
-    throw createHttpError(400, "Administrator ID not defined")
+    throw createHttpError(400, "Administrator ID not defined");
 
-  const session = driver.session()
+  const session = driver.session();
 
-  const current_user_id = get_current_user_id(req, res)
+  const current_user_id = get_current_user_id(req, res);
 
   const query = `
     MATCH (current_user:User) WHERE $current_user_id IN ${getCypherUserIdentifiers(
@@ -157,37 +165,37 @@ export const remove_user_from_administrators = (
 
     // Return
     RETURN properties(group) as group
-    `
+    `;
 
   const params = {
     current_user_id,
     user_id,
     group_id,
-  }
+  };
 
   session
     .run(query, params)
     .then(({ records }) => {
       if (!records.length)
-        throw createHttpError(400, `Error removing from administrators`)
+        throw createHttpError(400, `Error removing from administrators`);
       console.log(
         `User ${user_id} removed from administrators of group ${group_id}`
-      )
-      res.send(records[0].get("group"))
+      );
+      res.send(records[0].get("group"));
     })
     .catch(next)
     .finally(() => {
-      session.close()
-    })
-}
+      session.close();
+    });
+};
 
 export const get_groups_of_administrator = (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
-  let { administrator_id: user_id } = req.params
-  if (user_id === "self") user_id = get_current_user_id(req, res)
+  let { administrator_id: user_id } = req.params;
+  if (user_id === "self") user_id = get_current_user_id(req, res);
 
   const {
     batch_size = DEFAULT_BATCH_SIZE,
@@ -195,13 +203,16 @@ export const get_groups_of_administrator = (
     shallow,
     official,
     nonofficial,
-  } = req.query
+    ...filters
+  } = req.query;
+
+  const hasFilters = Object.keys(filters).length > 0;
 
   const shallow_query =
-    "AND NOT (group)-[:BELONGS_TO]->(:Group)<-[:ADMINISTRATED_BY]-(user)"
-  const official_query = "AND group.official"
+    "AND NOT (group)-[:BELONGS_TO]->(:Group)<-[:ADMINISTRATED_BY]-(user)";
+  const official_query = "AND group.official";
   const non_official_query =
-    "AND ( group.official IS NULL OR NOT group.official)"
+    "AND ( group.official IS NULL OR NOT group.official)";
   const query = `
     MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
     WITH user
@@ -214,22 +225,23 @@ export const get_groups_of_administrator = (
     ${nonofficial ? non_official_query : ""}
 
     WITH group as item
+    ${hasFilters ? filtering_query : ""}
     ${batch_items(batch_size as number)}
-    `
+    `;
 
-  const params = { user_id, batch_size, start_index }
+  const params = { user_id, batch_size, start_index, filters };
 
-  const session = driver.session()
+  const session = driver.session();
   session
     .run(query, params)
     .then(({ records }) => {
       if (!records.length)
-        throw createHttpError(400, `User ${user_id} not found`)
-      const response = format_batched_response(records)
-      res.send(response)
+        throw createHttpError(400, `User ${user_id} not found`);
+      const response = format_batched_response(records);
+      res.send(response);
     })
     .catch(next)
     .finally(() => {
-      session.close()
-    })
-}
+      session.close();
+    });
+};
