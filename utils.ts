@@ -3,7 +3,7 @@ import { authUseridentifiers, dbUserIdentifiers } from "./config";
 import createHttpError from "http-errors";
 
 export const get_current_user_id = (req: Request, res: Response) => {
-  const current_user = res.locals?.user ?? res.locals?.user?.properties;
+  const current_user = res.locals?.user?.properties ?? res.locals?.user;
 
   if (!current_user) return;
 
