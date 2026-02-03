@@ -2,6 +2,7 @@ import { Router } from "express"
 
 import administrator_router from "./administrators"
 import member_router from "./members"
+import system_administrators from "./systemAdmins"
 
 import {
   create_group,
@@ -51,5 +52,6 @@ router.use("/users", member_router)
 // Administrators
 router.use("/groups/:group_id/administrators", administrator_router)
 router.use("/administrators", administrator_router)
+router.use("/system/administrators", system_administrators)
 
 export default router

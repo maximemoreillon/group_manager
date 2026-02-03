@@ -13,11 +13,12 @@ export const get_system_admins = async (
     res: Response,
     next: NextFunction
 ) => {
-    if (!defaultAdmins.length) {
+    if (defaultAdmins.size === 0) {
         return res.send([]);
     }
 
     const session = driver.session();
+    const identifiers = [...defaultAdmins];
 
     const query = `
     MATCH (user:User)
@@ -29,7 +30,7 @@ export const get_system_admins = async (
 
     try {
         const { records } = await session.run(query, {
-            identifiers: defaultAdmins,
+            identifiers: identifiers,
         });
 
         const users = records.map(r => {

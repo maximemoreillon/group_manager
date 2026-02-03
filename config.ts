@@ -14,4 +14,9 @@ export const dbUserIdentifiers = ["_id", ...additionalDbUseridentifiers]
 const additionalAuthUserIdentifiers = AUTH_USER_ID_FIELDS?.split(",") ?? []
 export const authUseridentifiers = ["_id", ...additionalAuthUserIdentifiers]
 
-export const defaultAdmins = DEFAULT_ADMINS?.split(",") ?? []
+export const defaultAdmins = new Set(
+  (DEFAULT_ADMINS ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+);
