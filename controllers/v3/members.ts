@@ -2,7 +2,7 @@ import createHttpError from "http-errors";
 import { drivers } from "../../db";
 import { Request, Response, NextFunction } from "express";
 
-import { DEFAULT_BATCH_SIZE } from "../../config";
+import { DEFAULT_BATCH_SIZE, defaultAdmins } from "../../config";
 import {
   get_current_user_id,
   batch_items,
@@ -29,6 +29,9 @@ export const add_member_to_group = (
     throw createHttpError(400, "User ID(s) not defined");
 
   const session = driver.session();
+
+  // DEFAULT_ADMINS replaces current_user.isAdmin
+  const is_system_admin = defaultAdmins.has(current_user_id);
 
   const join_possible_check = `
     // Allow user to join unrestricted groups even if not admin
@@ -61,14 +64,14 @@ export const add_member_to_group = (
 
   const query = `
     MATCH (current_user:User) WHERE $current_user_id IN ${getCypherUserIdentifiers(
-      "current_user"
-    )}
+    "current_user"
+  )}
 
     WITH current_user
     MATCH (group:Group {_id: $group_id})
     // Allow only group admin or super admin to manage group
     WHERE ( 
-      (group)-[:ADMINISTRATED_BY]->(current_user) OR current_user.isAdmin
+      (group)-[:ADMINISTRATED_BY]->(current_user) OR $is_system_admin
       // Allowing oneself to join if group is not restricted
       ${user_id ? join_possible_check : ""}
     )
@@ -83,7 +86,13 @@ export const add_member_to_group = (
     RETURN properties(group) as group
     `;
 
-  const params = { current_user_id, user_id, user_ids, group_id };
+  const params = {
+    current_user_id,
+    user_id,
+    user_ids,
+    group_id,
+    is_system_admin,
+  };
 
   session
     .run(query, params)
@@ -91,14 +100,12 @@ export const add_member_to_group = (
       if (!records.length)
         throw createHttpError(
           400,
-          `Error adding adding user(s) ${
-            user_id || user_ids.join(", ")
-          } to group ${group_id}`
+          `Error adding adding user(s) ${user_id || user_ids.join(", ")
+          } to group ${group_id}. Please check that you have admin privileges or that the group allows self-joining.`
         );
 
       console.log(
-        `User ${current_user_id} added user(s) ${
-          user_id || user_ids.join(", ")
+        `User ${current_user_id} added user(s) ${user_id || user_ids.join(", ")
         } to group ${group_id}`
       );
 
@@ -203,41 +210,42 @@ export const remove_user_from_group = (
     throw createHttpError(400, "Group ID not defined");
   if (!user_id) throw createHttpError(400, "User ID not defined");
 
+  // DEFAULT_ADMINS replaces current_user.isAdmin
+  const is_system_admin = defaultAdmins.has(current_user_id);
   const session = driver.session();
 
   const query = `
     MATCH (current_user:User) WHERE $current_user_id IN ${getCypherUserIdentifiers(
-      "current_user"
-    )}
+    "current_user"
+  )}
 
     WITH current_user
     MATCH (group:Group {_id: $group_id})
     WHERE ( 
       (group)-[:ADMINISTRATED_BY]->(current_user) 
-      OR current_user.isAdmin
+      OR $is_system_admin
       // Allow oneself to leave group
       OR $user_id = $current_user_id 
     )
     
     WITH group
     MATCH (user:User)-[r:BELONGS_TO]->(group) WHERE $user_id IN ${getCypherUserIdentifiers(
-      "user"
-    )}
+    "user"
+  )}
 
     DELETE r
 
     RETURN properties(group) as group
     `;
 
-  const params = { current_user_id, user_id, group_id };
+  const params = { current_user_id, user_id, group_id, is_system_admin };
   session
-
     .run(query, params)
     .then(({ records }) => {
       if (!records.length)
         throw createHttpError(
           400,
-          `Error removing using ${user_id} from group ${group_id}`
+          `Error removing using ${user_id} from group ${group_id}. Please check that you have admin privileges.`
         );
       console.log(
         `User ${current_user_id} removed user ${user_id} from group ${group_id}`

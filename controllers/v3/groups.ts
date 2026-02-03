@@ -1,6 +1,6 @@
 import createHttpError from "http-errors";
 import { drivers } from "../../db";
-import { DEFAULT_BATCH_SIZE } from "../../config";
+import { DEFAULT_BATCH_SIZE, defaultAdmins } from "../../config";
 import {
   get_current_user_id,
   batch_items,
@@ -94,15 +94,13 @@ export const read_groups = (
 
   // TODO: There must be a simpler way to do this
   const direct_query = `
-    ${
-      parent_id
-        ? "AND NOT (group)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(:Group {_id: $parent_id})"
-        : ""
+    ${parent_id
+      ? "AND NOT (group)-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(:Group {_id: $parent_id})"
+      : ""
     }
-    ${
-      subgroup_id
-        ? "AND NOT (:Group {_id: $subgroup_id})-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(group)"
-        : ""
+    ${subgroup_id
+      ? "AND NOT (:Group {_id: $subgroup_id})-[:BELONGS_TO]->(:Group)-[:BELONGS_TO]->(group)"
+      : ""
     }
   `;
 
@@ -191,10 +189,7 @@ export const update_group = (
 
   // TODO: Have this list in an external file
   let customizable_fields = ["avatar_src", "name", "restricted"];
-
-  const current_user = res.locals.user;
-  const current_user_is_admin =
-    current_user.isAdmin || current_user.properties?.isAdmin;
+  const current_user_is_admin = defaultAdmins.has(user_id);;
 
   // Allow master admin to make groups officials
   // TODO: improve concatenation
@@ -218,7 +213,7 @@ export const update_group = (
     WITH user
     MATCH (group:Group {_id: $group_id})
     // Only allow group admin or super admin
-    WHERE ( (group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
+    WHERE ( (group)-[:ADMINISTRATED_BY]->(user) OR $current_user_is_admin )
 
     // Patch properties
     // += implies update of existing properties
@@ -231,13 +226,14 @@ export const update_group = (
     user_id,
     group_id,
     properties,
+    current_user_is_admin
   };
 
   session
     .run(query, params)
     .then(({ records }) => {
       if (!records.length)
-        throw createHttpError(400, `Error patching group ${group_id}`);
+        throw createHttpError(400, `Error patching group ${group_id}. Please check that you have admin privileges.`);
       console.log(`User ${user_id} patched group ${group_id}`);
       const group = records[0].get("group");
       res.send(group);
@@ -256,6 +252,7 @@ export const delete_group = (
     throw createHttpError(400, "Group ID not defined");
 
   const user_id = get_current_user_id(req, res);
+  const current_user_is_admin = defaultAdmins.has(user_id);;
 
   const { deep } = req.query;
 
@@ -271,7 +268,7 @@ export const delete_group = (
     MATCH (group:Group {_id: $group_id})
 
     // Only allow group admin or super admin
-    WHERE ( (group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
+    WHERE ( (group)-[:ADMINISTRATED_BY]->(user) OR $current_user_is_admin )
 
     ${deep === "true" ? deep_delete_query : ""}
 
@@ -284,10 +281,10 @@ export const delete_group = (
   const session = driver.session();
 
   session
-    .run(query, { user_id, group_id })
+    .run(query, { user_id, group_id, current_user_is_admin })
     .then(({ records }) => {
       if (!records.length)
-        throw createHttpError(404, `Group ${group_id} not found`);
+        throw createHttpError(404, `Error deleting group ${group_id}. Please check that you have admin privileges.`);
       console.log(`User ${user_id} deleted group ${group_id}`);
       res.send({ group_id });
     })
@@ -315,6 +312,9 @@ export const add_group_to_group = (
 
   const user_id = get_current_user_id(req, res);
 
+  // DEFAULT_ADMINS replaces current_user.isAdmin
+  const is_system_admin = defaultAdmins.has(user_id);
+
   const session = driver.session();
 
   const query = `
@@ -326,13 +326,13 @@ export const add_group_to_group = (
 
     // Allow only group admin or super admin to delete a group
     WHERE child_group._id = $subgroup_id
-      AND ( (child_group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
+      AND ( (child_group)-[:ADMINISTRATED_BY]->(user) OR $is_system_admin )
 
     // Find the parent group
     WITH child_group, user
     MATCH (parent_group:Group)
     WHERE parent_group._id = $parent_id
-      AND ( (parent_group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
+      AND ( (parent_group)-[:ADMINISTRATED_BY]->(user) OR $is_system_admin )
 
       // Prevent cyclic graphs (NOT WORKING)
       AND NOT (parent_group)-[:BELONGS_TO]->(child_group)
@@ -348,7 +348,7 @@ export const add_group_to_group = (
     RETURN properties(child_group) as child_group
     `;
 
-  const params = { user_id, parent_id, subgroup_id };
+  const params = { user_id, parent_id, subgroup_id, is_system_admin };
 
   session
     .run(query, params)
@@ -356,7 +356,7 @@ export const add_group_to_group = (
       if (!records.length)
         throw createHttpError(
           400,
-          `Failed to add group ${subgroup_id} in ${parent_id}`
+          `Failed to add group ${subgroup_id} in ${parent_id}. Please check that you have admin privileges or that the group allows self-joining.`
         );
       console.log(
         `User ${user_id} added group ${subgroup_id} to group ${parent_id}`
@@ -388,6 +388,9 @@ export const remove_group_from_group = (
 
   const user_id = get_current_user_id(req, res);
 
+  // DEFAULT_ADMINS replaces current_user.isAdmin
+  const is_system_admin = defaultAdmins.has(user_id);
+
   const session = driver.session();
 
   const query = `
@@ -399,13 +402,13 @@ export const remove_group_from_group = (
 
     // Allow only group admin or super admin to remove a group
     WHERE child_group._id = $subgroup_id
-      AND ( (child_group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
+      AND ( (child_group)-[:ADMINISTRATED_BY]->(user) OR $is_system_admin )
 
     // Find the parent group
     WITH child_group, user
     MATCH (child_group)-[r:BELONGS_TO]->(parent_group:Group)
     WHERE parent_group._id = $parent_id
-      AND ( (parent_group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
+      AND ( (parent_group)-[:ADMINISTRATED_BY]->(user) OR $is_system_admin )
 
     // delete relationship
     DELETE r
@@ -418,6 +421,7 @@ export const remove_group_from_group = (
     user_id,
     parent_id,
     subgroup_id,
+    is_system_admin
   };
 
   session
@@ -426,7 +430,7 @@ export const remove_group_from_group = (
       if (!records.length)
         throw createHttpError(
           400,
-          `Failed to remove group ${subgroup_id} from group ${parent_id}`
+          `Failed to remove group ${subgroup_id} from group ${parent_id}. Please check that you have admin privileges.`
         );
       console.log(
         `User ${user_id} removed group ${subgroup_id} from group ${parent_id}`

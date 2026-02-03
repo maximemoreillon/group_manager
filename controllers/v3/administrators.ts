@@ -10,7 +10,7 @@ import {
   filtering_query,
 } from "../../utils";
 
-import { DEFAULT_BATCH_SIZE } from "../../config";
+import { DEFAULT_BATCH_SIZE, defaultAdmins } from "../../config";
 
 const driver = drivers.v2;
 
@@ -73,6 +73,9 @@ export const make_user_administrator_of_group = (
 
   const current_user_id = get_current_user_id(req, res);
 
+  // DEFAULT_ADMINS replaces current_user.isAdmin
+  const is_system_admin = defaultAdmins.has(current_user_id);
+
   const session = driver.session();
 
   const single_user_add_query = `
@@ -98,13 +101,13 @@ export const make_user_administrator_of_group = (
 
   const query = `
     MATCH (current_user:User) WHERE $current_user_id IN ${getCypherUserIdentifiers(
-      "current_user"
-    )}
+    "current_user"
+  )}
 
     WITH current_user
     MATCH (group:Group {_id: $group_id})
     // Allow only group admin or super admin to delete a group
-    WHERE ( (group)-[:ADMINISTRATED_BY]->(current_user) OR current_user.isAdmin )
+    WHERE ( (group)-[:ADMINISTRATED_BY]->(current_user) OR $is_system_admin )
 
     // Create relationship for single user
     ${user_id ? single_user_add_query : ""}
@@ -116,13 +119,13 @@ export const make_user_administrator_of_group = (
     RETURN properties(group) as group
     `;
 
-  const params = { current_user_id, user_id, user_ids, group_id };
+  const params = { current_user_id, user_id, user_ids, group_id, is_system_admin };
 
   session
     .run(query, params)
     .then(({ records }) => {
       if (!records.length)
-        throw createHttpError(400, `Error adding user to administrators`);
+        throw createHttpError(400, `Error adding user to administrators. Please check that you have admin privileges.`);
       console.log(`User ${user_id} added administrators to group ${group_id}`);
       res.send(records[0].get("group"));
     })
@@ -149,14 +152,17 @@ export const remove_user_from_administrators = (
 
   const current_user_id = get_current_user_id(req, res);
 
+  // DEFAULT_ADMINS replaces current_user.isAdmin
+  const is_system_admin = defaultAdmins.has(current_user_id);
+
   const query = `
     MATCH (current_user:User) WHERE $current_user_id IN ${getCypherUserIdentifiers(
-      "current_user"
-    )}
+    "current_user"
+  )}
 
     WITH current_user
     MATCH (group:Group {_id: $group_id})
-    WHERE ( (group)-[:ADMINISTRATED_BY]->(current_user) OR current_user.isAdmin )
+    WHERE ( (group)-[:ADMINISTRATED_BY]->(current_user) OR $is_system_admin )
 
     WITH group
     MATCH (group)-[r:ADMINISTRATED_BY]->(user:User {_id: $user_id})
@@ -171,13 +177,14 @@ export const remove_user_from_administrators = (
     current_user_id,
     user_id,
     group_id,
+    is_system_admin
   };
 
   session
     .run(query, params)
     .then(({ records }) => {
       if (!records.length)
-        throw createHttpError(400, `Error removing from administrators`);
+        throw createHttpError(400, `Error removing from administrators. Please check that you have admin privileges.`);
       console.log(
         `User ${user_id} removed from administrators of group ${group_id}`
       );
