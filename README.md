@@ -61,6 +61,7 @@ For more information, please visit the project page [here](https://articles.maxi
 | /v3/groups/{group_id}/administrators/{administrator_id} | POST   | -          | Adds an administrator to the group                                                         |
 | /v3/groups/{group_id}/administrators/{administrator_id} | DELETE | -          | Removes an administrator from the group                                                    |
 | /v3/administrators/{administrators_id}/groups           | GET    | -          | Gets the groups administrated by a user, here, use 'self' as member_id of one's own groups |
+| /v3/system/administrators                               | GET    | -          | Returns the list of system administrators defined in `DEFAULT_ADMINS`                      |
 
 ### Pagination
 
@@ -68,16 +69,17 @@ To limit the size of responses, groups, members and administrators are provided 
 
 ## Environment variables
 
-| Variable            | Description                                                                             |
-| ------------------- | --------------------------------------------------------------------------------------- |
-| APP_PORT            | Application that the app listens on                                                     |
-| NEO4J_URL           | URL of the Neo4j database                                                               |
-| NEO4J_USERNAME      | Username for the Neo4j database                                                         |
-| NEO4J_PASSWORD      | Password for the Neo4j database                                                         |
-| OIDC_JWKS_URI       | URI for the JWKS of by the OAuth provider                                               |
-| IDENTIFICATION_URL  | URL of the user identification endpoint (legacy)                                        |
-| DB_USER_ID_FIELDS   | Fields of a Neo4J user record that can be used as identifier                            |
-| AUTH_USER_ID_FIELDS | Fields of the user profile provided by the auth provider that can be used as identifier |
+| Variable            | Description                                                                                                                                  |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| APP_PORT            | Application that the app listens on                                                                                                          |
+| NEO4J_URL           | URL of the Neo4j database                                                                                                                    |
+| NEO4J_USERNAME      | Username for the Neo4j database                                                                                                              |
+| NEO4J_PASSWORD      | Password for the Neo4j database                                                                                                              |
+| OIDC_JWKS_URI       | URI for the JWKS of by the OAuth provider                                                                                                    |
+| IDENTIFICATION_URL  | URL of the user identification endpoint (legacy)                                                                                             |
+| DB_USER_ID_FIELDS   | Fields of a Neo4J user record that can be used as identifier                                                                                 |
+| AUTH_USER_ID_FIELDS | Fields of the user profile provided by the auth provider that can be used as identifier                                                      |
+| DEFAULT_ADMINS      | Comma-separated list of user identifiers (`_id` or `username`) treated as system administrators. Recommended over relying on `User.isAdmin`. |
 
 ## Docker image
 
