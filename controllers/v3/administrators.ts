@@ -73,7 +73,7 @@ export const make_user_administrator_of_group = (
 
   const current_user_id = get_current_user_id(req, res);
 
-  // DEFAULT_ADMINS replaces current_user.isAdmin
+  // DEFAULT_ADMINS in addition to current_user.isAdmin
   const is_system_admin = defaultAdmins.has(current_user_id);
 
   const session = driver.session();
@@ -155,7 +155,7 @@ export const remove_user_from_administrators = (
 
   const current_user_id = get_current_user_id(req, res);
 
-  // DEFAULT_ADMINS replaces current_user.isAdmin
+  // DEFAULT_ADMINS in addition to current_user.isAdmin
   const is_system_admin = defaultAdmins.has(current_user_id);
 
   const query = `

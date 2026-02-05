@@ -30,7 +30,7 @@ export const add_member_to_group = (
 
   const session = driver.session();
 
-  // DEFAULT_ADMINS replaces current_user.isAdmin
+  // DEFAULT_ADMINS in addition to current_user.isAdmin
   const is_system_admin = defaultAdmins.has(current_user_id);
 
   const join_possible_check = `
@@ -212,7 +212,7 @@ export const remove_user_from_group = (
     throw createHttpError(400, "Group ID not defined");
   if (!user_id) throw createHttpError(400, "User ID not defined");
 
-  // DEFAULT_ADMINS replaces current_user.isAdmin
+  // DEFAULT_ADMINS in addition to current_user.isAdmin
   const is_system_admin = defaultAdmins.has(current_user_id);
   const session = driver.session();
 

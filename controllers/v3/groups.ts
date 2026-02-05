@@ -318,7 +318,7 @@ export const add_group_to_group = (
 
   const user_id = get_current_user_id(req, res);
 
-  // DEFAULT_ADMINS replaces current_user.isAdmin
+  //  DEFAULT_ADMINS in addition to current_user.isAdmin
   const is_system_admin = defaultAdmins.has(user_id);
 
   const session = driver.session();
@@ -400,7 +400,7 @@ export const remove_group_from_group = (
 
   const user_id = get_current_user_id(req, res);
 
-  // DEFAULT_ADMINS replaces current_user.isAdmin
+  // DEFAULT_ADMINS in addition to current_user.isAdmin
   const is_system_admin = defaultAdmins.has(user_id);
 
   const session = driver.session();
