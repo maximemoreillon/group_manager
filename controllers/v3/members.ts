@@ -71,7 +71,9 @@ export const add_member_to_group = (
     MATCH (group:Group {_id: $group_id})
     // Allow only group admin or super admin to manage group
     WHERE ( 
-      (group)-[:ADMINISTRATED_BY]->(current_user) OR $is_system_admin
+      (group)-[:ADMINISTRATED_BY]->(current_user) 
+      OR current_user.isAdmin
+      OR $is_system_admin
       // Allowing oneself to join if group is not restricted
       ${user_id ? join_possible_check : ""}
     )
@@ -223,6 +225,7 @@ export const remove_user_from_group = (
     MATCH (group:Group {_id: $group_id})
     WHERE ( 
       (group)-[:ADMINISTRATED_BY]->(current_user) 
+      OR current_user.isAdmin
       OR $is_system_admin
       // Allow oneself to leave group
       OR $user_id = $current_user_id 

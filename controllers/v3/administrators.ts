@@ -107,7 +107,10 @@ export const make_user_administrator_of_group = (
     WITH current_user
     MATCH (group:Group {_id: $group_id})
     // Allow only group admin or super admin to delete a group
-    WHERE ( (group)-[:ADMINISTRATED_BY]->(current_user) OR $is_system_admin )
+    WHERE ( (group)-[:ADMINISTRATED_BY]->(current_user) 
+      OR current_user.isAdmin
+      OR $is_system_admin
+    )
 
     // Create relationship for single user
     ${user_id ? single_user_add_query : ""}
@@ -162,7 +165,10 @@ export const remove_user_from_administrators = (
 
     WITH current_user
     MATCH (group:Group {_id: $group_id})
-    WHERE ( (group)-[:ADMINISTRATED_BY]->(current_user) OR $is_system_admin )
+    WHERE ( (group)-[:ADMINISTRATED_BY]->(current_user) 
+      OR current_user.isAdmin
+      OR $is_system_admin
+    )
 
     WITH group
     MATCH (group)-[r:ADMINISTRATED_BY]->(user:User {_id: $user_id})

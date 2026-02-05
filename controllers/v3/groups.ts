@@ -213,7 +213,10 @@ export const update_group = (
     WITH user
     MATCH (group:Group {_id: $group_id})
     // Only allow group admin or super admin
-    WHERE ( (group)-[:ADMINISTRATED_BY]->(user) OR $current_user_is_admin )
+    WHERE ( (group)-[:ADMINISTRATED_BY]->(user) 
+      OR user.isAdmin
+      OR $current_user_is_admin 
+    )
 
     // Patch properties
     // += implies update of existing properties
@@ -268,7 +271,10 @@ export const delete_group = (
     MATCH (group:Group {_id: $group_id})
 
     // Only allow group admin or super admin
-    WHERE ( (group)-[:ADMINISTRATED_BY]->(user) OR $current_user_is_admin )
+    WHERE ( (group)-[:ADMINISTRATED_BY]->(user) 
+      OR user.isAdmin
+      OR $current_user_is_admin 
+    )
 
     ${deep === "true" ? deep_delete_query : ""}
 
@@ -326,13 +332,19 @@ export const add_group_to_group = (
 
     // Allow only group admin or super admin to delete a group
     WHERE child_group._id = $subgroup_id
-      AND ( (child_group)-[:ADMINISTRATED_BY]->(user) OR $is_system_admin )
+      AND ( (child_group)-[:ADMINISTRATED_BY]->(user)
+        OR user.isAdmin
+        OR $is_system_admin 
+       )
 
     // Find the parent group
     WITH child_group, user
     MATCH (parent_group:Group)
     WHERE parent_group._id = $parent_id
-      AND ( (parent_group)-[:ADMINISTRATED_BY]->(user) OR $is_system_admin )
+      AND ( (parent_group)-[:ADMINISTRATED_BY]->(user) 
+        OR user.isAdmin
+        OR $is_system_admin 
+      )
 
       // Prevent cyclic graphs (NOT WORKING)
       AND NOT (parent_group)-[:BELONGS_TO]->(child_group)
@@ -402,13 +414,19 @@ export const remove_group_from_group = (
 
     // Allow only group admin or super admin to remove a group
     WHERE child_group._id = $subgroup_id
-      AND ( (child_group)-[:ADMINISTRATED_BY]->(user) OR $is_system_admin )
+      AND ( (child_group)-[:ADMINISTRATED_BY]->(user) 
+      OR user.isAdmin
+      OR $is_system_admin 
+    )
 
     // Find the parent group
     WITH child_group, user
     MATCH (child_group)-[r:BELONGS_TO]->(parent_group:Group)
     WHERE parent_group._id = $parent_id
-      AND ( (parent_group)-[:ADMINISTRATED_BY]->(user) OR $is_system_admin )
+      AND ( (parent_group)-[:ADMINISTRATED_BY]->(user) 
+        OR user.isAdmin
+        OR $is_system_admin 
+      )
 
     // delete relationship
     DELETE r
