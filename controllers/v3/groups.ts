@@ -31,6 +31,8 @@ export const create_group = (
     CREATE (group:Group)
     SET group.name = $name
     SET group._id = randomUUID() // IMPORTANT
+    SET group.restricted = true
+    SET group.hidden = true
 
     // Create relationships
     WITH group
@@ -76,6 +78,8 @@ export const read_groups = (
 
   const { parent_id, subgroup_id } = req.params;
 
+  const user_id = get_current_user_id(req, res);
+
   const {
     batch_size = DEFAULT_BATCH_SIZE,
     start_index = 0,
@@ -116,7 +120,16 @@ export const read_groups = (
     "AND toLower(toString(group.name)) CONTAINS toLower($search) ";
 
   const query = `
+    MATCH (current_user:User) WHERE $user_id IN ${getCypherUserIdentifiers("current_user")}
+    WITH current_user
     OPTIONAL MATCH (group:Group) WHERE group._id IS NOT NULL
+    AND (
+      group.official
+      OR (group.hidden IS NULL OR NOT group.hidden)
+      OR (group)<-[:BELONGS_TO]-(current_user)
+      OR (group)-[:ADMINISTRATED_BY]->(current_user)
+      OR current_user.isAdmin
+    )
     ${parent_id ? as_subgroup_query : ""}
     ${subgroup_id ? as_parent_query : ""}
     ${direct ? direct_query : ""}
@@ -125,7 +138,7 @@ export const read_groups = (
     ${nonofficial ? non_official_query : ""}
     ${search ? search_query : ""}
 
-    
+
     // Renaming as item for generic filtering and batching function
     WITH group as item
     ${hasFilters ? filtering_query : ""}
@@ -139,6 +152,7 @@ export const read_groups = (
     subgroup_id,
     filters,
     search,
+    user_id,
   };
 
   const session = driver.session();
@@ -159,8 +173,22 @@ export const read_group = (req: Request, res: Response, next: NextFunction) => {
   if (!group_id || group_id === "undefined")
     throw createHttpError(400, "Group ID not defined");
 
-  const query = `MATCH (group:Group {_id: $group_id}) RETURN properties(group) as group`;
-  const params = { group_id };
+  const user_id = get_current_user_id(req, res);
+
+  const query = `
+    MATCH (current_user:User) WHERE $user_id IN ${getCypherUserIdentifiers("current_user")}
+    WITH current_user
+    MATCH (group:Group {_id: $group_id})
+    WHERE (
+      group.official
+      OR (group.hidden IS NULL OR NOT group.hidden)
+      OR (group)<-[:BELONGS_TO]-(current_user)
+      OR (group)-[:ADMINISTRATED_BY]->(current_user)
+      OR current_user.isAdmin
+    )
+    RETURN properties(group) as group
+    `;
+  const params = { group_id, user_id };
 
   const session = driver.session();
   session
@@ -190,7 +218,7 @@ export const update_group = (
   const properties = req.body;
 
   // TODO: Have this list in an external file
-  let customizable_fields = ["avatar_src", "name", "restricted"];
+  let customizable_fields = ["avatar_src", "name", "restricted", "hidden"];
 
   const current_user = res.locals.user;
   const current_user_is_admin =
