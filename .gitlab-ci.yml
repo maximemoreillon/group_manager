@@ -2,7 +2,6 @@ stages:
   - build
   - test
   - release
-  - deploy
 
 # Needed for Docker in docker build
 image: moreillon/ci-dind
@@ -95,14 +94,3 @@ release:
     # Pushing
     - docker push ${CONTAINER_IMAGE_TAGGED}
     - docker push ${CONTAINER_IMAGE_LATEST}
-
-deploy:
-  stage: deploy
-  tags:
-    - dind
-  only:
-    - tags
-  before_script:
-    - kubectl config use-context moreillon_ci/moreillon_k8s/kubernetes-agent:cloud
-  script:
-    - envsubst < kubernetes_manifest.yml | kubectl apply -n ${KUBERNETES_NAMESPACE} -f -
