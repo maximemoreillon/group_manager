@@ -21,8 +21,6 @@ build:
   stage: build
   only:
     - tags
-  tags:
-    - dind
   before_script:
     # Docker hub login
     - echo "${DOCKER_HUB_PASSWORD}" | docker login --username ${DOCKER_HUB_USERNAME} --password-stdin
@@ -35,8 +33,6 @@ test:
   coverage: '/All files[^|]*\|[^|]*\s+([\d\.]+)/'
   only:
     - tags
-  tags:
-    - dind
   before_script:
     - echo "${DOCKER_HUB_PASSWORD}" | docker login --username ${DOCKER_HUB_USERNAME} --password-stdin
       # Creating network for TDD
@@ -80,8 +76,6 @@ test:
 
 release:
   stage: release
-  tags:
-    - dind
   only:
     - tags
   before_script:
