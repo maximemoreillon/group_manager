@@ -8,7 +8,7 @@ const driver = drivers.v2;
 export const create_group = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   // Create a group
   // TODO: validation with joi
@@ -55,7 +55,7 @@ export const create_group = async (
 export const get_groups = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   // Queries: official vs non official, top level vs normal, type
 
@@ -116,7 +116,7 @@ export const get_groups = async (
 export const get_group = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   const { group_id } = req.params;
 
@@ -142,7 +142,7 @@ export const get_group = async (
 export const patch_group = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   const { group_id } = req.params;
 
@@ -162,8 +162,7 @@ export const patch_group = async (
   // prevent user from modifying disallowed properties
   for (let [key, value] of Object.entries(properties)) {
     if (!customizable_fields.includes(key)) {
-      delete req.body[key];
-      // TODO: forbid changes
+      throw createHttpError(403, `Not allowed to modify property ${key}`);
     }
   }
 
@@ -206,7 +205,7 @@ export const patch_group = async (
 export const delete_group = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   // Route to delete a group
 
@@ -251,7 +250,7 @@ export const delete_group = async (
 export const join_group = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   // TODO: Could be combined with make user member of group
   // Route to join a group (only works if group is not private)
@@ -283,7 +282,7 @@ export const join_group = async (
     if (!records.length)
       throw createHttpError(
         400,
-        `Error during user ${user_id} joining of group ${group_id}`
+        `Error during user ${user_id} joining of group ${group_id}`,
       );
     console.log(`User ${user_id} joined group ${group_id}`);
     res.send({ group_id });
@@ -297,7 +296,7 @@ export const join_group = async (
 export const leave_group = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   // Route to leave a group
 
@@ -339,7 +338,7 @@ export const leave_group = async (
 export const get_parent_groups_of_group = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   // Route to retrieve groups inside a group
 
@@ -377,7 +376,7 @@ export const get_parent_groups_of_group = async (
 export const get_groups_of_group = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   // Route to retrieve groups inside a group
 
@@ -416,7 +415,7 @@ export const get_groups_of_group = async (
 export const add_group_to_group = (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   res.status(410).send("Deprecated");
 };
@@ -424,7 +423,7 @@ export const add_group_to_group = (
 export const remove_group_from_group = (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   res.status(410).send("Deprecated");
 };
@@ -432,7 +431,7 @@ export const remove_group_from_group = (
 export const get_groups_directly_belonging_to_group = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   // THIS IS LEGACY
 
@@ -474,7 +473,7 @@ export const get_groups_directly_belonging_to_group = async (
 export const get_top_level_groups = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   // This is legacy
 
@@ -494,7 +493,7 @@ export const get_top_level_groups = async (
     // NOT SURE WHY DISTINCT NEEDED
     RETURN DISTINCT(group)
     `,
-      {}
+      {},
     );
     const groups = records.map((record) => record.get("group"));
     res.send(groups);
@@ -509,7 +508,7 @@ export const get_top_level_groups = async (
 export const get_top_level_official_groups = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   // This is legacy
 
@@ -528,7 +527,7 @@ export const get_top_level_official_groups = async (
     // USED TO BE DISTINCT
     RETURN group
     `,
-      {}
+      {},
     );
     const groups = records.map((record) => record.get("group"));
     res.send(groups);
@@ -543,7 +542,7 @@ export const get_top_level_official_groups = async (
 export const get_top_level_non_official_groups = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   // This is legacy
 
@@ -562,7 +561,7 @@ export const get_top_level_non_official_groups = async (
     // USED TO BE DISTINCT
     RETURN group
     `,
-      {}
+      {},
     );
     const groups = records.map((record) => record.get("group"));
     res.send(groups);

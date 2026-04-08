@@ -15,7 +15,7 @@ const driver = drivers.v2;
 export const create_group = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   // Create a group
   // TODO: validation with joi
@@ -54,7 +54,7 @@ export const create_group = async (
     const group = records[0].get("group");
     res.send(group);
     console.log(
-      `User ${get_current_user_id(req, res)} created group ${group._id}`
+      `User ${get_current_user_id(req, res)} created group ${group._id}`,
     );
   } catch (e) {
     next(e);
@@ -66,7 +66,7 @@ export const create_group = async (
 export const read_groups = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   // Queries: official vs non official, top level vs normal, type
 
@@ -170,7 +170,7 @@ export const read_groups = async (
 export const read_group = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   const { group_id } = req.params;
   if (!group_id || group_id === "undefined")
@@ -210,7 +210,7 @@ export const read_group = async (
 export const update_group = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   const { group_id } = req.params;
   if (!group_id || group_id === "undefined")
@@ -232,11 +232,9 @@ export const update_group = async (
   if (current_user_is_admin) customizable_fields.push("official");
 
   // prevent user from modifying disallowed properties
-  // TODO: could be achieved using JOI
+  // TODO: could be achieved using Zod
   for (let [key, value] of Object.entries(properties)) {
     if (!customizable_fields.includes(key)) {
-      delete req.body[key];
-      // TODO: forbid changes
       throw createHttpError(403, `Not allowed to modify property ${key}`);
     }
   }
@@ -281,7 +279,7 @@ export const update_group = async (
 export const delete_group = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   const { group_id } = req.params;
   if (!group_id || group_id === "undefined")
@@ -332,7 +330,7 @@ export const delete_group = async (
 export const add_group_to_group = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   // Route to make a group join a group
   // Can only be done if user is admin of both groups
@@ -386,10 +384,10 @@ export const add_group_to_group = async (
     if (!records.length)
       throw createHttpError(
         400,
-        `Failed to add group ${subgroup_id} in ${parent_id}`
+        `Failed to add group ${subgroup_id} in ${parent_id}`,
       );
     console.log(
-      `User ${user_id} added group ${subgroup_id} to group ${parent_id}`
+      `User ${user_id} added group ${subgroup_id} to group ${parent_id}`,
     );
     const child_group = records[0].get("child_group");
     res.send(child_group);
@@ -403,7 +401,7 @@ export const add_group_to_group = async (
 export const remove_group_from_group = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   // Route to make a user join a group
 
@@ -455,10 +453,10 @@ export const remove_group_from_group = async (
     if (!records.length)
       throw createHttpError(
         400,
-        `Failed to remove group ${subgroup_id} from group ${parent_id}`
+        `Failed to remove group ${subgroup_id} from group ${parent_id}`,
       );
     console.log(
-      `User ${user_id} removed group ${subgroup_id} from group ${parent_id}`
+      `User ${user_id} removed group ${subgroup_id} from group ${parent_id}`,
     );
     const subgroup = records[0].get("child_group");
     res.send(subgroup);
