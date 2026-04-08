@@ -49,8 +49,6 @@ const set_ids = async () => {
     const { records } = await session.run(id_setting_query)
     const count = records[0].get("count")
     console.log(`[Neo4J] Formatted new ID for ${count} groups`)
-  } catch (e) {
-    throw e
   } finally {
     session.close()
   }
@@ -64,8 +62,6 @@ const create_constraints = async () => {
       `CREATE CONSTRAINT IF NOT EXISTS FOR (g:Group) REQUIRE g._id IS UNIQUE`
     )
     console.log(`[Neo4J] Created constraints`)
-  } catch (error) {
-    throw error
   } finally {
     session.close()
   }

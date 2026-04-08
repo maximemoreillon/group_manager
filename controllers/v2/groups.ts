@@ -413,138 +413,20 @@ export const get_groups_of_group = async (
   }
 };
 
-export const add_group_to_group = async (
+export const add_group_to_group = (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
-  // Route to make a group join a group
-  // Can only be done if user is admin of both groups
-
-  const { group_id: parent_group_id } = req.params;
-  const { group_id: child_group_id } = req.body;
-
-  const user_id = get_current_user_id(req, res);
-
-  const session = driver.session();
-
-  const query = `
-    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
-
-    // Find child group
-    WITH user
-    MATCH (child_group:Group)
-
-    // Allow only group admin or super admin to delete a group
-    WHERE child_group._id = $child_group_id
-      AND ( (child_group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
-
-    // Find the parent group
-    WITH child_group, user
-    MATCH (parent_group:Group)
-    WHERE parent_group._id = $parent_group_id
-      AND ( (parent_group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
-
-      // Prevent cyclic graphs (NOT WORKING)
-      AND NOT (parent_group)-[:BELONGS_TO]->(child_group)
-      AND NOT (parent_group)-[:BELONGS_TO *1..]->(:Group)-[:BELONGS_TO]->(child_group)
-
-      // Prevent self group
-      AND NOT id(parent_group)=id(child_group)
-
-    // MERGE relationship
-    MERGE (child_group)-[:BELONGS_TO]->(parent_group)
-
-    // Return
-    RETURN child_group
-    `;
-
-  const params = {
-    user_id,
-    parent_group_id,
-    child_group_id,
-  };
-
-  try {
-    const { records } = await session.run(query, params);
-    if (!records.length)
-      throw createHttpError(
-        400,
-        `Failed to add group ${child_group_id} in ${parent_group_id}`
-      );
-    console.log(
-      `User ${user_id} added group ${child_group_id} to group ${parent_group_id}`
-    );
-    const child_group = records[0].get("child_group");
-    res.send(child_group);
-  } catch (e) {
-    next(e);
-  } finally {
-    session.close();
-  }
+  res.status(410).send("Deprecated");
 };
 
-export const remove_group_from_group = async (
+export const remove_group_from_group = (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
-  // Route to make a user join a group
-
-  // TODO: Should the user be admin of child group?
-
-  const { group_id: parent_group_id, subgroup_id: child_group_id } = req.params;
-  const user_id = get_current_user_id(req, res);
-
-  const session = driver.session();
-
-  const query = `
-    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
-
-    // Find the child group group
-    WITH user
-    MATCH (child_group:Group)
-
-    // Allow only group admin or super admin to remove a group
-    WHERE child_group._id = $child_group_id
-      AND ( (child_group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
-
-    // Find the parent group
-    WITH child_group, user
-    MATCH (child_group)-[r:BELONGS_TO]->(parent_group:Group)
-    WHERE parent_group._id = $parent_group_id
-      AND ( (parent_group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
-
-    // delete relationship
-    DELETE r
-
-    // Return
-    RETURN child_group, parent_group
-  `;
-
-  const params = {
-    user_id,
-    parent_group_id,
-    child_group_id,
-  };
-
-  try {
-    const { records } = await session.run(query, params);
-    if (!records.length)
-      throw createHttpError(
-        400,
-        `Failed to remove group ${child_group_id} from group ${parent_group_id}`
-      );
-    console.log(
-      `User ${user_id} removed group ${child_group_id} from group ${parent_group_id}`
-    );
-    const subgroup = records[0].get("child_group");
-    res.send(subgroup);
-  } catch (e) {
-    next(e);
-  } finally {
-    session.close();
-  }
+  res.status(410).send("Deprecated");
 };
 
 export const get_groups_directly_belonging_to_group = async (
