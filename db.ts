@@ -68,16 +68,13 @@ const create_constraints = async () => {
 }
 
 export const init = async () => {
-  if (await get_connection_status()) {
-    connected = true
+  if (!await get_connection_status()) throw new Error("Could not connect to Neo4J")
 
-    console.log("[Neo4J] Initializing DB...")
-    await set_ids()
-    await create_constraints()
-    console.log("[Neo4J] DB initialized")
-  } else {
-    setTimeout(init, 10000)
-  }
+  connected = true
+  console.log("[Neo4J] Initializing DB...")
+  await set_ids()
+  await create_constraints()
+  console.log("[Neo4J] DB initialized")
 }
 
 export const getConnected = () => connected

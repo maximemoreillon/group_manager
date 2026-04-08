@@ -11,7 +11,10 @@ import { errorHandler } from "./utils"
 import { APP_PORT } from "./config"
 import router from "./routes/"
 
-db_init()
+db_init().catch((e) => {
+  console.error(e.message)
+  process.exit(1)
+})
 
 const promOptions = { includeMethod: true, includePath: true }
 
