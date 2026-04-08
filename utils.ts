@@ -58,9 +58,9 @@ export const errorHandler = (
   next: NextFunction
 ) => {
   console.error(error);
-  let { statusCode = 500, message = error } = error;
+  let { statusCode = 500, message = error, expose = false } = error;
   if (isNaN(statusCode) || statusCode > 600) statusCode = 500;
-  res.status(statusCode).send(message);
+  res.status(statusCode).send(expose ? message : "Internal Server Error");
 };
 
 export const getCypherUserIdentifiers = (name: string = "user") =>

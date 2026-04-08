@@ -159,7 +159,7 @@ export const remove_user_from_administrators = (
     WHERE ( (group)-[:ADMINISTRATED_BY]->(current_user) OR current_user.isAdmin )
 
     WITH group
-    MATCH (group)-[r:ADMINISTRATED_BY]->(user:User {_id: $user_id})
+    MATCH (group)-[r:ADMINISTRATED_BY]->(user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
 
     DELETE r
 
