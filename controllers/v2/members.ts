@@ -5,7 +5,11 @@ import { Request, Response, NextFunction } from "express"
 
 const driver = drivers.v2
 
-export const get_user = (req: Request, res: Response, next: NextFunction) => {
+export const get_user = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to retrieve a user's info
   // This should not be a feature of group manager
   // Used in front-end
@@ -22,29 +26,29 @@ export const get_user = (req: Request, res: Response, next: NextFunction) => {
   if (!user_id) throw createHttpError(400, "User ID not defined")
 
   const session = driver.session()
-  session
-    .run(
+
+  try {
+    const { records } = await session.run(
       `
     MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
     RETURN user
     `,
       { user_id }
     )
-    .then(({ records }) => {
-      if (!records.length) throw createHttpError(404, "User not found")
+    if (!records.length) throw createHttpError(404, "User not found")
 
-      const user = records[0].get("user")
-      delete user.properties.password_hashed
+    const user = records[0].get("user")
+    delete user.properties.password_hashed
 
-      res.send(user)
-    })
-    .catch(next)
-    .finally(() => {
-      session.close()
-    })
+    res.send(user)
+  } catch (e) {
+    next(e)
+  } finally {
+    session.close()
+  }
 }
 
-export const get_members_of_group = (
+export const get_members_of_group = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -66,23 +70,22 @@ export const get_members_of_group = (
     RETURN collect(user) as users, group
     `
 
-  session
-    .run(query, { group_id })
-    .then(({ records }) => {
-      if (!records.length) throw createHttpError(404, "Group not found")
-      const users = records[0].get("users")
-      users.forEach((user: any) => {
-        delete user.properties.password_hashed
-      })
-      res.send(users)
+  try {
+    const { records } = await session.run(query, { group_id })
+    if (!records.length) throw createHttpError(404, "Group not found")
+    const users = records[0].get("users")
+    users.forEach((user: any) => {
+      delete user.properties.password_hashed
     })
-    .catch(next)
-    .finally(() => {
-      session.close()
-    })
+    res.send(users)
+  } catch (e) {
+    next(e)
+  } finally {
+    session.close()
+  }
 }
 
-export const add_member_to_group = (
+export const add_member_to_group = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -124,28 +127,27 @@ export const add_member_to_group = (
 
   const params = { current_user_id, user_id, group_id }
 
-  session
-    .run(query, params)
-    .then(({ records }) => {
-      if (!records.length)
-        throw createHttpError(
-          400,
-          `Error adding using ${user_id} from group ${group_id}`
-        )
-      console.log(
-        `User ${current_user_id} added user ${user_id} to group ${group_id}`
+  try {
+    const { records } = await session.run(query, params)
+    if (!records.length)
+      throw createHttpError(
+        400,
+        `Error adding using ${user_id} from group ${group_id}`
       )
+    console.log(
+      `User ${current_user_id} added user ${user_id} to group ${group_id}`
+    )
 
-      const user = records[0].get("user")
-      res.send(user)
-    })
-    .catch(next)
-    .finally(() => {
-      session.close()
-    })
+    const user = records[0].get("user")
+    res.send(user)
+  } catch (e) {
+    next(e)
+  } finally {
+    session.close()
+  }
 }
 
-export const remove_user_from_group = (
+export const remove_user_from_group = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -179,29 +181,28 @@ export const remove_user_from_group = (
     `
 
   const params = { current_user_id, user_id, group_id }
-  session
 
-    .run(query, params)
-    .then(({ records }) => {
-      if (!records.length)
-        throw createHttpError(
-          400,
-          `Error removing using ${user_id} from group ${group_id}`
-        )
-      console.log(
-        `User ${current_user_id}  removed user ${user_id} from group ${group_id}`
+  try {
+    const { records } = await session.run(query, params)
+    if (!records.length)
+      throw createHttpError(
+        400,
+        `Error removing using ${user_id} from group ${group_id}`
       )
+    console.log(
+      `User ${current_user_id}  removed user ${user_id} from group ${group_id}`
+    )
 
-      const user = records[0].get("user")
-      res.send(user)
-    })
-    .catch(next)
-    .finally(() => {
-      session.close()
-    })
+    const user = records[0].get("user")
+    res.send(user)
+  } catch (e) {
+    next(e)
+  } finally {
+    session.close()
+  }
 }
 
-export const get_groups_of_user = (
+export const get_groups_of_user = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -221,22 +222,21 @@ export const get_groups_of_user = (
     RETURN collect(group) as groups
     `
 
-  session
-    .run(query, { user_id })
-    .then(({ records }) => {
-      if (!records.length)
-        throw createHttpError(404, `User ${user_id} not found`)
-      console.log(`Groups of user ${user_id} queried`)
-      const groups = records[0].get("groups")
-      res.send(groups)
-    })
-    .catch(next)
-    .finally(() => {
-      session.close()
-    })
+  try {
+    const { records } = await session.run(query, { user_id })
+    if (!records.length)
+      throw createHttpError(404, `User ${user_id} not found`)
+    console.log(`Groups of user ${user_id} queried`)
+    const groups = records[0].get("groups")
+    res.send(groups)
+  } catch (e) {
+    next(e)
+  } finally {
+    session.close()
+  }
 }
 
-export const users_with_no_group = (
+export const users_with_no_group = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -244,8 +244,9 @@ export const users_with_no_group = (
   // Route to retrieve users without a group
 
   const session = driver.session()
-  session
-    .run(
+
+  try {
+    const { records } = await session.run(
       `
     MATCH (user:User)
     WHERE NOT (user)-[:BELONGS_TO]->(:Group)
@@ -253,22 +254,21 @@ export const users_with_no_group = (
     `,
       {}
     )
-    .then(({ records }) => {
-      const users = records.map((record) => record.get("user"))
-      users.forEach((user) => {
-        delete user.properties.password_hashed
-      })
+    const users = records.map((record) => record.get("user"))
+    users.forEach((user) => {
+      delete user.properties.password_hashed
+    })
 
-      res.send(users)
-      console.log(`Queried users with no group`)
-    })
-    .catch(next)
-    .finally(() => {
-      session.close()
-    })
+    res.send(users)
+    console.log(`Queried users with no group`)
+  } catch (e) {
+    next(e)
+  } finally {
+    session.close()
+  }
 }
 
-export const get_members_of_groups = (
+export const get_members_of_groups = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -294,26 +294,26 @@ export const get_members_of_groups = (
   const params = { group_ids }
 
   const session = driver.session()
-  session
-    .run(query, params)
-    .then(({ records }) => {
-      const output = records.map((record) => {
-        const group = record.get("group")
-        group.members = record.get("members")
-        return group
-      })
 
-      res.send(output)
+  try {
+    const { records } = await session.run(query, params)
+    const output = records.map((record) => {
+      const group = record.get("group")
+      group.members = record.get("members")
+      return group
+    })
 
-      console.log(`Members of groups ${group_ids.join(", ")} queried`)
-    })
-    .catch(next)
-    .finally(() => {
-      session.close()
-    })
+    res.send(output)
+
+    console.log(`Members of groups ${group_ids.join(", ")} queried`)
+  } catch (e) {
+    next(e)
+  } finally {
+    session.close()
+  }
 }
 
-export const get_groups_of_users = (
+export const get_groups_of_users = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -327,7 +327,7 @@ export const get_groups_of_users = (
   UNWIND $user_ids AS user_id
   MATCH (user:User)
   WHERE user_id IN ${getCypherUserIdentifiers("user")}
-  
+
   // CANNOT USE QUERY TEMPLATE BECAUSE NOT $group_id
   WITH user
   MATCH (user)-[:BELONGS_TO]->(group:Group)
@@ -337,19 +337,19 @@ export const get_groups_of_users = (
   const params = { user_ids }
 
   const session = driver.session()
-  session
-    .run(query, params)
-    .then(({ records }) => {
-      const output = records.map((record) => {
-        const user = record.get("user")
-        user.groups = record.get("groups")
-        return user
-      })
 
-      res.send(output)
+  try {
+    const { records } = await session.run(query, params)
+    const output = records.map((record) => {
+      const user = record.get("user")
+      user.groups = record.get("groups")
+      return user
     })
-    .catch(next)
-    .finally(() => {
-      session.close()
-    })
+
+    res.send(output)
+  } catch (e) {
+    next(e)
+  } finally {
+    session.close()
+  }
 }

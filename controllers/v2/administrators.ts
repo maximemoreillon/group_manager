@@ -4,7 +4,7 @@ import { get_current_user_id, getCypherUserIdentifiers } from "../../utils"
 import { Request, Response, NextFunction } from "express"
 const driver = drivers.v2
 
-export const get_administrators_of_group = (
+export const get_administrators_of_group = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -23,24 +23,23 @@ export const get_administrators_of_group = (
   RETURN collect(admin) as administrators
   `
 
-  session
-    .run(query, { group_id })
-    .then(({ records }) => {
-      if (!records.length)
-        throw createHttpError(400, `Group ${group_id} not found`)
-      const admins = records[0].get("administrators")
-      admins.forEach((admin: any) => {
-        delete admin.properties.password_hashed
-      })
-      res.send(admins)
+  try {
+    const { records } = await session.run(query, { group_id })
+    if (!records.length)
+      throw createHttpError(400, `Group ${group_id} not found`)
+    const admins = records[0].get("administrators")
+    admins.forEach((admin: any) => {
+      delete admin.properties.password_hashed
     })
-    .catch(next)
-    .finally(() => {
-      session.close()
-    })
+    res.send(admins)
+  } catch (e) {
+    next(e)
+  } finally {
+    session.close()
+  }
 }
 
-export const make_user_administrator_of_group = (
+export const make_user_administrator_of_group = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -87,23 +86,20 @@ export const make_user_administrator_of_group = (
     group_id,
   }
 
-  session
-    .run(query, params)
-    .then(({ records }) => {
-      if (!records.length)
-        throw createHttpError(400, `Error adding user to administrators`)
-      console.log(
-        `User ${user_id} added to administrators of group ${group_id}`
-      )
-      res.send(records[0].get("user"))
-    })
-    .catch(next)
-    .finally(() => {
-      session.close()
-    })
+  try {
+    const { records } = await session.run(query, params)
+    if (!records.length)
+      throw createHttpError(400, `Error adding user to administrators`)
+    console.log(`User ${user_id} added to administrators of group ${group_id}`)
+    res.send(records[0].get("user"))
+  } catch (e) {
+    next(e)
+  } finally {
+    session.close()
+  }
 }
 
-export const remove_user_from_administrators = (
+export const remove_user_from_administrators = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -143,23 +139,22 @@ export const remove_user_from_administrators = (
     group_id,
   }
 
-  session
-    .run(query, params)
-    .then(({ records }) => {
-      if (!records.length)
-        throw createHttpError(400, `Error removing from administrators`)
-      console.log(
-        `User ${user_id} removed from administrators of group ${group_id}`
-      )
-      res.send(records[0].get("user"))
-    })
-    .catch(next)
-    .finally(() => {
-      session.close()
-    })
+  try {
+    const { records } = await session.run(query, params)
+    if (!records.length)
+      throw createHttpError(400, `Error removing from administrators`)
+    console.log(
+      `User ${user_id} removed from administrators of group ${group_id}`
+    )
+    res.send(records[0].get("user"))
+  } catch (e) {
+    next(e)
+  } finally {
+    session.close()
+  }
 }
 
-export const get_groups_of_administrator = (
+export const get_groups_of_administrator = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -175,17 +170,17 @@ export const get_groups_of_administrator = (
     WHERE $user_id IN ${getCypherUserIdentifiers("user")}
     RETURN collect(group) as groups
     `
-  session
-    .run(query, { user_id })
-    .then(({ records }) => {
-      if (!records.length)
-        throw createHttpError(404, `User ${user_id} not found`)
-      const groups = records[0].get("groups")
-      console.log(`Groups of administrator ${user_id} queried`)
-      res.send(groups)
-    })
-    .catch(next)
-    .finally(() => {
-      session.close()
-    })
+
+  try {
+    const { records } = await session.run(query, { user_id })
+    if (!records.length)
+      throw createHttpError(404, `User ${user_id} not found`)
+    const groups = records[0].get("groups")
+    console.log(`Groups of administrator ${user_id} queried`)
+    res.send(groups)
+  } catch (e) {
+    next(e)
+  } finally {
+    session.close()
+  }
 }

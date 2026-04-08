@@ -5,7 +5,11 @@ import { Request, Response, NextFunction } from "express"
 
 const driver = drivers.v1
 
-export const get_user = (req: Request, res: Response, next: NextFunction) => {
+export const get_user = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Route to retrieve a user's info
 
   let user_id =
@@ -25,18 +29,17 @@ export const get_user = (req: Request, res: Response, next: NextFunction) => {
     RETURN user
     `
 
-  session
-    .run(query, { user_id })
-    .then((result) => {
-      res.send(result.records)
-    })
-    .catch(next)
-    .finally(() => {
-      session.close()
-    })
+  try {
+    const result = await session.run(query, { user_id })
+    res.send(result.records)
+  } catch (e) {
+    next(e)
+  } finally {
+    session.close()
+  }
 }
 
-export const get_members_of_group = (
+export const get_members_of_group = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -57,18 +60,18 @@ export const get_members_of_group = (
     MATCH (user:User)-[:BELONGS_TO]->(group:Group {_id: $group_id})
     RETURN user
     `
-  session
-    .run(query, { group_id })
-    .then((result) => {
-      res.send(result.records)
-    })
-    .catch(next)
-    .finally(() => {
-      session.close()
-    })
+
+  try {
+    const result = await session.run(query, { group_id })
+    res.send(result.records)
+  } catch (e) {
+    next(e)
+  } finally {
+    session.close()
+  }
 }
 
-export const get_groups_of_user = (
+export const get_groups_of_user = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -90,22 +93,18 @@ export const get_groups_of_user = (
     MATCH (user)-[:BELONGS_TO]->(group:Group)
     RETURN group
     `
-  session
-    .run(
-      query,
 
-      { user_id: member_id }
-    )
-    .then((result) => {
-      res.send(result.records)
-    })
-    .catch(next)
-    .finally(() => {
-      session.close()
-    })
+  try {
+    const result = await session.run(query, { user_id: member_id })
+    res.send(result.records)
+  } catch (e) {
+    next(e)
+  } finally {
+    session.close()
+  }
 }
 
-export const users_with_no_group = (
+export const users_with_no_group = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -117,15 +116,15 @@ export const users_with_no_group = (
     WHERE NOT (user)-[:BELONGS_TO]->(:Group)
     RETURN user
     `
-  session
-    .run(query, {})
-    .then((result) => {
-      res.send(result.records)
-    })
-    .catch(next)
-    .finally(() => {
-      session.close()
-    })
+
+  try {
+    const result = await session.run(query, {})
+    res.send(result.records)
+  } catch (e) {
+    next(e)
+  } finally {
+    session.close()
+  }
 }
 
 export const add_member_to_group = (

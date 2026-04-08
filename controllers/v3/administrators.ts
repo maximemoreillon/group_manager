@@ -14,7 +14,7 @@ import { DEFAULT_BATCH_SIZE } from "../../config";
 
 const driver = drivers.v2;
 
-export const get_administrators_of_group = (
+export const get_administrators_of_group = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -44,21 +44,20 @@ export const get_administrators_of_group = (
 
   const params = { group_id, batch_size, start_index, filters };
 
-  session
-    .run(query, params)
-    .then(({ records }) => {
-      if (!records.length)
-        throw createHttpError(400, `Group ${group_id} not found`);
-      const response = format_batched_response(records);
-      res.send(response);
-    })
-    .catch(next)
-    .finally(() => {
-      session.close();
-    });
+  try {
+    const { records } = await session.run(query, params);
+    if (!records.length)
+      throw createHttpError(400, `Group ${group_id} not found`);
+    const response = format_batched_response(records);
+    res.send(response);
+  } catch (e) {
+    next(e);
+  } finally {
+    session.close();
+  }
 };
 
-export const make_user_administrator_of_group = (
+export const make_user_administrator_of_group = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -118,21 +117,20 @@ export const make_user_administrator_of_group = (
 
   const params = { current_user_id, user_id, user_ids, group_id };
 
-  session
-    .run(query, params)
-    .then(({ records }) => {
-      if (!records.length)
-        throw createHttpError(400, `Error adding user to administrators`);
-      console.log(`User ${user_id} added administrators to group ${group_id}`);
-      res.send(records[0].get("group"));
-    })
-    .catch(next)
-    .finally(() => {
-      session.close();
-    });
+  try {
+    const { records } = await session.run(query, params);
+    if (!records.length)
+      throw createHttpError(400, `Error adding user to administrators`);
+    console.log(`User ${user_id} added administrators to group ${group_id}`);
+    res.send(records[0].get("group"));
+  } catch (e) {
+    next(e);
+  } finally {
+    session.close();
+  }
 };
 
-export const remove_user_from_administrators = (
+export const remove_user_from_administrators = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -159,7 +157,9 @@ export const remove_user_from_administrators = (
     WHERE ( (group)-[:ADMINISTRATED_BY]->(current_user) OR current_user.isAdmin )
 
     WITH group
-    MATCH (group)-[r:ADMINISTRATED_BY]->(user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
+    MATCH (group)-[r:ADMINISTRATED_BY]->(user:User) WHERE $user_id IN ${getCypherUserIdentifiers(
+      "user"
+    )}
 
     DELETE r
 
@@ -173,23 +173,22 @@ export const remove_user_from_administrators = (
     group_id,
   };
 
-  session
-    .run(query, params)
-    .then(({ records }) => {
-      if (!records.length)
-        throw createHttpError(400, `Error removing from administrators`);
-      console.log(
-        `User ${user_id} removed from administrators of group ${group_id}`
-      );
-      res.send(records[0].get("group"));
-    })
-    .catch(next)
-    .finally(() => {
-      session.close();
-    });
+  try {
+    const { records } = await session.run(query, params);
+    if (!records.length)
+      throw createHttpError(400, `Error removing from administrators`);
+    console.log(
+      `User ${user_id} removed from administrators of group ${group_id}`
+    );
+    res.send(records[0].get("group"));
+  } catch (e) {
+    next(e);
+  } finally {
+    session.close();
+  }
 };
 
-export const get_groups_of_administrator = (
+export const get_groups_of_administrator = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -232,16 +231,16 @@ export const get_groups_of_administrator = (
   const params = { user_id, batch_size, start_index, filters };
 
   const session = driver.session();
-  session
-    .run(query, params)
-    .then(({ records }) => {
-      if (!records.length)
-        throw createHttpError(400, `User ${user_id} not found`);
-      const response = format_batched_response(records);
-      res.send(response);
-    })
-    .catch(next)
-    .finally(() => {
-      session.close();
-    });
+
+  try {
+    const { records } = await session.run(query, params);
+    if (!records.length)
+      throw createHttpError(400, `User ${user_id} not found`);
+    const response = format_batched_response(records);
+    res.send(response);
+  } catch (e) {
+    next(e);
+  } finally {
+    session.close();
+  }
 };
