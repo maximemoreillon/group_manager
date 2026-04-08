@@ -363,9 +363,8 @@ export const add_group_to_group = (
     WHERE parent_group._id = $parent_id
       AND ( (parent_group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
 
-      // Prevent cyclic graphs (NOT WORKING)
-      AND NOT (parent_group)-[:BELONGS_TO]->(child_group)
-      AND NOT (parent_group)-[:BELONGS_TO *1..]->(:Group)-[:BELONGS_TO]->(child_group)
+      // Prevent cyclic graphs: check that parent_group is not already reachable from child_group
+      AND NOT (parent_group)-[:BELONGS_TO*1..100]->(child_group)
 
       // Prevent self group
       AND NOT id(parent_group)=id(child_group)
