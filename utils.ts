@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { authUseridentifiers, dbUserIdentifiers } from "./config";
+import { authUserIdentifiers, dbUserIdentifiers } from "./config";
 import createHttpError from "http-errors";
 
 export const get_current_user_id = (req: Request, res: Response) => {
@@ -7,7 +7,7 @@ export const get_current_user_id = (req: Request, res: Response) => {
 
   if (!current_user) return;
 
-  const aui = authUseridentifiers.find((aui) => current_user[aui]);
+  const aui = authUserIdentifiers.find((aui) => current_user[aui]);
   if (!aui) return;
 
   return current_user[aui];
@@ -55,7 +55,7 @@ export const errorHandler = (
   error: any,
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   console.error(error);
   let { statusCode = 500, message = error, expose = false } = error;
