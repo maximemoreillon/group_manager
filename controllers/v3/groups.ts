@@ -289,7 +289,8 @@ export const delete_group = (
 
   const deep_delete_query = `
     WITH group
-    OPTIONAL MATCH (subgroup:Group)-[:BELONGS_TO]->(group)
+    // *1..100 matches BELONGS_TO relationships of depth 1 to 100, capturing all subgroups recursively
+    OPTIONAL MATCH (subgroup:Group)-[:BELONGS_TO*1..100]->(group)
     DETACH DELETE subgroup
   `;
 
