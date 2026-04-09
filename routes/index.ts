@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { version, author } from "../package.json";
-import { NEO4J_URL, getConnected as neo4j_connected } from "../db";
+import { NEO4J_URL, get_connection_status as neo4j_connected } from "../db";
 
 import router_v1 from "./v1";
 import router_v2 from "./v2";
@@ -16,14 +16,14 @@ import { registerAuthMiddleware } from "../auth";
 
 const router = Router({ mergeParams: true });
 
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   res.send({
     application_name: "Group Manager",
     version,
     author,
     neo4j: {
       url: NEO4J_URL,
-      connected: neo4j_connected(),
+      connected: await neo4j_connected(),
     },
     auth: {
       identification_url: IDENTIFICATION_URL,
