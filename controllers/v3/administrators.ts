@@ -47,7 +47,7 @@ export const get_administrators_of_group = async (
   try {
     const { records } = await session.run(query, params);
     if (!records.length)
-      throw createHttpError(400, `Group ${group_id} not found`);
+      throw createHttpError(404, `Group ${group_id} not found`);
     const response = format_batched_response(records);
     res.send(response);
   } catch (e) {
@@ -235,7 +235,7 @@ export const get_groups_of_administrator = async (
   try {
     const { records } = await session.run(query, params);
     if (!records.length)
-      throw createHttpError(400, `User ${user_id} not found`);
+      throw createHttpError(404, `User ${user_id} not found`);
     const response = format_batched_response(records);
     res.send(response);
   } catch (e) {
