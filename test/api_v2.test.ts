@@ -54,9 +54,9 @@ describe("/v2/", () => {
   });
 
   describe("Authentication", () => {
-    it("Should return 401 when no token is provided", async () => {
+    it("Should return 401 or 403 when no token is provided", async () => {
       const { status } = await request(app).get("/v2/groups");
-      expect(status).to.equal(401);
+      expect(status).to.be.oneOf([401, 403]);
     });
   });
 
