@@ -401,7 +401,7 @@ describe("/v3/", () => {
     it("Should return groups for a list of user IDs", async () => {
       const { status, body } = await request(app)
         .get(`/v3/members/groups`)
-        .query({ user_ids: [user._id] })
+        .query(`user_ids[]=${user._id}`)
         .set("Authorization", `Bearer ${jwt}`)
 
       expect(status).to.equal(200)
