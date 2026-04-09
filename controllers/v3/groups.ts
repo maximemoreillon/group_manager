@@ -12,10 +12,10 @@ import { Request, Response, NextFunction } from "express";
 
 const driver = drivers.v2;
 
-export const create_group = (
+export const create_group = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   // Create a group
   // TODO: validation with joi
@@ -47,27 +47,26 @@ export const create_group = (
     RETURN properties(group) as group
     `;
 
-  session
-    .run(query, { user_id, name })
-    .then(({ records }) => {
-      if (!records.length)
-        throw createHttpError(500, `Error while creating group ${name}`);
-      const group = records[0].get("group");
-      res.send(group);
-      console.log(
-        `User ${get_current_user_id(req, res)} created group ${group._id}`
-      );
-    })
-    .catch(next)
-    .finally(() => {
-      session.close();
-    });
+  try {
+    const { records } = await session.run(query, { user_id, name });
+    if (!records.length)
+      throw createHttpError(500, `Error while creating group ${name}`);
+    const group = records[0].get("group");
+    res.send(group);
+    console.log(
+      `User ${get_current_user_id(req, res)} created group ${group._id}`,
+    );
+  } catch (e) {
+    next(e);
+  } finally {
+    session.close();
+  }
 };
 
-export const read_groups = (
+export const read_groups = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   // Queries: official vs non official, top level vs normal, type
 
@@ -156,19 +155,23 @@ export const read_groups = (
   };
 
   const session = driver.session();
-  session
-    .run(query, params)
-    .then(({ records }) => {
-      const response = format_batched_response(records);
-      res.send(response);
-    })
-    .catch(next)
-    .finally(() => {
-      session.close();
-    });
+
+  try {
+    const { records } = await session.run(query, params);
+    const response = format_batched_response(records);
+    res.send(response);
+  } catch (e) {
+    next(e);
+  } finally {
+    session.close();
+  }
 };
 
-export const read_group = (req: Request, res: Response, next: NextFunction) => {
+export const read_group = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   const { group_id } = req.params;
   if (!group_id || group_id === "undefined")
     throw createHttpError(400, "Group ID not defined");
@@ -191,23 +194,23 @@ export const read_group = (req: Request, res: Response, next: NextFunction) => {
   const params = { group_id, user_id };
 
   const session = driver.session();
-  session
-    .run(query, params)
-    .then(({ records }) => {
-      if (!records.length)
-        throw createHttpError(404, `Group ${group_id} not found`);
-      res.send(records[0].get("group"));
-    })
-    .catch(next)
-    .finally(() => {
-      session.close();
-    });
+
+  try {
+    const { records } = await session.run(query, params);
+    if (!records.length)
+      throw createHttpError(404, `Group ${group_id} not found`);
+    res.send(records[0].get("group"));
+  } catch (e) {
+    next(e);
+  } finally {
+    session.close();
+  }
 };
 
-export const update_group = (
+export const update_group = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   const { group_id } = req.params;
   if (!group_id || group_id === "undefined")
@@ -229,11 +232,9 @@ export const update_group = (
   if (current_user_is_admin) customizable_fields.push("official");
 
   // prevent user from modifying disallowed properties
-  // TODO: could be achieved using JOI
+  // TODO: could be achieved using Zod
   for (let [key, value] of Object.entries(properties)) {
     if (!customizable_fields.includes(key)) {
-      delete req.body[key];
-      // TODO: forbid changes
       throw createHttpError(403, `Not allowed to modify property ${key}`);
     }
   }
@@ -261,23 +262,24 @@ export const update_group = (
     properties,
   };
 
-  session
-    .run(query, params)
-    .then(({ records }) => {
-      if (!records.length)
-        throw createHttpError(400, `Error patching group ${group_id}`);
-      console.log(`User ${user_id} patched group ${group_id}`);
-      const group = records[0].get("group");
-      res.send(group);
-    })
-    .catch(next)
-    .finally(() => session.close());
+  try {
+    const { records } = await session.run(query, params);
+    if (!records.length)
+      throw createHttpError(400, `Error patching group ${group_id}`);
+    console.log(`User ${user_id} patched group ${group_id}`);
+    const group = records[0].get("group");
+    res.send(group);
+  } catch (e) {
+    next(e);
+  } finally {
+    session.close();
+  }
 };
 
-export const delete_group = (
+export const delete_group = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   const { group_id } = req.params;
   if (!group_id || group_id === "undefined")
@@ -289,7 +291,8 @@ export const delete_group = (
 
   const deep_delete_query = `
     WITH group
-    OPTIONAL MATCH (subgroup:Group)-[:BELONGS_TO]->(group)
+    // *1..100 matches BELONGS_TO relationships of depth 1 to 100, capturing all subgroups recursively
+    OPTIONAL MATCH (subgroup:Group)-[:BELONGS_TO*1..100]->(group)
     DETACH DELETE subgroup
   `;
 
@@ -311,24 +314,23 @@ export const delete_group = (
 
   const session = driver.session();
 
-  session
-    .run(query, { user_id, group_id })
-    .then(({ records }) => {
-      if (!records.length)
-        throw createHttpError(404, `Group ${group_id} not found`);
-      console.log(`User ${user_id} deleted group ${group_id}`);
-      res.send({ group_id });
-    })
-    .catch(next)
-    .finally(() => {
-      session.close();
-    });
+  try {
+    const { records } = await session.run(query, { user_id, group_id });
+    if (!records.length)
+      throw createHttpError(404, `Group ${group_id} not found`);
+    console.log(`User ${user_id} deleted group ${group_id}`);
+    res.send({ group_id });
+  } catch (e) {
+    next(e);
+  } finally {
+    session.close();
+  }
 };
 
-export const add_group_to_group = (
+export const add_group_to_group = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   // Route to make a group join a group
   // Can only be done if user is admin of both groups
@@ -362,9 +364,8 @@ export const add_group_to_group = (
     WHERE parent_group._id = $parent_id
       AND ( (parent_group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
 
-      // Prevent cyclic graphs (NOT WORKING)
-      AND NOT (parent_group)-[:BELONGS_TO]->(child_group)
-      AND NOT (parent_group)-[:BELONGS_TO *1..]->(:Group)-[:BELONGS_TO]->(child_group)
+      // Prevent cyclic graphs: check that parent_group is not already reachable from child_group
+      AND NOT (parent_group)-[:BELONGS_TO*1..100]->(child_group)
 
       // Prevent self group
       AND NOT id(parent_group)=id(child_group)
@@ -378,30 +379,29 @@ export const add_group_to_group = (
 
   const params = { user_id, parent_id, subgroup_id };
 
-  session
-    .run(query, params)
-    .then(({ records }) => {
-      if (!records.length)
-        throw createHttpError(
-          400,
-          `Failed to add group ${subgroup_id} in ${parent_id}`
-        );
-      console.log(
-        `User ${user_id} added group ${subgroup_id} to group ${parent_id}`
+  try {
+    const { records } = await session.run(query, params);
+    if (!records.length)
+      throw createHttpError(
+        400,
+        `Failed to add group ${subgroup_id} in ${parent_id}`,
       );
-      const child_group = records[0].get("child_group");
-      res.send(child_group);
-    })
-    .catch(next)
-    .finally(() => {
-      session.close();
-    });
+    console.log(
+      `User ${user_id} added group ${subgroup_id} to group ${parent_id}`,
+    );
+    const child_group = records[0].get("child_group");
+    res.send(child_group);
+  } catch (e) {
+    next(e);
+  } finally {
+    session.close();
+  }
 };
 
-export const remove_group_from_group = (
+export const remove_group_from_group = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   // Route to make a user join a group
 
@@ -448,22 +448,21 @@ export const remove_group_from_group = (
     subgroup_id,
   };
 
-  session
-    .run(query, params)
-    .then(({ records }) => {
-      if (!records.length)
-        throw createHttpError(
-          400,
-          `Failed to remove group ${subgroup_id} from group ${parent_id}`
-        );
-      console.log(
-        `User ${user_id} removed group ${subgroup_id} from group ${parent_id}`
+  try {
+    const { records } = await session.run(query, params);
+    if (!records.length)
+      throw createHttpError(
+        400,
+        `Failed to remove group ${subgroup_id} from group ${parent_id}`,
       );
-      const subgroup = records[0].get("child_group");
-      res.send(subgroup);
-    })
-    .catch(next)
-    .finally(() => {
-      session.close();
-    });
+    console.log(
+      `User ${user_id} removed group ${subgroup_id} from group ${parent_id}`,
+    );
+    const subgroup = records[0].get("child_group");
+    res.send(subgroup);
+  } catch (e) {
+    next(e);
+  } finally {
+    session.close();
+  }
 };

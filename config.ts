@@ -5,10 +5,10 @@ export const {
   OIDC_JWKS_URI,
   DB_USER_ID_FIELDS,
   AUTH_USER_ID_FIELDS,
-} = process.env
+} = process.env;
 
-const additionalDbUseridentifiers = DB_USER_ID_FIELDS?.split(",") ?? []
-export const dbUserIdentifiers = ["_id", ...additionalDbUseridentifiers]
+const additionalDbUseridentifiers = DB_USER_ID_FIELDS?.split(",") ?? [];
+export const dbUserIdentifiers = ["_id", ...additionalDbUseridentifiers];
 
-const additionalAuthUserIdentifiers = AUTH_USER_ID_FIELDS?.split(",") ?? []
-export const authUseridentifiers = ["_id", ...additionalAuthUserIdentifiers]
+const additionalauthUserIdentifiers = AUTH_USER_ID_FIELDS?.split(",") ?? [];
+export const authUserIdentifiers = ["_id", ...additionalauthUserIdentifiers];

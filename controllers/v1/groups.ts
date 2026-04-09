@@ -12,7 +12,11 @@ export const create_group = (
   res.status(410).send("Deprecated")
 }
 
-export const get_group = (req: Request, res: Response, next: NextFunction) => {
+export const get_group = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const group_id = req.params.group_id || req.query.id || req.query.group_id
 
   const session = driver.session()
@@ -22,21 +26,20 @@ export const get_group = (req: Request, res: Response, next: NextFunction) => {
     RETURN group
     `
 
-  session
-    .run(query, { group_id })
-    .then(({ records }) => {
-      // NOTE: Not too sure about sendig only one record
-      // How about sending all records and let the front end deal with it?
-      if (!records.length) throw createHttpError(404, "Not found")
-      res.send(records[0].get("group"))
-    })
-    .catch(next)
-    .finally(() => {
-      session.close()
-    })
+  try {
+    const { records } = await session.run(query, { group_id })
+    // NOTE: Not too sure about sendig only one record
+    // How about sending all records and let the front end deal with it?
+    if (!records.length) throw createHttpError(404, "Not found")
+    res.send(records[0].get("group"))
+  } catch (e) {
+    next(e)
+  } finally {
+    session.close()
+  }
 }
 
-export const get_top_level_groups = (
+export const get_top_level_groups = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -50,18 +53,17 @@ export const get_top_level_groups = (
     RETURN DISTINCT(group)
     `
 
-  session
-    .run(query, {})
-    .then((result) => {
-      res.send(result.records)
-    })
-    .catch(next)
-    .finally(() => {
-      session.close()
-    })
+  try {
+    const result = await session.run(query, {})
+    res.send(result.records)
+  } catch (e) {
+    next(e)
+  } finally {
+    session.close()
+  }
 }
 
-export const get_top_level_official_groups = (
+export const get_top_level_official_groups = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -82,18 +84,18 @@ export const get_top_level_official_groups = (
     // NOT SURE WHY DISTINCT NEEDED
     RETURN DISTINCT(group)
     `
-  session
-    .run(query, {})
-    .then((result) => {
-      res.send(result.records)
-    })
-    .catch(next)
-    .finally(() => {
-      session.close()
-    })
+
+  try {
+    const result = await session.run(query, {})
+    res.send(result.records)
+  } catch (e) {
+    next(e)
+  } finally {
+    session.close()
+  }
 }
 
-export const get_top_level_non_official_groups = (
+export const get_top_level_non_official_groups = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -109,18 +111,18 @@ export const get_top_level_non_official_groups = (
 
     RETURN DISTINCT(group)
     `
-  session
-    .run(query, {})
-    .then((result) => {
-      res.send(result.records)
-    })
-    .catch(next)
-    .finally(() => {
-      session.close()
-    })
+
+  try {
+    const result = await session.run(query, {})
+    res.send(result.records)
+  } catch (e) {
+    next(e)
+  } finally {
+    session.close()
+  }
 }
 
-export const get_groups_directly_belonging_to_group = (
+export const get_groups_directly_belonging_to_group = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -143,18 +145,17 @@ export const get_groups_directly_belonging_to_group = (
     RETURN DISTINCT(group)
     `
 
-  session
-    .run(query, { group_id })
-    .then((result) => {
-      res.send(result.records)
-    })
-    .catch(next)
-    .finally(() => {
-      session.close()
-    })
+  try {
+    const result = await session.run(query, { group_id })
+    res.send(result.records)
+  } catch (e) {
+    next(e)
+  } finally {
+    session.close()
+  }
 }
 
-export const get_parent_groups_of_group = (
+export const get_parent_groups_of_group = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -175,18 +176,18 @@ export const get_parent_groups_of_group = (
     `
 
   const params = { group_id: subgroup_id }
-  session
-    .run(query, params)
-    .then((result) => {
-      res.send(result.records)
-    })
-    .catch(next)
-    .finally(() => {
-      session.close()
-    })
+
+  try {
+    const result = await session.run(query, params)
+    res.send(result.records)
+  } catch (e) {
+    next(e)
+  } finally {
+    session.close()
+  }
 }
 
-export const get_groups_of_group = (
+export const get_groups_of_group = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -205,15 +206,14 @@ export const get_groups_of_group = (
     RETURN group
     `
 
-  session
-    .run(query, { group_id })
-    .then((result) => {
-      res.send(result.records)
-    })
-    .catch(next)
-    .finally(() => {
-      session.close()
-    })
+  try {
+    const result = await session.run(query, { group_id })
+    res.send(result.records)
+  } catch (e) {
+    next(e)
+  } finally {
+    session.close()
+  }
 }
 
 export const add_group_to_group = (

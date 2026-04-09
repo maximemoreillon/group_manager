@@ -13,7 +13,7 @@ import {
 
 const driver = drivers.v2;
 
-export const add_member_to_group = (
+export const add_member_to_group = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -33,12 +33,12 @@ export const add_member_to_group = (
   const join_possible_check = `
     // Allow user to join unrestricted groups even if not admin
     OR (
-      $user_id = $current_user_id 
+      $user_id = $current_user_id
       AND ( group.restricted IS NULL OR NOT group.restricted )
     )`;
 
   const single_user_add_query = `
-    
+
     WITH group
     MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
     MERGE (user)-[:BELONGS_TO]->(group)
@@ -67,7 +67,7 @@ export const add_member_to_group = (
     WITH current_user
     MATCH (group:Group {_id: $group_id})
     // Allow only group admin or super admin to manage group
-    WHERE ( 
+    WHERE (
       (group)-[:ADMINISTRATED_BY]->(current_user) OR current_user.isAdmin
       // Allowing oneself to join if group is not restricted
       ${user_id ? join_possible_check : ""}
@@ -85,33 +85,36 @@ export const add_member_to_group = (
 
   const params = { current_user_id, user_id, user_ids, group_id };
 
-  session
-    .run(query, params)
-    .then(({ records }) => {
-      if (!records.length)
-        throw createHttpError(
-          400,
-          `Error adding adding user(s) ${
-            user_id || user_ids.join(", ")
-          } to group ${group_id}`
-        );
-
-      console.log(
-        `User ${current_user_id} added user(s) ${
+  try {
+    const { records } = await session.run(query, params);
+    if (!records.length)
+      throw createHttpError(
+        400,
+        `Error adding adding user(s) ${
           user_id || user_ids.join(", ")
         } to group ${group_id}`
       );
 
-      const group = records[0].get("group");
-      res.send(group);
-    })
-    .catch(next)
-    .finally(() => {
-      session.close();
-    });
+    console.log(
+      `User ${current_user_id} added user(s) ${
+        user_id || user_ids.join(", ")
+      } to group ${group_id}`
+    );
+
+    const group = records[0].get("group");
+    res.send(group);
+  } catch (e) {
+    next(e);
+  } finally {
+    session.close();
+  }
 };
 
-export const get_user = (req: Request, res: Response, next: NextFunction) => {
+export const get_user = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // This should not be a feature of group manager
   // but it is used in front-end
 
@@ -122,28 +125,27 @@ export const get_user = (req: Request, res: Response, next: NextFunction) => {
   const session = driver.session();
 
   const query = `
-    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")} 
+    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
     RETURN properties(user) as user
     `;
 
-  session
-    .run(query, { user_id })
-    .then(({ records }) => {
-      if (!records.length)
-        throw createHttpError(404, `User ${user_id} not found`);
+  try {
+    const { records } = await session.run(query, { user_id });
+    if (!records.length)
+      throw createHttpError(404, `User ${user_id} not found`);
 
-      const user = records[0].get("user");
-      delete user.password_hashed;
+    const user = records[0].get("user");
+    delete user.password_hashed;
 
-      res.send(user);
-    })
-    .catch(next)
-    .finally(() => {
-      session.close();
-    });
+    res.send(user);
+  } catch (e) {
+    next(e);
+  } finally {
+    session.close();
+  }
 };
 
-export const get_members_of_group = (
+export const get_members_of_group = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -170,26 +172,25 @@ export const get_members_of_group = (
     OPTIONAL MATCH (user:User)-[:BELONGS_TO]->(group)
 
     WITH user as item
-    ${hasFilters ? filtering_query : ""} 
+    ${hasFilters ? filtering_query : ""}
     ${batch_items(batch_size as number)}
     `;
 
   const params = { group_id, batch_size, start_index, filters };
 
-  session
-    .run(query, params)
-    .then(({ records }) => {
-      if (!records.length) throw createHttpError(404, `No record found`);
-      const response = format_batched_response(records);
-      res.send(response);
-    })
-    .catch(next)
-    .finally(() => {
-      session.close();
-    });
+  try {
+    const { records } = await session.run(query, params);
+    if (!records.length) throw createHttpError(404, `No record found`);
+    const response = format_batched_response(records);
+    res.send(response);
+  } catch (e) {
+    next(e);
+  } finally {
+    session.close();
+  }
 };
 
-export const remove_user_from_group = (
+export const remove_user_from_group = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -212,13 +213,13 @@ export const remove_user_from_group = (
 
     WITH current_user
     MATCH (group:Group {_id: $group_id})
-    WHERE ( 
-      (group)-[:ADMINISTRATED_BY]->(current_user) 
+    WHERE (
+      (group)-[:ADMINISTRATED_BY]->(current_user)
       OR current_user.isAdmin
       // Allow oneself to leave group
-      OR $user_id = $current_user_id 
+      OR $user_id = $current_user_id
     )
-    
+
     WITH group
     MATCH (user:User)-[r:BELONGS_TO]->(group) WHERE $user_id IN ${getCypherUserIdentifiers(
       "user"
@@ -230,29 +231,28 @@ export const remove_user_from_group = (
     `;
 
   const params = { current_user_id, user_id, group_id };
-  session
 
-    .run(query, params)
-    .then(({ records }) => {
-      if (!records.length)
-        throw createHttpError(
-          400,
-          `Error removing using ${user_id} from group ${group_id}`
-        );
-      console.log(
-        `User ${current_user_id} removed user ${user_id} from group ${group_id}`
+  try {
+    const { records } = await session.run(query, params);
+    if (!records.length)
+      throw createHttpError(
+        400,
+        `Error removing using ${user_id} from group ${group_id}`
       );
+    console.log(
+      `User ${current_user_id} removed user ${user_id} from group ${group_id}`
+    );
 
-      const group = records[0].get("group");
-      res.send(group);
-    })
-    .catch(next)
-    .finally(() => {
-      session.close();
-    });
+    const group = records[0].get("group");
+    res.send(group);
+  } catch (e) {
+    next(e);
+  } finally {
+    session.close();
+  }
 };
 
-export const get_groups_of_user = (
+export const get_groups_of_user = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -288,33 +288,32 @@ export const get_groups_of_user = (
 
     // using dummy WHERE here so as to use AND in other queryies
     WHERE group._id IS NOT NULL
-    
+
     ${shallow ? shallow_query : ""}
     ${official ? official_query : ""}
     ${nonofficial ? non_official_query : ""}
-    
+
     WITH group as item
-    ${hasFilters ? filtering_query : ""} 
+    ${hasFilters ? filtering_query : ""}
     ${batch_items(batch_size as number)}
     `;
 
   const params = { user_id, batch_size, start_index, filters };
 
-  session
-    .run(query, params)
-    .then(({ records }) => {
-      if (!records.length)
-        throw createHttpError(404, `No group found for user ${user_id}`);
-      const response = format_batched_response(records);
-      res.send(response);
-    })
-    .catch(next)
-    .finally(() => {
-      session.close();
-    });
+  try {
+    const { records } = await session.run(query, params);
+    if (!records.length)
+      throw createHttpError(404, `No group found for user ${user_id}`);
+    const response = format_batched_response(records);
+    res.send(response);
+  } catch (e) {
+    next(e);
+  } finally {
+    session.close();
+  }
 };
 
-export const users_with_no_group = (
+export const users_with_no_group = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -339,21 +338,20 @@ export const users_with_no_group = (
 
   const params = { batch_size, start_index, filters };
 
-  session
-    .run(query, params)
-    .then(({ records }) => {
-      if (!records.length)
-        throw createHttpError(404, `No users with no groups`);
-      const response = format_batched_response(records);
-      res.send(response);
-    })
-    .catch(next)
-    .finally(() => {
-      session.close();
-    });
+  try {
+    const { records } = await session.run(query, params);
+    if (!records.length)
+      throw createHttpError(404, `No users with no groups`);
+    const response = format_batched_response(records);
+    res.send(response);
+  } catch (e) {
+    next(e);
+  } finally {
+    session.close();
+  }
 };
 
-export const get_groups_of_users = (
+export const get_groups_of_users = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -386,7 +384,7 @@ export const get_groups_of_users = (
   const query = `
     UNWIND $userIds AS user_id
     MATCH (user:User)-[:BELONGS_TO]->(group:Group)
-    WHERE user_id IN ${getCypherUserIdentifiers("user")}     
+    WHERE user_id IN ${getCypherUserIdentifiers("user")}
     ${shallow ? shallow_query : ""}
     ${official ? official_query : ""}
     ${nonofficial ? non_official_query : ""}
@@ -397,15 +395,14 @@ export const get_groups_of_users = (
 
   const params = { userIds, batch_size, start_index };
 
-  session
-    .run(query, params)
-    .then(({ records }) => {
-      if (!records.length) throw createHttpError(404, `No users found`);
-      const response = format_batched_response(records);
-      res.send(response);
-    })
-    .catch(next)
-    .finally(() => {
-      session.close();
-    });
+  try {
+    const { records } = await session.run(query, params);
+    if (!records.length) throw createHttpError(404, `No users found`);
+    const response = format_batched_response(records);
+    res.send(response);
+  } catch (e) {
+    next(e);
+  } finally {
+    session.close();
+  }
 };

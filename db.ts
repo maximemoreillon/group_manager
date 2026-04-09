@@ -49,8 +49,6 @@ const set_ids = async () => {
     const { records } = await session.run(id_setting_query)
     const count = records[0].get("count")
     console.log(`[Neo4J] Formatted new ID for ${count} groups`)
-  } catch (e) {
-    throw e
   } finally {
     session.close()
   }
@@ -64,24 +62,19 @@ const create_constraints = async () => {
       `CREATE CONSTRAINT IF NOT EXISTS FOR (g:Group) REQUIRE g._id IS UNIQUE`
     )
     console.log(`[Neo4J] Created constraints`)
-  } catch (error) {
-    throw error
   } finally {
     session.close()
   }
 }
 
 export const init = async () => {
-  if (await get_connection_status()) {
-    connected = true
+  if (!await get_connection_status()) throw new Error("Could not connect to Neo4J")
 
-    console.log("[Neo4J] Initializing DB...")
-    await set_ids()
-    await create_constraints()
-    console.log("[Neo4J] DB initialized")
-  } else {
-    setTimeout(init, 10000)
-  }
+  connected = true
+  console.log("[Neo4J] Initializing DB...")
+  await set_ids()
+  await create_constraints()
+  console.log("[Neo4J] DB initialized")
 }
 
 export const getConnected = () => connected
