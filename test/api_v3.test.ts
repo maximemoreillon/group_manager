@@ -34,6 +34,22 @@ describe("/v3/", () => {
     user = await whoami(jwt)
   })
 
+  describe("GET /", () => {
+    it("Should return application info", async () => {
+      const { status, body } = await request(app).get("/")
+      expect(status).to.equal(200)
+      expect(body).to.have.property("application_name")
+      expect(body).to.have.property("version")
+    })
+  })
+
+  describe("Authentication", () => {
+    it("Should return 401 when no token is provided", async () => {
+      const { status } = await request(app).get("/v3/groups")
+      expect(status).to.equal(401)
+    })
+  })
+
   describe("POST /v3/groups", () => {
     it("Should allow the creation of groups", async () => {
       let res = await request(app)
@@ -51,20 +67,45 @@ describe("/v3/", () => {
       if (res.body) subgroup_id = res.body._id
       expect(res.status).to.equal(200)
     })
+
+    it("Should return the created group with _id and name", async () => {
+      const { status, body } = await request(app)
+        .post("/v3/groups")
+        .send({ name: "tdd_v3_shape" })
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(200)
+      expect(body).to.have.property("_id")
+      expect(body).to.have.property("name", "tdd_v3_shape")
+
+      // cleanup
+      await request(app)
+        .delete(`/v3/groups/${body._id}`)
+        .set("Authorization", `Bearer ${jwt}`)
+    })
+
+    it("Should respond 400 when name is missing", async () => {
+      const { status } = await request(app)
+        .post("/v3/groups")
+        .send({})
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(400)
+    })
   })
 
   describe("GET /v3/groups", () => {
-    // TODO: add filters
     it("Should allow the query of groups", async () => {
       const { status, body } = await request(app)
         .get("/v3/groups")
         .set("Authorization", `Bearer ${jwt}`)
 
       expect(status).to.equal(200)
+      expect(body).to.have.property("items").that.is.an("array")
     })
 
     it("Should allow the query of top level groups", async () => {
-      const { status, body } = await request(app)
+      const { status } = await request(app)
         .get("/v3/groups")
         .query({ shallow: 1 })
         .set("Authorization", `Bearer ${jwt}`)
@@ -73,12 +114,31 @@ describe("/v3/", () => {
     })
 
     it("Should allow the query of top level official groups", async () => {
-      const { status, body } = await request(app)
+      const { status } = await request(app)
         .get("/v3/groups")
         .query({ shallow: 1, official: 1 })
         .set("Authorization", `Bearer ${jwt}`)
 
       expect(status).to.equal(200)
+    })
+
+    it("Should allow the query of non-official groups", async () => {
+      const { status } = await request(app)
+        .get("/v3/groups")
+        .query({ nonofficial: 1 })
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(200)
+    })
+
+    it("Should allow searching groups by name", async () => {
+      const { status, body } = await request(app)
+        .get("/v3/groups")
+        .query({ search: "tdd_v3" })
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(200)
+      expect(body).to.have.property("items").that.is.an("array")
     })
   })
 
@@ -108,6 +168,16 @@ describe("/v3/", () => {
         .set("Authorization", `Bearer ${jwt}`)
 
       expect(status).to.equal(200)
+      expect(body).to.have.property("name", "banana")
+    })
+
+    it("Should respond 403 when patching a disallowed property", async () => {
+      const { status } = await request(app)
+        .patch(`/v3/groups/${group_id}`)
+        .send({ _id: "hacked" })
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(403)
     })
   })
 
@@ -123,12 +193,30 @@ describe("/v3/", () => {
 
   describe("POST /v3/groups/:group_id/members/", () => {
     it("Should allow adding a user to a group", async () => {
-      const { status, body } = await request(app)
+      const { status } = await request(app)
         .post(`/v3/groups/${group_id}/members/`)
         .send({ user_id: user._id })
         .set("Authorization", `Bearer ${jwt}`)
 
       expect(status).to.equal(200)
+    })
+
+    it("Should allow adding multiple users to a group at once", async () => {
+      const { status } = await request(app)
+        .post(`/v3/groups/${group_id}/members/`)
+        .send({ user_ids: [user._id] })
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(200)
+    })
+
+    it("Should respond 400 when no user_id or user_ids is provided", async () => {
+      const { status } = await request(app)
+        .post(`/v3/groups/${group_id}/members/`)
+        .send({})
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(400)
     })
   })
 
@@ -157,6 +245,7 @@ describe("/v3/", () => {
         .set("Authorization", `Bearer ${jwt}`)
 
       expect(status).to.equal(200)
+      expect(body).to.have.property("_id", user._id)
     })
   })
 
@@ -164,6 +253,24 @@ describe("/v3/", () => {
     it("Should allow to get one's groups", async () => {
       const { status, body } = await request(app)
         .get(`/v3/users/self/groups/`)
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(200)
+    })
+
+    it("Should support the shallow filter", async () => {
+      const { status } = await request(app)
+        .get(`/v3/users/self/groups/`)
+        .query({ shallow: 1 })
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(200)
+    })
+
+    it("Should support the official filter", async () => {
+      const { status } = await request(app)
+        .get(`/v3/users/self/groups/`)
+        .query({ official: 1 })
         .set("Authorization", `Bearer ${jwt}`)
 
       expect(status).to.equal(200)
@@ -183,8 +290,17 @@ describe("/v3/", () => {
 
   describe("GET /v3/groups/:group_id/groups/", () => {
     it("Should allow the query of subgroups", async () => {
-      const { status, body } = await request(app)
+      const { status } = await request(app)
         .get(`/v3/groups/${group_id}/groups/`)
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(200)
+    })
+
+    it("Should allow the query of direct subgroups only", async () => {
+      const { status } = await request(app)
+        .get(`/v3/groups/${group_id}/groups/`)
+        .query({ direct: 1 })
         .set("Authorization", `Bearer ${jwt}`)
 
       expect(status).to.equal(200)
@@ -193,8 +309,18 @@ describe("/v3/", () => {
 
   describe("GET /v3/groups/:group_id/parents/", () => {
     it("Should allow querying parents of a group", async () => {
-      const { status, body } = await request(app)
+      const { status } = await request(app)
         .get(`/v3/groups/${group_id}/parents/`)
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(200)
+    })
+  })
+
+  describe("GET /v3/groups/:subgroup_id/parent_groups", () => {
+    it("Should allow querying parents via the parent_groups alias", async () => {
+      const { status } = await request(app)
+        .get(`/v3/groups/${subgroup_id}/parent_groups`)
         .set("Authorization", `Bearer ${jwt}`)
 
       expect(status).to.equal(200)
@@ -234,17 +360,65 @@ describe("/v3/", () => {
 
   describe("GET /v3/administrators/:user_id/groups", () => {
     it("Should allow querying groups administrated by a user", async () => {
-      const { status, body } = await request(app)
+      const { status } = await request(app)
         .get(`/v3/administrators/self/groups`)
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(200)
+    })
+
+    it("Should support the shallow filter", async () => {
+      const { status } = await request(app)
+        .get(`/v3/administrators/self/groups`)
+        .query({ shallow: 1 })
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(200)
+    })
+
+    it("Should support the official filter", async () => {
+      const { status } = await request(app)
+        .get(`/v3/administrators/self/groups`)
+        .query({ official: 1 })
         .set("Authorization", `Bearer ${jwt}`)
 
       expect(status).to.equal(200)
     })
   })
 
+  describe("GET /v3/groups/none/members", () => {
+    it("Should return users who belong to no group", async () => {
+      const { status, body } = await request(app)
+        .get(`/v3/groups/none/members`)
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(200)
+      expect(body).to.have.property("items").that.is.an("array")
+    })
+  })
+
+  describe("GET /v3/members/groups", () => {
+    it("Should return groups for a list of user IDs", async () => {
+      const { status, body } = await request(app)
+        .get(`/v3/members/groups`)
+        .query({ user_ids: [user._id] })
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(200)
+    })
+
+    it("Should respond 400 when user_ids is missing", async () => {
+      const { status } = await request(app)
+        .get(`/v3/members/groups`)
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(400)
+    })
+  })
+
   describe("DELETE /v3/groups/:group_id/groups/:subgroup_id", () => {
     it("Should allow the removal of a subgroup", async () => {
-      const { status, body } = await request(app)
+      const { status } = await request(app)
         .delete(`/v3/groups/${group_id}/groups/${subgroup_id}`)
         .set("Authorization", `Bearer ${jwt}`)
 
@@ -252,9 +426,44 @@ describe("/v3/", () => {
     })
   })
 
+  describe("DELETE /v3/groups/:group_id?deep=true", () => {
+    it("Should allow deep deletion of a group and its subgroups", async () => {
+      // Create a parent and a child group
+      const parentRes = await request(app)
+        .post("/v3/groups")
+        .send({ name: "tdd_deep_parent" })
+        .set("Authorization", `Bearer ${jwt}`)
+      const parentId = parentRes.body._id
+
+      const childRes = await request(app)
+        .post("/v3/groups")
+        .send({ name: "tdd_deep_child" })
+        .set("Authorization", `Bearer ${jwt}`)
+      const childId = childRes.body._id
+
+      await request(app)
+        .post(`/v3/groups/${parentId}/groups/`)
+        .send({ group_id: childId })
+        .set("Authorization", `Bearer ${jwt}`)
+
+      const { status } = await request(app)
+        .delete(`/v3/groups/${parentId}`)
+        .query({ deep: "true" })
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(200)
+
+      // Child should also be gone
+      const { status: childStatus } = await request(app)
+        .get(`/v3/groups/${childId}`)
+        .set("Authorization", `Bearer ${jwt}`)
+      expect(childStatus).to.equal(404)
+    })
+  })
+
   describe("DELETE /v3/groups/:group_id", () => {
     it("Should allow the deletion of a group", async () => {
-      const { status, body } = await request(app)
+      const { status } = await request(app)
         .delete(`/v3/groups/${group_id}`)
         .set("Authorization", `Bearer ${jwt}`)
 
@@ -262,7 +471,7 @@ describe("/v3/", () => {
     })
 
     it("Should allow the deletion of another group", async () => {
-      const { status, body } = await request(app)
+      const { status } = await request(app)
         .delete(`/v3/groups/${subgroup_id}`)
         .set("Authorization", `Bearer ${jwt}`)
 
@@ -270,7 +479,7 @@ describe("/v3/", () => {
     })
 
     it("Should respond 404 to the deletion of an inexistent group", async () => {
-      const { status, body } = await request(app)
+      const { status } = await request(app)
         .delete(`/v3/groups/111111`)
         .set("Authorization", `Bearer ${jwt}`)
 

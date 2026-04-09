@@ -53,6 +53,13 @@ describe("/v2/", () => {
       .set("Authorization", `Bearer ${jwt}`);
   });
 
+  describe("Authentication", () => {
+    it("Should return 401 when no token is provided", async () => {
+      const { status } = await request(app).get("/v2/groups");
+      expect(status).to.equal(401);
+    });
+  });
+
   describe("POST /v2/groups", () => {
     it("Should respond with 410", async () => {
       const { status } = await request(app)
