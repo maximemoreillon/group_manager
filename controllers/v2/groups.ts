@@ -5,51 +5,12 @@ import { Request, Response, NextFunction } from "express";
 
 const driver = drivers.v2;
 
-export const create_group = async (
+export const create_group = (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
-  // Create a group
-  // TODO: validation with joi
-
-  const user_id = get_current_user_id(req, res);
-  const { name } = req.body;
-  if (!name) throw createHttpError(400, `Missing group name`);
-
-  const session = driver.session();
-
-  const query = `
-    // Create the group
-    CREATE (group:Group)
-    SET group.name = $name
-    SET group._id = randomUUID() // IMPORTANT
-
-    // Create relationships
-    WITH group
-    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
-    CREATE (group)-[:ADMINISTRATED_BY]->(user)
-    CREATE (group)-[creation:CREATED_BY]->(user)
-    CREATE (group)<-[:BELONGS_TO]-(user)
-
-    // Setting creation relationship properties
-    SET creation.date = date()
-
-    RETURN group
-    `;
-
-  try {
-    const { records } = await session.run(query, { user_id, name });
-    if (!records.length)
-      throw createHttpError(500, `Error while creating group ${name}`);
-    const group = records[0].get("group");
-    console.log(`User ${user_id} created group ${group.properties._id}`);
-    res.send(group);
-  } catch (e) {
-    next(e);
-  } finally {
-    session.close();
-  }
+  res.status(410).send("Deprecated");
 };
 
 export const get_groups = async (
@@ -139,200 +100,36 @@ export const get_group = async (
   }
 };
 
-export const patch_group = async (
+export const patch_group = (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
-  const { group_id } = req.params;
-
-  if (!group_id) throw createHttpError(400, "Group ID not defined");
-  const user_id = get_current_user_id(req, res);
-
-  const properties = req.body;
-
-  let customizable_fields = ["avatar_src", "name", "restricted"];
-
-  // Allow master admin to make groups officials
-  const current_user = res.locals.user;
-  if (current_user.isAdmin || current_user?.properties?.isAdmin) {
-    customizable_fields.push("official");
-  }
-
-  // prevent user from modifying disallowed properties
-  for (let [key, value] of Object.entries(properties)) {
-    if (!customizable_fields.includes(key)) {
-      throw createHttpError(403, `Not allowed to modify property ${key}`);
-    }
-  }
-
-  const session = driver.session();
-
-  const query = `
-    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
-    WITH user
-    MATCH (group:Group {_id: $group_id})
-    // Only allow group admin or super admin
-    WHERE ( (group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
-
-    // Patch properties
-    // += implies update of existing properties
-    SET group += $properties
-
-    RETURN group
-    `;
-
-  const params = {
-    user_id,
-    group_id,
-    properties,
-  };
-
-  try {
-    const { records } = await session.run(query, params);
-    if (!records[0])
-      throw createHttpError(400, `Error patching group ${group_id}`);
-    console.log(`User ${user_id} patched group ${group_id}`);
-    const group = records[0].get("group");
-    res.send(group);
-  } catch (e) {
-    next(e);
-  } finally {
-    session.close();
-  }
+  res.status(410).send("Deprecated");
 };
 
-export const delete_group = async (
+export const delete_group = (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
-  // Route to delete a group
-
-  const { group_id } = req.params;
-
-  if (!group_id) throw createHttpError(400, "Group ID not defined");
-
-  const user_id = get_current_user_id(req, res);
-
-  const query = `
-    // Find the current user
-    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
-
-    // Find group
-    WITH user
-    MATCH (group:Group {_id: $group_id})
-
-    // Only allow group admin or super admin
-    WHERE ( (group)-[:ADMINISTRATED_BY]->(user) OR user.isAdmin )
-
-    // Delete the group
-    DETACH DELETE group
-
-    RETURN $group_id as group_id
-    `;
-
-  const session = driver.session();
-
-  try {
-    const { records } = await session.run(query, { user_id, group_id });
-    if (!records.length)
-      throw createHttpError(404, `Group ${group_id} not found`);
-    res.send({ group_id });
-    console.log(`User ${user_id} deleted group ${group_id}`);
-  } catch (e) {
-    next(e);
-  } finally {
-    session.close();
-  }
+  res.status(410).send("Deprecated");
 };
 
-export const join_group = async (
+export const join_group = (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
-  // TODO: Could be combined with make user member of group
-  // Route to join a group (only works if group is not private)
-
-  const { group_id } = req.params;
-  if (!group_id) throw createHttpError(400, "Group ID not defined");
-
-  const user_id = get_current_user_id(req, res);
-
-  const session = driver.session();
-
-  const query = `
-    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
-    WITH user
-    MATCH (group:Group {_id: $group_id})
-
-    // TODO: allow admin to join
-    WHERE (group.restricted IS NULL OR NOT group.restricted)
-
-    MERGE (user)-[:BELONGS_TO]->(group)
-
-    RETURN user
-    `;
-
-  const params = { user_id, group_id };
-
-  try {
-    const { records } = await session.run(query, params);
-    if (!records.length)
-      throw createHttpError(
-        400,
-        `Error during user ${user_id} joining of group ${group_id}`,
-      );
-    console.log(`User ${user_id} joined group ${group_id}`);
-    res.send({ group_id });
-  } catch (e) {
-    next(e);
-  } finally {
-    session.close();
-  }
+  res.status(410).send("Deprecated");
 };
 
-export const leave_group = async (
+export const leave_group = (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
-  // Route to leave a group
-
-  const { group_id } = req.params;
-  if (!group_id) throw createHttpError(400, "Group ID not defined");
-
-  const user_id = get_current_user_id(req, res);
-
-  const session = driver.session();
-
-  const query = `
-    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
-    WITH user
-    MATCH (group:Group {_id: $group_id})
-    WITH user, group
-
-    MATCH (user)-[r:BELONGS_TO]->(group)
-
-    DELETE r
-
-    RETURN user
-    `;
-
-  const params = { user_id, group_id };
-
-  try {
-    const { records } = await session.run(query, params);
-    if (!records.length)
-      throw createHttpError(400, `Error while leaving group ${group_id}`);
-    console.log(`User ${user_id} left group ${group_id}`);
-    res.send({ group_id });
-  } catch (e) {
-    next(e);
-  } finally {
-    session.close();
-  }
+  res.status(410).send("Deprecated");
 };
 
 export const get_parent_groups_of_group = async (

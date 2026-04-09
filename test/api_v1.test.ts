@@ -10,11 +10,6 @@ const {
   TEST_USER_PASSWORD,
 } = process.env as any
 
-const sleep = (delay: number) =>
-  new Promise((resolve) => {
-    setTimeout(resolve, delay)
-  })
-
 const login = async () => {
   const body = { username: TEST_USER_USERNAME, password: TEST_USER_PASSWORD }
   const {
@@ -29,15 +24,23 @@ const whoami = async (jwt: string) => {
   return user
 }
 
-// We will test for api users
 describe("/v1", () => {
   let user: any, jwt: string, group_id: string
 
   before(async () => {
-    //console.log = function () {}
-    await sleep(10000)
     jwt = await login()
     user = await whoami(jwt)
+    const { body } = await request(app)
+      .post("/v3/groups")
+      .send({ name: "tdd_v1" })
+      .set("Authorization", `Bearer ${jwt}`)
+    group_id = body._id
+  })
+
+  after(async () => {
+    await request(app)
+      .delete(`/v3/groups/${group_id}`)
+      .set("Authorization", `Bearer ${jwt}`)
   })
 
   describe("POST /v1/groups", () => {
@@ -47,18 +50,6 @@ describe("/v1", () => {
         .set("Authorization", `Bearer ${jwt}`)
 
       expect(status).to.equal(410)
-    })
-  })
-
-  describe("POST /v2/groups", () => {
-    it("Should allow the creation of groups", async () => {
-      const { body, status } = await request(app)
-        .post("/v2/groups")
-        .send({ name: "tdd_v1" })
-        .set("Authorization", `Bearer ${jwt}`)
-
-      if (body.properties) group_id = body.properties._id
-      expect(status).to.equal(200)
     })
   })
 
@@ -110,7 +101,7 @@ describe("/v1", () => {
 
   describe("GET /v1/users/self/groups/", () => {
     it("Should allow to get one's groups", async () => {
-      const { status, body } = await request(app)
+      const { status } = await request(app)
         .get(`/v1/users/self/groups/`)
         .set("Authorization", `Bearer ${jwt}`)
 
@@ -120,7 +111,7 @@ describe("/v1", () => {
 
   describe("GET /v1/groups/:group_id/groups/", () => {
     it("Should allow the query of subgroups", async () => {
-      const { status, body } = await request(app)
+      const { status } = await request(app)
         .get(`/v1/groups/${group_id}/groups/`)
         .set("Authorization", `Bearer ${jwt}`)
 
@@ -145,16 +136,6 @@ describe("/v1", () => {
         .set("Authorization", `Bearer ${jwt}`)
 
       expect(status).to.equal(410)
-    })
-  })
-
-  describe("DELETE /v2/groups/:group_id", () => {
-    it("Should allow the deletion of a group", async () => {
-      const { status } = await request(app)
-        .delete(`/v2/groups/${group_id}`)
-        .set("Authorization", `Bearer ${jwt}`)
-
-      expect(status).to.equal(200)
     })
   })
 })

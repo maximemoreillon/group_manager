@@ -85,121 +85,20 @@ export const get_members_of_group = async (
   }
 }
 
-export const add_member_to_group = async (
+export const add_member_to_group = (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
-  // Route to make a user join a group
-
-  const { group_id } = req.params
-  const { user_id } = req.body
-
-  if (!group_id) throw createHttpError(400, "User ID not defined")
-  if (!user_id) throw createHttpError(400, "User ID not defined")
-
-  const current_user_id = get_current_user_id(req, res)
-
-  const session = driver.session()
-
-  const query = `
-    // Find the current user
-    MATCH (current_user:User)
-    WHERE $current_user_id IN ${getCypherUserIdentifiers("current_user")}
-
-    // Find group
-    WITH current_user
-    MATCH (group:Group {_id: $group_id})
-    // Allow only group admin or super admin to delete a group
-    WHERE ( (group)-[:ADMINISTRATED_BY]->(current_user)
-        OR current_user.isAdmin )
-
-    // Find the user
-    WITH group
-    MATCH (user:User) WHERE $user_id IN ${getCypherUserIdentifiers("user")}
-
-    // MERGE relationship
-    MERGE (user)-[:BELONGS_TO]->(group)
-
-    // Return
-    RETURN user, group
-    `
-
-  const params = { current_user_id, user_id, group_id }
-
-  try {
-    const { records } = await session.run(query, params)
-    if (!records.length)
-      throw createHttpError(
-        400,
-        `Error adding using ${user_id} from group ${group_id}`
-      )
-    console.log(
-      `User ${current_user_id} added user ${user_id} to group ${group_id}`
-    )
-
-    const user = records[0].get("user")
-    res.send(user)
-  } catch (e) {
-    next(e)
-  } finally {
-    session.close()
-  }
+  res.status(410).send("Deprecated")
 }
 
-export const remove_user_from_group = async (
+export const remove_user_from_group = (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
-  // Route to make a user leave a group
-
-  const { group_id, member_id: user_id } = req.params
-
-  if (!group_id) throw createHttpError(400, "Group ID not defined")
-  if (!user_id) throw createHttpError(400, "User ID not defined")
-
-  const current_user_id = get_current_user_id(req, res)
-
-  const session = driver.session()
-
-  const query = `
-    MATCH (current_user:User)
-    WHERE $current_user_id IN ${getCypherUserIdentifiers("current_user")}
-
-    WITH current_user
-    MATCH (group:Group {_id: $group_id})
-    WHERE ( (group)-[:ADMINISTRATED_BY]->(current_user) OR current_user.isAdmin )
-
-    WITH group
-    MATCH (user:User)-[r:BELONGS_TO]->(group)
-    WHERE $user_id IN ${getCypherUserIdentifiers("user")}
-
-    DELETE r
-
-    RETURN user, group
-    `
-
-  const params = { current_user_id, user_id, group_id }
-
-  try {
-    const { records } = await session.run(query, params)
-    if (!records.length)
-      throw createHttpError(
-        400,
-        `Error removing using ${user_id} from group ${group_id}`
-      )
-    console.log(
-      `User ${current_user_id}  removed user ${user_id} from group ${group_id}`
-    )
-
-    const user = records[0].get("user")
-    res.send(user)
-  } catch (e) {
-    next(e)
-  } finally {
-    session.close()
-  }
+  res.status(410).send("Deprecated")
 }
 
 export const get_groups_of_user = async (
