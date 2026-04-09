@@ -18,9 +18,7 @@ export const drivers = {
   v2: neo4j.driver(NEO4J_URL, auth, options.v2),
 }
 
-let connected = false
-
-const get_connection_status = async () => {
+export const get_connection_status = async () => {
   const session = drivers.v2.session()
   try {
     console.log(`[Neo4J] Testing connection...`)
@@ -70,11 +68,9 @@ const create_constraints = async () => {
 export const init = async () => {
   if (!await get_connection_status()) throw new Error("Could not connect to Neo4J")
 
-  connected = true
   console.log("[Neo4J] Initializing DB...")
   await set_ids()
   await create_constraints()
   console.log("[Neo4J] DB initialized")
 }
 
-export const getConnected = () => connected

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { authUserIdentifiers, dbUserIdentifiers } from "./config";
-import createHttpError from "http-errors";
+import createHttpError, { isHttpError } from "http-errors";
+import type { Record as Neo4jRecord } from "neo4j-driver";
 
 export const get_current_user_id = (req: Request, res: Response) => {
   const current_user = res.locals?.user?.properties ?? res.locals?.user;
@@ -33,7 +34,7 @@ RETURN
   batch_size
 `;
 
-export const format_batched_response = (records: any) => {
+export const format_batched_response = (records: Neo4jRecord[]) => {
   const record = records[0];
 
   if (!record) throw createHttpError(400, "Query did not yield any match");
@@ -52,15 +53,18 @@ export const format_batched_response = (records: any) => {
 };
 
 export const errorHandler = (
-  error: any,
+  error: unknown,
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
   console.error(error);
-  let { statusCode = 500, message = error, expose = false } = error;
-  if (isNaN(statusCode) || statusCode > 600) statusCode = 500;
-  res.status(statusCode).send(expose ? message : "Internal Server Error");
+  if (isHttpError(error)) {
+    const { statusCode, message, expose } = error;
+    res.status(statusCode).send(expose ? message : "Internal Server Error");
+  } else {
+    res.status(500).send("Internal Server Error");
+  }
 };
 
 export const getCypherUserIdentifiers = (name: string = "user") =>

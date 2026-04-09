@@ -16,7 +16,7 @@ const driver = drivers.v2;
 export const add_member_to_group = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   const current_user_id = get_current_user_id(req, res);
 
@@ -61,7 +61,7 @@ export const add_member_to_group = async (
 
   const query = `
     MATCH (current_user:User) WHERE $current_user_id IN ${getCypherUserIdentifiers(
-      "current_user"
+      "current_user",
     )}
 
     WITH current_user
@@ -90,15 +90,15 @@ export const add_member_to_group = async (
     if (!records.length)
       throw createHttpError(
         400,
-        `Error adding adding user(s) ${
+        `Error adding user(s) ${
           user_id || user_ids.join(", ")
-        } to group ${group_id}`
+        } to group ${group_id}`,
       );
 
     console.log(
       `User ${current_user_id} added user(s) ${
         user_id || user_ids.join(", ")
-      } to group ${group_id}`
+      } to group ${group_id}`,
     );
 
     const group = records[0].get("group");
@@ -113,7 +113,7 @@ export const add_member_to_group = async (
 export const get_user = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   // This should not be a feature of group manager
   // but it is used in front-end
@@ -148,7 +148,7 @@ export const get_user = async (
 export const get_members_of_group = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   const { group_id } = req.params;
   if (!group_id || group_id === "undefined")
@@ -193,7 +193,7 @@ export const get_members_of_group = async (
 export const remove_user_from_group = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   const current_user_id = get_current_user_id(req, res);
 
@@ -208,7 +208,7 @@ export const remove_user_from_group = async (
 
   const query = `
     MATCH (current_user:User) WHERE $current_user_id IN ${getCypherUserIdentifiers(
-      "current_user"
+      "current_user",
     )}
 
     WITH current_user
@@ -222,7 +222,7 @@ export const remove_user_from_group = async (
 
     WITH group
     MATCH (user:User)-[r:BELONGS_TO]->(group) WHERE $user_id IN ${getCypherUserIdentifiers(
-      "user"
+      "user",
     )}
 
     DELETE r
@@ -237,10 +237,10 @@ export const remove_user_from_group = async (
     if (!records.length)
       throw createHttpError(
         400,
-        `Error removing using ${user_id} from group ${group_id}`
+        `Error removing user ${user_id} from group ${group_id}`,
       );
     console.log(
-      `User ${current_user_id} removed user ${user_id} from group ${group_id}`
+      `User ${current_user_id} removed user ${user_id} from group ${group_id}`,
     );
 
     const group = records[0].get("group");
@@ -255,7 +255,7 @@ export const remove_user_from_group = async (
 export const get_groups_of_user = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   let { member_id: user_id } = req.params;
   if (user_id === "self") user_id = get_current_user_id(req, res);
@@ -316,7 +316,7 @@ export const get_groups_of_user = async (
 export const users_with_no_group = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   const session = driver.session();
 
@@ -340,8 +340,7 @@ export const users_with_no_group = async (
 
   try {
     const { records } = await session.run(query, params);
-    if (!records.length)
-      throw createHttpError(404, `No users with no groups`);
+    if (!records.length) throw createHttpError(404, `No users with no groups`);
     const response = format_batched_response(records);
     res.send(response);
   } catch (e) {
@@ -354,7 +353,7 @@ export const users_with_no_group = async (
 export const get_groups_of_users = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   const session = driver.session();
 

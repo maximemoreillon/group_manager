@@ -11,11 +11,6 @@ import { errorHandler } from "./utils"
 import { APP_PORT } from "./config"
 import router from "./routes/"
 
-db_init().catch((e) => {
-  console.error(e.message)
-  process.exit(1)
-})
-
 const promOptions = { includeMethod: true, includePath: true }
 
 export const app = express()
@@ -26,6 +21,13 @@ app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument))
 app.use("/", router)
 app.use(errorHandler)
 
-app.listen(APP_PORT, () => {
-  console.log(`[Express] listening on port ${APP_PORT}`)
-})
+db_init()
+  .then(() => {
+    app.listen(APP_PORT, () => {
+      console.log(`[Express] listening on port ${APP_PORT}`)
+    })
+  })
+  .catch((e) => {
+    console.error(e.message)
+    process.exit(1)
+  })
