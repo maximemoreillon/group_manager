@@ -2,6 +2,23 @@ import { Request, Response, NextFunction } from "express";
 import { authUserIdentifiers, dbUserIdentifiers } from "./config";
 import createHttpError, { isHttpError } from "http-errors";
 import type { Record as Neo4jRecord } from "neo4j-driver";
+import { z } from "zod";
+
+export const GroupFilterSchema = z
+  .object({
+    name: z.string(),
+    official: z.string(),
+    hidden: z.string(),
+    restricted: z.string(),
+    avatar_src: z.string(),
+  })
+  .partial();
+
+export const UserFilterSchema = z
+  .object({
+    username: z.string(),
+  })
+  .partial();
 
 export const get_current_user_id = (req: Request, res: Response) => {
   const current_user = res.locals?.user?.properties ?? res.locals?.user;

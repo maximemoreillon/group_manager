@@ -7,8 +7,23 @@ import {
   format_batched_response,
   getCypherUserIdentifiers,
   filtering_query,
+  GroupFilterSchema,
 } from "../../utils";
 import { Request, Response, NextFunction } from "express";
+import { z } from "zod";
+
+const groupUpdateFields = {
+  avatar_src: z.string(),
+  name: z.string(),
+  restricted: z.boolean(),
+  hidden: z.boolean(),
+};
+
+const GroupUpdateSchema = z.object(groupUpdateFields).partial().strict();
+const AdminGroupUpdateSchema = z
+  .object({ ...groupUpdateFields, official: z.boolean() })
+  .partial()
+  .strict();
 
 const driver = drivers.v2;
 
@@ -17,9 +32,6 @@ export const create_group = async (
   res: Response,
   next: NextFunction,
 ) => {
-  // Create a group
-  // TODO: validation with joi
-
   const user_id = get_current_user_id(req, res);
   const { name } = req.body;
   if (!name) throw createHttpError(400, `Missing group name`);
@@ -87,9 +99,10 @@ export const read_groups = async (
     official,
     nonofficial,
     search,
-    ...filters
+    ...rawFilters
   } = req.query;
 
+  const filters = GroupFilterSchema.parse(rawFilters);
   const hasFilters = Object.keys(filters).length > 0;
 
   const as_parent_query = `AND (group)<-[:BELONGS_TO]-(:Group {_id: $subgroup_id})`;
@@ -218,25 +231,22 @@ export const update_group = async (
 
   const user_id = get_current_user_id(req, res);
 
-  const properties = req.body;
-
-  // TODO: Have this list in an external file
-  let customizable_fields = ["avatar_src", "name", "restricted", "hidden"];
-
   const current_user = res.locals.user;
   const current_user_is_admin =
     current_user.isAdmin || current_user.properties?.isAdmin;
 
-  // Allow master admin to make groups officials
-  // TODO: improve concatenation
-  if (current_user_is_admin) customizable_fields.push("official");
+  const schema = current_user_is_admin
+    ? AdminGroupUpdateSchema
+    : GroupUpdateSchema;
 
-  // prevent user from modifying disallowed properties
-  // TODO: could be achieved using Zod
-  for (let [key, value] of Object.entries(properties)) {
-    if (!customizable_fields.includes(key)) {
-      throw createHttpError(403, `Not allowed to modify property ${key}`);
-    }
+  const { data: properties, success, error } = schema.safeParse(req.body);
+
+  if (!success) {
+    const field = error.issues[0]?.path[0];
+    throw createHttpError(
+      403,
+      `Not allowed to modify property ${String(field)}`,
+    );
   }
 
   const session = driver.session();
