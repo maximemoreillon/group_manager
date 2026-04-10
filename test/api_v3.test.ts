@@ -104,6 +104,29 @@ describe("/v3/", () => {
       expect(body).to.have.property("items").that.is.an("array")
     })
 
+    it("Should filter groups by name", async () => {
+      const { status, body } = await request(app)
+        .get("/v3/groups")
+        .query({ name: "tdd_v3" })
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(200)
+      expect(body.items).to.be.an("array")
+      body.items.forEach((item: any) => {
+        expect(item).to.have.property("name", "tdd_v3")
+      })
+    })
+
+    it("Should ignore unknown filter keys", async () => {
+      const { status, body } = await request(app)
+        .get("/v3/groups")
+        .query({ password_hashed: "secret", _id: "hacked" })
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(200)
+      expect(body).to.have.property("items").that.is.an("array")
+    })
+
     it("Should allow the query of top level groups", async () => {
       const { status } = await request(app)
         .get("/v3/groups")
@@ -171,6 +194,27 @@ describe("/v3/", () => {
       expect(body).to.have.property("name", "banana")
     })
 
+    it("Should allow patching boolean fields", async () => {
+      const { status, body } = await request(app)
+        .patch(`/v3/groups/${group_id}`)
+        .send({ restricted: false, hidden: false })
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(200)
+      expect(body).to.have.property("restricted", false)
+      expect(body).to.have.property("hidden", false)
+    })
+
+    it("Should allow an admin to set the official field", async () => {
+      const { status, body } = await request(app)
+        .patch(`/v3/groups/${group_id}`)
+        .send({ official: true })
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(200)
+      expect(body).to.have.property("official", true)
+    })
+
     it("Should respond 403 when patching a disallowed property", async () => {
       const { status } = await request(app)
         .patch(`/v3/groups/${group_id}`)
@@ -227,6 +271,16 @@ describe("/v3/", () => {
         .set("Authorization", `Bearer ${jwt}`)
 
       expect(status).to.equal(200)
+    })
+
+    it("Should ignore unknown filter keys", async () => {
+      const { status, body } = await request(app)
+        .get(`/v3/groups/${group_id}/members/`)
+        .query({ password_hashed: "secret", _id: "hacked" })
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(200)
+      expect(body).to.have.property("items").that.is.an("array")
     })
 
     it("Should allow querying members of no group", async () => {

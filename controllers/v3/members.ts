@@ -9,6 +9,8 @@ import {
   format_batched_response,
   getCypherUserIdentifiers,
   filtering_query,
+  GroupFilterSchema,
+  UserFilterSchema,
 } from "../../utils";
 
 const driver = drivers.v2;
@@ -157,9 +159,10 @@ export const get_members_of_group = async (
   const {
     batch_size = DEFAULT_BATCH_SIZE,
     start_index = 0,
-    ...filters
+    ...rawFilters
   } = req.query;
 
+  const filters = UserFilterSchema.parse(rawFilters);
   const hasFilters = Object.keys(filters).length > 0;
 
   const session = driver.session();
@@ -267,9 +270,10 @@ export const get_groups_of_user = async (
     shallow,
     official,
     nonofficial,
-    ...filters
+    ...rawFilters
   } = req.query;
 
+  const filters = GroupFilterSchema.parse(rawFilters);
   const hasFilters = Object.keys(filters).length > 0;
 
   const session = driver.session();
@@ -323,9 +327,10 @@ export const users_with_no_group = async (
   const {
     batch_size = DEFAULT_BATCH_SIZE,
     start_index = 0,
-    ...filters
+    ...rawFilters
   } = req.query;
 
+  const filters = UserFilterSchema.parse(rawFilters);
   const hasFilters = Object.keys(filters).length > 0;
 
   const query = `
