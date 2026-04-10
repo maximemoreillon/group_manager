@@ -5,6 +5,7 @@ export const {
   OIDC_JWKS_URI,
   DB_USER_ID_FIELDS,
   AUTH_USER_ID_FIELDS,
+  CORS_ALLOWED_ORIGINS,
 } = process.env;
 
 const additionalDbUseridentifiers = DB_USER_ID_FIELDS?.split(",") ?? [];
