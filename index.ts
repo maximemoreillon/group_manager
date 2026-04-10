@@ -2,7 +2,6 @@ import { version } from "./package.json";
 console.log(`= Group manager v${version} =`);
 
 import express from "express";
-import "express-async-errors";
 import cors from "cors";
 import promBundle from "express-prom-bundle";
 import swaggerUi from "swagger-ui-express";
@@ -18,6 +17,7 @@ const corsOptions = CORS_ALLOWED_ORIGINS
   : {};
 
 export const app = express();
+app.set("query parser", "extended");
 app.use(express.json());
 app.use(cors(corsOptions));
 app.use(promBundle(promOptions));
