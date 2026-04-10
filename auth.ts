@@ -4,6 +4,12 @@ import oidcAuth from "@moreillon/express-oidc";
 import { OIDC_JWKS_URI, IDENTIFICATION_URL } from "./config";
 
 export const registerAuthMiddleware = (router: Router) => {
+  if (!IDENTIFICATION_URL && !OIDC_JWKS_URI) {
+    throw new Error(
+      "[Auth] No authentication configured. Set IDENTIFICATION_URL or OIDC_JWKS_URI",
+    );
+  }
+
   if (IDENTIFICATION_URL) {
     console.log(`[Auth] Legacy auth enabled with URL: ${IDENTIFICATION_URL}`);
     router.use(legacyAuth({ url: IDENTIFICATION_URL, lax: !!OIDC_JWKS_URI }));
