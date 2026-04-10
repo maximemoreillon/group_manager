@@ -65,6 +65,11 @@ const create_constraints = async () => {
   }
 };
 
+export const close = async () => {
+  await Promise.all([drivers.v1.close(), drivers.v2.close()]);
+  console.log("[Neo4J] Connections closed");
+};
+
 export const init = async () => {
   if (!(await get_connection_status()))
     throw new Error("Could not connect to Neo4J");

@@ -5,6 +5,7 @@ import { NEO4J_URL, get_connection_status as neo4j_connected } from "../db";
 import router_v1 from "./v1";
 import router_v2 from "./v2";
 import router_v3 from "./v3";
+import healthRouter from "./health";
 
 import {
   IDENTIFICATION_URL,
@@ -33,6 +34,8 @@ router.get("/", async (req, res) => {
     },
   });
 });
+
+router.use("/health", healthRouter);
 
 registerAuthMiddleware(router);
 router.use("/", router_v1);

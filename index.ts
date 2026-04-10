@@ -7,7 +7,7 @@ import cors from "cors";
 import promBundle from "express-prom-bundle";
 import swaggerUi from "swagger-ui-express";
 import swaggerDocument from "./swagger-output.json";
-import { init as db_init } from "./db";
+import { init as db_init, close as db_close } from "./db";
 import { errorHandler } from "./utils";
 import { APP_PORT, CORS_ALLOWED_ORIGINS } from "./config";
 import router from "./routes/";
@@ -27,9 +27,20 @@ app.use(errorHandler);
 
 db_init()
   .then(() => {
-    app.listen(APP_PORT, () => {
+    const server = app.listen(APP_PORT, () => {
       console.log(`[Express] listening on port ${APP_PORT}`);
     });
+
+    const shutdown = async () => {
+      console.log("[Express] Shutting down...");
+      server.close(async () => {
+        await db_close();
+        process.exit(0);
+      });
+    };
+
+    process.on("SIGTERM", shutdown);
+    process.on("SIGINT", shutdown);
   })
   .catch((e) => {
     console.error(e.message);
