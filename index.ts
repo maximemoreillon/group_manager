@@ -18,7 +18,9 @@ const corsOptions = CORS_ALLOWED_ORIGINS
   : {};
 
 export const app = express();
-app.set("query parser", (str: string) => qs.parse(str, { arrayLimit: 200 }));
+app.set("query parser", (str: string) =>
+  qs.parse(str, { arrayLimit: Infinity }),
+);
 app.use(express.json());
 app.use(cors(corsOptions));
 app.use(promBundle(promOptions));
