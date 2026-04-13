@@ -482,10 +482,14 @@ describe("/v3/", () => {
       expect(body).to.have.property("items").that.is.an("array")
     })
 
-    it("Should handle multiple IDs", async () => {
+    it("Should handle multiple IDs including more than 20", async () => {
+      // qs default arrayLimit is 20 — exceeding it previously caused ids to be
+      // parsed as an object instead of an array, resulting in a 400 error
+      const manyIds = Array.from({ length: 25 }, () => user._id)
+      const query = manyIds.map((id) => `ids[]=${id}`).join("&")
       const { status, body } = await request(app)
         .get(`/v3/members/groups`)
-        .query(`ids[]=${user._id}&ids[]=${user._id}`)
+        .query(query)
         .set("Authorization", `Bearer ${jwt}`)
 
       expect(status).to.equal(200)

@@ -21,9 +21,7 @@ export const drivers = {
 export const get_connection_status = async () => {
   const session = drivers.v2.session();
   try {
-    console.log(`[Neo4J] Testing connection...`);
     await session.run("RETURN 1");
-    console.log(`[Neo4J] Connection successful`);
     return true;
   } catch (e) {
     console.log(`[Neo4J] Connection failed`);
