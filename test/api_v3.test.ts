@@ -452,18 +452,58 @@ describe("/v3/", () => {
   })
 
   describe("GET /v3/members/groups", () => {
-    it("Should return groups for a list of user IDs", async () => {
+    it("Should return groups for a list of user IDs using user_ids[]", async () => {
       const { status, body } = await request(app)
         .get(`/v3/members/groups`)
         .query(`user_ids[]=${user._id}`)
         .set("Authorization", `Bearer ${jwt}`)
 
       expect(status).to.equal(200)
+      expect(body).to.have.property("items").that.is.an("array")
+    })
+
+    it("Should return groups for a list of user IDs using member_ids[]", async () => {
+      const { status, body } = await request(app)
+        .get(`/v3/members/groups`)
+        .query(`member_ids[]=${user._id}`)
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(200)
+      expect(body).to.have.property("items").that.is.an("array")
+    })
+
+    it("Should return groups for a list of user IDs using ids[]", async () => {
+      const { status, body } = await request(app)
+        .get(`/v3/members/groups`)
+        .query(`ids[]=${user._id}`)
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(200)
+      expect(body).to.have.property("items").that.is.an("array")
+    })
+
+    it("Should handle multiple IDs", async () => {
+      const { status, body } = await request(app)
+        .get(`/v3/members/groups`)
+        .query(`ids[]=${user._id}&ids[]=${user._id}`)
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(200)
+      expect(body).to.have.property("items").that.is.an("array")
     })
 
     it("Should respond 400 when user_ids is missing", async () => {
       const { status } = await request(app)
         .get(`/v3/members/groups`)
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(400)
+    })
+
+    it("Should respond 400 when user_ids is not an array", async () => {
+      const { status } = await request(app)
+        .get(`/v3/members/groups`)
+        .query(`ids=${user._id}`)
         .set("Authorization", `Bearer ${jwt}`)
 
       expect(status).to.equal(400)
