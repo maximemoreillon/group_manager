@@ -10,35 +10,41 @@ export const registerAuthMiddleware = (router: Router) => {
     );
   }
 
-  if (IDENTIFICATION_URL) {
-    console.log(`[Auth] Legacy auth enabled with URL: ${IDENTIFICATION_URL}`);
-    router.use(legacyAuth({ url: IDENTIFICATION_URL, lax: !!OIDC_JWKS_URI }));
-  }
+  if (IDENTIFICATION_URL && OIDC_JWKS_URI) {
+    console.log(`[Auth] Both Legacy and OIDC auth are enabled`);
 
-  if (OIDC_JWKS_URI) {
-    console.log(`[Auth] OIDC auth enabled with JWKS URI: ${OIDC_JWKS_URI}`);
-
+    const legacyMiddleware = legacyAuth({ url: IDENTIFICATION_URL });
     const oidcMiddleware = oidcAuth({ jwksUri: OIDC_JWKS_URI });
 
-    if (IDENTIFICATION_URL) {
-      console.log(`[Auth] Both Legacy and OIDC auth are enabled`);
-      const wrappingMiddleware = (
-        req: Request,
-        res: Response,
-        next: NextFunction,
-      ) => {
-        // Do nothing if user already identified from previous middleware
+    router.use((req: Request, res: Response, next: NextFunction) => {
+      // Route to the correct middleware based on the JWT header's kid field.
+      // Legacy JWTs never carry a kid; OIDC JWTs always do (required for JWKS
+      // key lookup). This lets us avoid running both middlewares on every request.
+      const token = req.headers.authorization?.split(" ")[1];
+      let hasKid = false;
 
-        if (res.locals.user) return next();
+      if (token) {
+        try {
+          const header = JSON.parse(
+            Buffer.from(token.split(".")[0], "base64url").toString("utf8"),
+          );
+          hasKid = !!header.kid;
+        } catch {
+          // Malformed token — let the selected middleware produce the error
+        }
+      }
 
+      if (hasKid) {
         oidcMiddleware(req, res, next);
-      };
-
-      router.use(wrappingMiddleware);
-    }
-    // If just OIDC, register as usual
-    else {
-      router.use(oidcMiddleware);
-    }
+      } else {
+        legacyMiddleware(req, res, next);
+      }
+    });
+  } else if (IDENTIFICATION_URL) {
+    console.log(`[Auth] Legacy auth enabled with URL: ${IDENTIFICATION_URL}`);
+    router.use(legacyAuth({ url: IDENTIFICATION_URL }));
+  } else if (OIDC_JWKS_URI) {
+    console.log(`[Auth] OIDC auth enabled with JWKS URI: ${OIDC_JWKS_URI}`);
+    router.use(oidcAuth({ jwksUri: OIDC_JWKS_URI }));
   }
 };
