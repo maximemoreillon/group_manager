@@ -84,6 +84,22 @@ describe("/v3/", () => {
         .set("Authorization", `Bearer ${jwt}`)
     })
 
+    it("Should create groups with restricted and hidden set to true by default", async () => {
+      const { status, body } = await request(app)
+        .post("/v3/groups")
+        .send({ name: "tdd_v3_defaults" })
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(200)
+      expect(body).to.have.property("restricted", true)
+      expect(body).to.have.property("hidden", true)
+
+      // cleanup
+      await request(app)
+        .delete(`/v3/groups/${body._id}`)
+        .set("Authorization", `Bearer ${jwt}`)
+    })
+
     it("Should respond 400 when name is missing", async () => {
       const { status } = await request(app)
         .post("/v3/groups")
@@ -180,6 +196,14 @@ describe("/v3/", () => {
         .set("Authorization", `Bearer ${jwt}`)
 
       expect(status).to.equal(404)
+    })
+
+    it("Should allow the group administrator to query their own hidden group", async () => {
+      const { status } = await request(app)
+        .get(`/v3/groups/${group_id}`)
+        .set("Authorization", `Bearer ${jwt}`)
+
+      expect(status).to.equal(200)
     })
   })
 

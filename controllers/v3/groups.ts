@@ -136,8 +136,7 @@ export const read_groups = async (
     WITH current_user
     OPTIONAL MATCH (group:Group) WHERE group._id IS NOT NULL
     AND (
-      group.official
-      OR (group.hidden IS NULL OR NOT group.hidden)
+      (group.hidden IS NULL OR NOT group.hidden)
       OR (group)<-[:BELONGS_TO]-(current_user)
       OR (group)-[:ADMINISTRATED_BY]->(current_user)
       OR current_user.isAdmin
@@ -196,8 +195,7 @@ export const read_group = async (
     WITH current_user
     MATCH (group:Group {_id: $group_id})
     WHERE (
-      group.official
-      OR (group.hidden IS NULL OR NOT group.hidden)
+      (group.hidden IS NULL OR NOT group.hidden)
       OR (group)<-[:BELONGS_TO]-(current_user)
       OR (group)-[:ADMINISTRATED_BY]->(current_user)
       OR current_user.isAdmin
