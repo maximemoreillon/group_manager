@@ -145,8 +145,8 @@ export const read_groups = async (
     ${subgroup_id ? as_parent_query : ""}
     ${direct ? direct_query : ""}
     ${shallow ? shallow_query : ""}
-    ${official ? official_query : ""}
-    ${nonofficial ? non_official_query : ""}
+    ${official && !nonofficial ? official_query : ""}
+    ${nonofficial && !official ? non_official_query : ""}
     ${search ? search_query : ""}
 
 
