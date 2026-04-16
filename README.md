@@ -22,15 +22,29 @@ For more information, please visit the project page [here](https://articles.maxi
 
 ### Groups
 
-| Endpoint                    | Method | query/body | Description                                                          |
-| --------------------------- | ------ | ---------- | -------------------------------------------------------------------- |
-| /v3/groups/                 | GET    | tbd        | Returns list of groups                                               |
-| /v3/groups/                 | GET    | tbd        | Returns list of groups                                               |
-| /v3/groups/{group_id}       | GET    | -          | Returns information about the group corresponding to the provided ID |
-| /v3/groups/{group_id}       | PATCH  | properties | Updates properties of a group                                        |
-| /v3/groups/{group_id}       | DELETE | -          | Deletes a group                                                      |
-| /v3/groups/{group_id}/join  | POST   | -          | Join a group                                                         |
-| /v3/groups/{group_id}/leave | POST   | -          | leave a group                                                        |
+| Endpoint              | Method | query/body | Description                                                          |
+| --------------------- | ------ | ---------- | -------------------------------------------------------------------- |
+| /v3/groups/           | GET    | see below  | Returns list of groups                                               |
+| /v3/groups/           | POST   | name       | Creates a group                                                      |
+| /v3/groups/{group_id} | GET    | -          | Returns information about the group corresponding to the provided ID |
+| /v3/groups/{group_id} | PATCH  | properties | Updates properties of a group                                        |
+| /v3/groups/{group_id} | DELETE | -          | Deletes a group                                                      |
+
+#### GET /v3/groups query parameters
+
+| Parameter   | Description                                                              |
+| ----------- | ------------------------------------------------------------------------ |
+| batch_size  | Number of results per page (default: 100)                                |
+| start_index | Index of the first result (default: 0)                                   |
+| shallow     | If set, only returns top-level groups (groups with no parent)            |
+| direct      | If set, only returns direct subgroups (not transitive ones)              |
+| official    | If set, only returns official groups                                      |
+| nonofficial | If set, only returns non-official groups                                  |
+| search      | Case-insensitive substring match on group name                           |
+| name        | Exact match filter on name                                               |
+| hidden      | Exact match filter on hidden flag                                        |
+| restricted  | Exact match filter on restricted flag                                    |
+| avatar_src  | Exact match filter on avatar_src                                         |
 
 ### Subgroups
 
@@ -44,14 +58,14 @@ For more information, please visit the project page [here](https://articles.maxi
 
 ### Members
 
-| Endpoint                                | Method | query/body | Description                                                                    |
-| --------------------------------------- | ------ | ---------- | ------------------------------------------------------------------------------ |
-| /v3/groups/none/members                 | GET    | -          | Returns users without a group                                                  |
-| /v3/groups/{group_id}/members           | GET    | -          | Returns the users belonging to the group with the given ID                     |
-| /v3/groups/{group_id}/members/{user_id} | POST   | -          | Adds a user to the group                                                       |
-| /v3/groups/{group_id}/members/{user_id} | DELETE | -          | Removes a user from the group                                                  |
-| /v3/members/groups                      | GET    | user_ids   | Gets the groups of multiple users identrified by their respective IDs          |
-| /v3/members/{member_id}/groups          | GET    | -          | Gets the groups of a member, here, use 'self' as member_id of one's own groups |
+| Endpoint                                | Method | query/body        | Description                                                                      |
+| --------------------------------------- | ------ | ----------------- | -------------------------------------------------------------------------------- |
+| /v3/groups/none/members                 | GET    | -                 | Returns users without a group                                                    |
+| /v3/groups/{group_id}/members           | GET    | -                 | Returns the users belonging to the group with the given ID                       |
+| /v3/groups/{group_id}/members           | POST   | user_id, user_ids | Adds one or more users to the group; use 'self' as user_id to join               |
+| /v3/groups/{group_id}/members/{user_id} | DELETE | -                 | Removes a user from the group; use 'self' as user_id to leave                   |
+| /v3/members/groups                      | GET    | user_ids          | Gets the groups of multiple users identified by their respective IDs             |
+| /v3/members/{member_id}/groups          | GET    | -                 | Gets the groups of a member; use 'self' as member_id to get one's own groups    |
 
 ### Administrators
 

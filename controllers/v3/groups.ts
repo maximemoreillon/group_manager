@@ -108,7 +108,6 @@ export const read_groups = async (
   const as_parent_query = `AND (group)<-[:BELONGS_TO]-(:Group {_id: $subgroup_id})`;
   const as_subgroup_query = `AND (group)-[:BELONGS_TO]->(:Group {_id: $parent_id})`;
 
-  // TODO: There must be a simpler way to do this
   const direct_query = `
     ${
       parent_id
@@ -411,10 +410,6 @@ export const remove_group_from_group = async (
   res: Response,
   next: NextFunction,
 ) => {
-  // Route to make a user join a group
-
-  // TODO: Should the user be admin of child group?
-
   const { parent_id, subgroup_id } = req.params;
 
   if (!parent_id || parent_id === "undefined")
